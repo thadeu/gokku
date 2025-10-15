@@ -36,7 +36,9 @@ done
 
 echo ""
 echo "Binaries created in bin/ directory:"
+
 ls -la bin/
+
 
 echo ""
 echo "To compress binaries (optional):"

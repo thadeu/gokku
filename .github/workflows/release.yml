@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    name: Build release binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin]
+        goarch: ["386", amd64, arm64]
+        exclude:
+          - goarch: "386"
+            goos: darwin
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Build Go binaries
+        uses: wangyoucao577/go-release-action@v1
+        with:
+          pre_command: "export CGO_ENABLED=0"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          goversion: "1.25.0"
+          binary_name: "gokku"
+          project_path: ./cmd/cli
+          release_tag: ${{ github.event.release.tag_name || inputs.tag }}
+          release_name: ${{ github.event.release.tag_name || inputs.tag }}
+          ldflags: -s -X main.version=${{ github.event.release.tag_name || inputs.tag }}
