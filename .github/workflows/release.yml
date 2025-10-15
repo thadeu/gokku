@@ -66,5 +66,5 @@ Binaries built for:
 - Linux ARM64
 - macOS Intel (AMD64)
 - macOS Apple Silicon (ARM64)" --allow-empty
-            git push
+            git push origin main
           fi
