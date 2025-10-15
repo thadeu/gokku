@@ -160,8 +160,10 @@ download_binary() {
     # https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/bin/gokku-darwin-arm64
     log "Downloading gokku binary for $OS/$ARCH..."
 
-    mkdir -p $INSTALL_DIR/tmp
-    cd $INSTALL_DIR/tmp
+    # Use system temp directory for downloads to avoid HOME issues
+    local temp_dir="/tmp/gokku-install"
+    mkdir -p $temp_dir
+    cd $temp_dir
 
     # Construct binary name based on OS and architecture
     local binary_name="gokku-$OS-$ARCH"
@@ -214,7 +216,9 @@ download_binary() {
 install_binary() {
     log "Installing gokku to $BIN_DIR..."
 
-    cd $INSTALL_DIR/tmp/gokku
+    # Use the same temp directory as download_binary
+    local temp_dir="/tmp/gokku-install"
+    cd $temp_dir
 
     # Try to install to /usr/local/bin
     if [ -w "$BIN_DIR" ]; then
@@ -405,7 +409,8 @@ print_usage_server() {
 }
 
 cleanup() {
-    rm -rf $INSTALL_DIR/tmp
+    # Clean up temporary directory used for downloads
+    rm -rf /tmp/gokku-install
 }
 
 main() {
