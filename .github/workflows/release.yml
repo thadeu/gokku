@@ -37,6 +37,4 @@ jobs:
           goversion: "1.25.0"
           binary_name: "gokku"
           project_path: ./cmd/cli
-          release_tag: ${{ github.event.release.tag_name || inputs.tag }}
-          release_name: ${{ github.event.release.tag_name || inputs.tag }}
           ldflags: -s -X main.version=${{ github.event.release.tag_name || inputs.tag }}
