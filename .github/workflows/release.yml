@@ -22,10 +22,14 @@ jobs:
             goos: darwin
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
         with:
-          fetch-depth: 0
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-modules-
 
       - name: Build Go binaries
         uses: wangyoucao577/go-release-action@v1
