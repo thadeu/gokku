@@ -1,0 +1,53 @@
+package handlers
+
+// This file exports the handler functions for use by main.go
+
+// HandleServer manages server configuration commands
+func HandleServer(args []string) {
+	handleServer(args)
+}
+
+// HandleApps lists applications on the server
+func HandleApps(args []string) {
+	handleApps(args)
+}
+
+// HandleConfig manages environment variable configuration
+func HandleConfig(args []string) {
+	handleConfig(args)
+}
+
+// HandleRun executes arbitrary commands on remote servers
+func HandleRun(args []string) {
+	handleRun(args)
+}
+
+// HandleLogs shows application logs
+func HandleLogs(args []string) {
+	handleLogs(args)
+}
+
+// HandleStatus shows service/container status
+func HandleStatus(args []string) {
+	handleStatus(args)
+}
+
+// HandleRestart restarts services/containers
+func HandleRestart(args []string) {
+	handleRestart(args)
+}
+
+// HandleDeploy deploys applications via git push
+func HandleDeploy(args []string) {
+	handleDeploy(args)
+}
+
+// HandleRollback rolls back to a previous release
+func HandleRollback(args []string) {
+	handleRollback(args)
+}
+
+// HandleSSH establishes SSH connections to servers
+func HandleSSH(args []string) {
+	handleSSH(args)
+}
