@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'docs/**'
 
 permissions:
   contents: read
@@ -28,21 +30,21 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: infra/docs/package.json
+          cache-dependency-path: docs/package-lock.json
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
       - name: Install dependencies
-        run: cd infra/docs && npm ci
+        run: cd docs && npm ci
 
       - name: Build with VitePress
-        run: cd infra/docs && npm run docs:build
+        run: cd docs && npm run docs:build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: infra/docs/.vitepress/dist
+          path: docs/.vitepress/dist
 
   deploy:
     environment:
