@@ -71,9 +71,9 @@ jobs:
             echo "Committing binary changes..."
             git commit -m "build: update binary releases
 
-Generated from commit: ${{ github.sha }}
-Build triggered by: ${{ github.actor }}
-Workflow run: ${{ github.run_id }}
+Generated from commit: ${GITHUB_SHA}
+Build triggered by: ${GITHUB_ACTOR}
+Workflow run: ${GITHUB_RUN_ID}
 
 Binaries built for:
 - Linux AMD64
