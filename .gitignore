@@ -1,0 +1,13 @@
+# Compiled binaries
+env-manager
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Backup files
+*.bak
+*.tmp
+
+# Temporary installation files
+papis-install-*/

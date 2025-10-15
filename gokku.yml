@@ -1,0 +1,110 @@
+# Gokku Deployment Configuration
+# This file defines your applications and environments
+
+project:
+  name: gokku
+  base_dir: /opt/gokku
+
+apps:
+  - name: speech-to-text
+    lang: go
+    build:
+      type: systemd
+      path: ./cmd/speech-to-text
+      binary_name: speech-to-text
+      work_dir: apps/trunk
+      go_version: "1.25"
+      goos: linux
+      goarch: amd64
+      cgo_enabled: 0
+    environments:
+      - name: production
+        branch: main
+        default_env_vars:
+          AWS_REGION: us-east-1
+          LOG_LEVEL: info
+      - name: staging
+        branch: staging
+        default_env_vars:
+          AWS_REGION: us-east-1
+          LOG_LEVEL: debug
+    deployment:
+      keep_releases: 5
+      restart_policy: always
+      restart_delay: 5
+    
+  - name: voice-agent
+    lang: go
+    build:
+      type: systemd
+      path: ./cmd/voice-agent
+      binary_name: voice-agent
+      work_dir: apps/trunk
+      go_version: "1.25"
+      goos: linux
+      goarch: amd64
+      cgo_enabled: 0
+    environments:
+      - name: production
+        branch: main
+        default_env_vars:
+          AWS_REGION: us-east-1
+          LOG_LEVEL: info
+      - name: staging
+        branch: staging
+        default_env_vars:
+          AWS_REGION: us-east-1
+          LOG_LEVEL: debug
+    deployment:
+      keep_releases: 5
+      restart_policy: always
+      restart_delay: 5
+    
+  - name: vad
+    lang: python
+    build:
+      type: docker
+      path: ./apps/vad
+      dockerfile: ./apps/vad/Dockerfile  # optional, will generate if not exists
+      entrypoint: main.py
+      base_image: "python:3.11-slim"
+      # Mise config (optional) - if .tool-versions exists, mise is auto-enabled
+      mise:
+        plugins:
+          - name: whispercpp
+            url: https://github.com/thadeu/asdf-whispercpp.git
+    environments:
+      - name: production
+        branch: main
+        default_env_vars:
+          LOG_LEVEL: info
+          PORT: 8080
+    deployment:
+      keep_releases: 3
+      keep_images: 5
+      restart_policy: always
+      restart_delay: 10
+
+# Port assignment strategy: auto or manual
+# auto: automatically assigns sequential ports starting from base_port
+# manual: use ports defined in .env for each app/environment
+port_strategy: manual
+
+# Default Docker images (used if not specified in app.build.base_image)
+docker:
+  registry: ""  # empty = local registry, or use docker.io, ghcr.io, etc
+  base_images:
+    go: "golang:1.25-alpine"
+    python: "python:3.11-slim"
+    nodejs: "node:20-alpine"
+
+# User configuration
+user:
+  deploy_user: ubuntu
+  deploy_group: ubuntu
+
+# Repository URLs (for installation)
+repository:
+  github_url: https://raw.githubusercontent.com/USER/REPO/main/infra
+  s3_bucket: ""
+  s3_prefix: gokku-infra

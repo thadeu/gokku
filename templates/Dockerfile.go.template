@@ -1,0 +1,35 @@
+# Generated Dockerfile for Go application
+# App: {{APP_NAME}}
+# Build path: {{BUILD_PATH}}
+
+FROM {{GO_BASE_IMAGE}} AS builder
+
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum* ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED={{CGO_ENABLED}} GOOS={{GOOS}} GOARCH={{GOARCH}} \
+    go build -ldflags="-w -s" -o app {{BUILD_PATH}}
+
+# Final stage
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates tzdata
+
+WORKDIR /root/
+
+# Copy binary from builder
+COPY --from=builder /app/app .
+
+# Expose port (will be set via env var)
+EXPOSE ${PORT:-8080}
+
+# Run the application
+CMD ["./app"]
+

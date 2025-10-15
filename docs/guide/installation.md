@@ -1,0 +1,322 @@
+# Installation
+
+This guide covers installing Gokku on your server and local machine using the universal installer.
+
+## Requirements
+
+- **OS**: Ubuntu 20.04+ / Debian 11+ / macOS (Linux for server)
+- **CPU**: 1 core minimum (2+ recommended)
+- **RAM**: 512MB minimum (1GB+ recommended)
+- **Disk**: 2GB free space
+- **Network**: Port 22 (SSH) open for server
+- **Go**: 1.20+ (for compilation)
+
+## Universal Installer
+
+Gokku has a single universal installer that automatically detects if you're installing on a server or client.
+
+### Server Installation
+
+SSH into your server and run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/main/infra/install | bash
+```
+
+Or explicitly specify server mode:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/main/infra/install | bash -s -- --server
+```
+
+This installs:
+- `gokku` binary in `/usr/local/bin`
+- Core scripts in `/opt/gokku/scripts/`
+- Hook templates in `/opt/gokku/hooks/`
+- Dockerfile templates in `/opt/gokku/templates/`
+- Sample `gokku.yml` config
+
+### Client/Local Installation
+
+On your local machine:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/main/infra/install | bash
+```
+
+Or explicitly specify client mode:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/main/infra/install | bash -s -- --client
+```
+
+This installs:
+- `gokku` binary in `/usr/local/bin`
+- Config directory in `~/.gokku/`
+- Sample config file
+
+### Verify Installation
+
+Check that Gokku is installed:
+
+```bash
+gokku --version
+```
+
+On server, verify files:
+
+```bash
+ls -la /opt/gokku
+```
+
+You should see:
+```
+/opt/gokku/
+├── apps/           # Deployed applications
+├── repos/          # Git repositories
+├── scripts/        # Core scripts
+├── hooks/          # Git hook templates
+├── templates/      # Dockerfile templates
+└── gokku.yml       # Sample configuration
+```
+
+## Manual Installation
+
+If you prefer to build from source:
+
+```bash
+# Clone repository
+git clone https://github.com/thadeu/gokku.git
+cd gokku/infra
+
+# Build binary
+go build -o gokku ./cmd/cli
+
+# Install
+sudo mv gokku /usr/local/bin/
+
+# Verify
+gokku --version
+```
+
+## Configuration
+
+### Create gokku.yml
+
+In your project root, create `gokku.yml`:
+
+```yaml
+project:
+  name: my-project
+
+apps:
+  - name: api
+    build:
+      path: ./cmd/api
+      binary_name: api
+```
+
+See [Configuration](/guide/configuration) for all options.
+
+### Setup Your App
+
+On the server, setup your app:
+
+```bash
+cd /opt/gokku
+./scripts/deploy-server-setup.sh api production
+```
+
+This creates:
+- Git repository at `/opt/gokku/repos/api.git`
+- App directory at `/opt/gokku/apps/api/`
+- Systemd service `api-production`
+- Environment file
+
+### Add Git Remote
+
+On your local machine:
+
+```bash
+git remote add production ubuntu@your-server:api
+```
+
+Replace:
+- `ubuntu` with your SSH user
+- `your-server` with your server IP or hostname
+
+### Test SSH Connection
+
+```bash
+ssh ubuntu@your-server
+```
+
+If connection fails, see [SSH Setup](#ssh-setup).
+
+## SSH Setup
+
+### Generate SSH Key
+
+If you don't have an SSH key:
+
+```bash
+ssh-keygen -t ed25519 -C "your-email@example.com"
+```
+
+Press Enter to accept defaults.
+
+### Copy Key to Server
+
+```bash
+ssh-copy-id ubuntu@your-server
+```
+
+Or manually:
+
+```bash
+cat ~/.ssh/id_ed25519.pub | ssh ubuntu@your-server "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
+```
+
+### Test Connection
+
+```bash
+ssh ubuntu@your-server
+```
+
+Should connect without password prompt.
+
+## First Deployment
+
+Deploy your app:
+
+```bash
+git push production main
+```
+
+You should see:
+
+```
+-----> Deploying api to production...
+-----> Extracting code...
+-----> Building api...
+-----> Build complete (5.2M)
+-----> Deploying...
+-----> Restarting api-production...
+-----> Deploy successful!
+```
+
+## Verify Deployment
+
+Check service status:
+
+```bash
+ssh ubuntu@your-server "sudo systemctl status api-production"
+```
+
+Check logs:
+
+```bash
+ssh ubuntu@your-server "sudo journalctl -u api-production -f"
+```
+
+## Multiple Environments
+
+Setup staging environment:
+
+```bash
+# On server
+cd /opt/gokku
+./scripts/deploy-server-setup.sh api staging
+
+# On local machine
+git remote add staging ubuntu@your-server:api
+```
+
+Deploy to staging:
+
+```bash
+git push staging develop
+```
+
+## Uninstall
+
+### Remove Gokku from Server
+
+```bash
+# Stop all services
+sudo systemctl stop api-*
+
+# Remove systemd services
+sudo rm /etc/systemd/system/api-*.service
+sudo systemctl daemon-reload
+
+# Remove Gokku directory
+sudo rm -rf /opt/gokku
+
+# Optional: Remove mise
+rm -rf ~/.local/share/mise
+```
+
+### Remove CLI from Local Machine
+
+```bash
+sudo rm /usr/local/bin/gokku
+```
+
+## Troubleshooting
+
+### Permission Denied
+
+If you get "Permission denied (publickey)":
+
+```bash
+# Copy SSH key again
+ssh-copy-id ubuntu@your-server
+
+# Or add key to ssh-agent
+ssh-add ~/.ssh/id_ed25519
+```
+
+### Port Already in Use
+
+If deployment fails with "port already in use":
+
+```bash
+# Check what's using the port
+ssh ubuntu@your-server "sudo lsof -i :8080"
+
+# Change port in environment
+ssh ubuntu@your-server
+cd /opt/gokku
+./env-manager --app api --env production set PORT=8081
+```
+
+### Build Failed
+
+Check deployment logs:
+
+```bash
+ssh ubuntu@your-server "cat /opt/gokku/apps/api/production/deploy.log"
+```
+
+### Service Won't Start
+
+Check systemd logs:
+
+```bash
+ssh ubuntu@your-server "sudo journalctl -u api-production -n 100"
+```
+
+## Next Steps
+
+- [Configuration](/guide/configuration) - Customize your deployment
+- [Environments](/guide/environments) - Setup staging/production
+- [Environment Variables](/guide/env-vars) - Configure your app
+- [Docker Support](/guide/docker) - Use Docker instead of systemd
+
+## Getting Help
+
+- [GitHub Issues](https://github.com/thadeu/gokku/issues)
+- [Discussions](https://github.com/thadeu/gokku/discussions)
+- [Troubleshooting](/reference/troubleshooting)
+

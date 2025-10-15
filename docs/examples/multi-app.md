@@ -1,0 +1,520 @@
+# Multi-App Project Example
+
+Deploy multiple applications from a single repository (monorepo).
+
+## Basic Multi-App Setup
+
+### Project Structure
+
+```
+my-project/
+├── cmd/
+│   ├── api/
+│   │   └── main.go
+│   ├── worker/
+│   │   └── main.go
+│   └── admin/
+│       └── main.go
+├── services/
+│   └── ml/
+│       ├── server.py
+│       └── requirements.txt
+├── go.mod
+├── go.sum
+└── gokku.yml
+```
+
+### gokku.yml
+
+```yaml
+project:
+  name: my-project
+
+apps:
+  - name: api
+    build:
+      path: ./cmd/api
+      binary_name: api
+  
+  - name: worker
+    build:
+      path: ./cmd/worker
+      binary_name: worker
+  
+  - name: admin
+    build:
+      path: ./cmd/admin
+      binary_name: admin
+  
+  - name: ml-service
+    lang: python
+    build:
+      type: docker
+      path: ./services/ml
+      entrypoint: server.py
+```
+
+### Setup All Apps
+
+```bash
+# On server
+ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api production"
+ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh worker production"
+ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh admin production"
+ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh ml-service production"
+
+# On local machine
+git remote add api-prod ubuntu@server:api
+git remote add worker-prod ubuntu@server:worker
+git remote add admin-prod ubuntu@server:admin
+git remote add ml-prod ubuntu@server:ml-service
+```
+
+### Deploy
+
+```bash
+# Deploy all to production
+git push api-prod main
+git push worker-prod main
+git push admin-prod main
+git push ml-prod main
+```
+
+## Microservices Architecture
+
+### API + Worker + Admin
+
+```yaml
+apps:
+  - name: api
+    build:
+      path: ./cmd/api
+    environments:
+      - name: production
+        branch: main
+        default_env_vars:
+          PORT: 8080
+          WORKER_URL: http://localhost:8081
+  
+  - name: worker
+    build:
+      path: ./cmd/worker
+    environments:
+      - name: production
+        branch: main
+        default_env_vars:
+          PORT: 8081
+          REDIS_URL: redis://localhost:6379
+  
+  - name: admin
+    build:
+      path: ./cmd/admin
+    environments:
+      - name: production
+        branch: main
+        default_env_vars:
+          PORT: 8082
+          API_URL: http://localhost:8080
+```
+
+### Service Communication
+
+```go
+// cmd/api/main.go
+package main
+
+import (
+    "net/http"
+    "os"
+)
+
+func main() {
+    workerURL := os.Getenv("WORKER_URL")
+    
+    http.HandleFunc("/process", func(w http.ResponseWriter, r *http.Request) {
+        // Call worker service
+        resp, _ := http.Post(workerURL+"/job", "application/json", r.Body)
+        // ...
+    })
+    
+    http.ListenAndServe(":"+os.Getenv("PORT"), nil)
+}
+```
+
+```go
+// cmd/worker/main.go
+package main
+
+import (
+    "net/http"
+    "os"
+)
+
+func main() {
+    http.HandleFunc("/job", func(w http.ResponseWriter, r *http.Request) {
+        // Process job
+        w.Write([]byte("Job processed"))
+    })
+    
+    http.ListenAndServe(":"+os.Getenv("PORT"), nil)
+}
+```
+
+## Different Technologies
+
+Mix Go, Python, Node.js in one project:
+
+```yaml
+apps:
+  # Go API
+  - name: api
+    lang: go
+    build:
+      type: systemd
+      path: ./cmd/api
+  
+  # Python ML Service
+  - name: ml
+    lang: python
+    build:
+      type: docker
+      path: ./services/ml
+      entrypoint: server.py
+  
+  # Node.js Frontend
+  - name: frontend
+    lang: nodejs
+    build:
+      type: docker
+      path: ./frontend
+      entrypoint: server.js
+```
+
+## Shared Dependencies
+
+### Go Modules (Shared)
+
+```
+my-project/
+├── cmd/
+│   ├── api/
+│   └── worker/
+├── internal/
+│   ├── models/
+│   └── db/
+├── go.mod
+└── gokku.yml
+```
+
+Both API and Worker share `internal/` packages.
+
+### Python (Shared)
+
+```
+my-project/
+├── services/
+│   ├── ml/
+│   │   └── server.py
+│   └── worker/
+│       └── worker.py
+├── shared/
+│   └── utils.py
+└── gokku.yml
+```
+
+```python
+# services/ml/server.py
+import sys
+sys.path.append('../../')
+from shared import utils
+```
+
+## Different Versions
+
+Each app can use different tool versions:
+
+```yaml
+apps:
+  - name: api-v1
+    build:
+      path: ./cmd/api-v1
+      go_version: "1.24"
+  
+  - name: api-v2
+    build:
+      path: ./cmd/api-v2
+      go_version: "1.25"
+```
+
+Or with `.tool-versions`:
+
+```
+cmd/api-v1/.tool-versions:
+golang 1.24.0
+
+cmd/api-v2/.tool-versions:
+golang 1.25.0
+```
+
+## Background Workers
+
+### Cron-like Worker
+
+```go
+// cmd/cron-worker/main.go
+package main
+
+import (
+    "log"
+    "time"
+)
+
+func main() {
+    ticker := time.NewTicker(1 * time.Hour)
+    defer ticker.Stop()
+    
+    for range ticker.C {
+        log.Println("Running scheduled task...")
+        // Do work
+    }
+}
+```
+
+```yaml
+apps:
+  - name: cron-worker
+    build:
+      path: ./cmd/cron-worker
+```
+
+### Queue Worker (Celery)
+
+```python
+# services/worker/worker.py
+from celery import Celery
+
+app = Celery('tasks', broker='redis://localhost:6379')
+
+@app.task
+def process_video(video_id):
+    # Process
+    return f"Done: {video_id}"
+
+if __name__ == '__main__':
+    app.worker_main()
+```
+
+```yaml
+apps:
+  - name: celery-worker
+    lang: python
+    build:
+      type: docker
+      path: ./services/worker
+      entrypoint: worker.py
+```
+
+## Staging + Production
+
+Each app with both environments:
+
+```yaml
+apps:
+  - name: api
+    build:
+      path: ./cmd/api
+    environments:
+      - name: production
+        branch: main
+      - name: staging
+        branch: staging
+  
+  - name: worker
+    build:
+      path: ./cmd/worker
+    environments:
+      - name: production
+        branch: main
+      - name: staging
+        branch: staging
+```
+
+### Setup
+
+```bash
+# Production
+ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api production"
+ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh worker production"
+
+# Staging
+ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api staging"
+ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh worker staging"
+```
+
+### Deploy
+
+```bash
+# Production
+git remote add api-prod ubuntu@server:api
+git remote add worker-prod ubuntu@server:worker
+
+# Staging
+git remote add api-staging ubuntu@server:api
+git remote add worker-staging ubuntu@server:worker
+
+# Deploy to staging
+git push api-staging staging
+git push worker-staging staging
+
+# Deploy to production
+git push api-prod main
+git push worker-prod main
+```
+
+## Database Migrations
+
+### Separate Migration App
+
+```yaml
+apps:
+  - name: api
+    build:
+      path: ./cmd/api
+  
+  - name: migrate
+    build:
+      path: ./cmd/migrate
+```
+
+```go
+// cmd/migrate/main.go
+package main
+
+import (
+    "database/sql"
+    "log"
+    "os"
+    
+    _ "github.com/lib/pq"
+)
+
+func main() {
+    db, _ := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+    
+    // Run migrations
+    _, err := db.Exec(`
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100)
+        )
+    `)
+    
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    log.Println("Migrations complete")
+}
+```
+
+Deploy migrations before API:
+
+```bash
+git push migrate-prod main
+git push api-prod main
+```
+
+## Load Balancer Setup
+
+With multiple instances:
+
+```yaml
+apps:
+  - name: api-1
+    build:
+      path: ./cmd/api
+    environments:
+      - name: production
+        default_env_vars:
+          PORT: 8080
+  
+  - name: api-2
+    build:
+      path: ./cmd/api
+    environments:
+      - name: production
+        default_env_vars:
+          PORT: 8081
+```
+
+Use nginx for load balancing:
+
+```nginx
+upstream api_backend {
+    server localhost:8080;
+    server localhost:8081;
+}
+
+server {
+    listen 80;
+    
+    location / {
+        proxy_pass http://api_backend;
+    }
+}
+```
+
+## Monitoring All Apps
+
+### Health Check Aggregator
+
+```go
+// cmd/health-checker/main.go
+package main
+
+import (
+    "net/http"
+    "encoding/json"
+)
+
+func main() {
+    http.HandleFunc("/health/all", func(w http.ResponseWriter, r *http.Request) {
+        services := map[string]string{
+            "api":    checkHealth("http://localhost:8080/health"),
+            "worker": checkHealth("http://localhost:8081/health"),
+            "ml":     checkHealth("http://localhost:8082/health"),
+        }
+        json.NewEncoder(w).Encode(services)
+    })
+    
+    http.ListenAndServe(":9000", nil)
+}
+
+func checkHealth(url string) string {
+    resp, err := http.Get(url)
+    if err != nil || resp.StatusCode != 200 {
+        return "unhealthy"
+    }
+    return "healthy"
+}
+```
+
+## Complete Example
+
+Full monorepo example: [github.com/thadeu/gokku-examples/monorepo](https://github.com/thadeu/gokku-examples/tree/main/monorepo)
+
+## Best Practices
+
+1. **Shared Code**: Keep shared code in `internal/` or `pkg/`
+2. **Independent Deploys**: Each app deploys independently
+3. **Environment Parity**: Keep staging and production configs similar
+4. **Service Discovery**: Use environment variables for service URLs
+5. **Database Migrations**: Deploy migrations before apps
+6. **Health Checks**: Each service should have `/health` endpoint
+
+## Next Steps
+
+- [Configuration](/guide/configuration) - Advanced multi-app config
+- [Environments](/guide/environments) - Manage multiple environments
+- [Docker Support](/guide/docker) - Mix systemd and Docker
+

@@ -1,0 +1,419 @@
+#!/bin/bash
+# Gokku Universal Installer
+# Automatically detects if installing on server or client
+#
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/USER/REPO/main/infra/install | bash
+#
+#   Or with options:
+#   curl -fsSL https://...install | bash -s -- --server
+#   curl -fsSL https://...install | bash -s -- --client
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# Configuration
+REPO_URL="${GOKKU_REPO_URL:-https://raw.githubusercontent.com/thadeu/gooku/main/infra}"
+INSTALL_DIR="${GOKKU_INSTALL_DIR:-$HOME/.gokku}"
+BIN_DIR="/usr/local/bin"
+VERSION="${GOKKU_VERSION:-latest}"
+MODE=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --server)
+            MODE="server"
+            shift
+            ;;
+        --client)
+            MODE="client"
+            shift
+            ;;
+        --help)
+            echo "Gokku Universal Installer"
+            echo ""
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --server    Install on server (setup deployment)"
+            echo "  --client    Install CLI only (local machine)"
+            echo "  --help      Show this help"
+            echo ""
+            echo "If no option is provided, installer will auto-detect."
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+log() {
+    echo -e "${CYAN}[$(date +'%H:%M:%S')]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} ✓ $1"
+}
+
+log_error() {
+    echo -e "${RED}[$(date +'%H:%M:%S')]${NC} ✗ $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[$(date +'%H:%M:%S')]${NC} ⚠ $1"
+}
+
+print_banner() {
+    echo ""
+    echo -e "${CYAN}╔════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                                                        ║${NC}"
+    echo -e "${CYAN}║              Gokku Universal Installer                 ║${NC}"
+    echo -e "${CYAN}║                                                        ║${NC}"
+    echo -e "${CYAN}╚════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+}
+
+detect_mode() {
+    if [ -n "$MODE" ]; then
+        log "Mode: $MODE (explicit)"
+        return
+    fi
+
+    # Auto-detect based on environment
+    if [ -f "/etc/systemd/system" ] && [ -d "/opt" ]; then
+        MODE="server"
+        log "Auto-detected: server environment"
+    else
+        MODE="client"
+        log "Auto-detected: client environment"
+    fi
+}
+
+detect_os() {
+    case "$(uname -s)" in
+        Linux*)     OS=linux;;
+        Darwin*)    OS=darwin;;
+        *)          OS=unknown;;
+    esac
+
+    case "$(uname -m)" in
+        x86_64)     ARCH=amd64;;
+        arm64)      ARCH=arm64;;
+        aarch64)    ARCH=arm64;;
+        *)          ARCH=unknown;;
+    esac
+
+    log "System: $OS/$ARCH"
+}
+
+check_requirements() {
+    log "Checking requirements..."
+
+    local missing_deps=()
+
+    if ! command -v curl &> /dev/null && ! command -v wget &> /dev/null; then
+        missing_deps+=("curl or wget")
+    fi
+
+    if ! command -v git &> /dev/null; then
+        missing_deps+=("git")
+    fi
+
+    if ! command -v go &> /dev/null; then
+        missing_deps+=("go")
+    fi
+
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        log_error "Missing dependencies: ${missing_deps[*]}"
+        echo ""
+        echo "Install them:"
+        if [ "$OS" = "linux" ]; then
+            echo "  sudo apt update && sudo apt install -y git curl golang"
+        else
+            echo "  brew install git go"
+        fi
+        exit 1
+    fi
+
+    log_success "Requirements met"
+}
+
+download_source() {
+    log "Downloading gokku source..."
+
+    mkdir -p $INSTALL_DIR/tmp
+    cd $INSTALL_DIR/tmp
+
+    # Download CLI source
+    if [ -d "gokku" ]; then
+        rm -rf gokku
+    fi
+
+    mkdir -p gokku/cmd/cli
+
+    if ! curl -fsSL "$REPO_URL/cmd/cli/main.go" -o gokku/cmd/cli/main.go; then
+        log_error "Failed to download CLI source"
+        exit 1
+    fi
+
+    if ! curl -fsSL "$REPO_URL/go.mod" -o gokku/go.mod; then
+        log_error "Failed to download go.mod"
+        exit 1
+    fi
+
+    if ! curl -fsSL "$REPO_URL/go.sum" -o gokku/go.sum 2>/dev/null; then
+        log_warn "go.sum not found, will be generated"
+    fi
+
+    log_success "Source downloaded"
+}
+
+build_binary() {
+    log "Building gokku binary..."
+
+    cd $INSTALL_DIR/tmp/gokku
+
+    if ! go build -o gokku ./cmd/cli; then
+        log_error "Failed to build gokku"
+        exit 1
+    fi
+
+    log_success "Binary compiled"
+}
+
+install_binary() {
+    log "Installing gokku to $BIN_DIR..."
+
+    cd $INSTALL_DIR/tmp/gokku
+
+    # Try to install to /usr/local/bin
+    if [ -w "$BIN_DIR" ]; then
+        cp gokku $BIN_DIR/
+        chmod +x $BIN_DIR/gokku
+    else
+        sudo cp gokku $BIN_DIR/
+        sudo chmod +x $BIN_DIR/gokku
+    fi
+
+    log_success "Binary installed"
+}
+
+setup_client() {
+    log "Setting up client configuration..."
+
+    mkdir -p $INSTALL_DIR
+
+    # Create initial config if doesn't exist
+    if [ ! -f "$INSTALL_DIR/config.yml" ]; then
+        cat > $INSTALL_DIR/config.yml << 'EOF'
+# Gokku CLI Configuration
+servers: []
+
+# Example server configuration:
+# servers:
+#   - name: production
+#     host: ubuntu@ec2-xxx-xxx-xxx-xxx.compute.amazonaws.com
+#     base_dir: /opt/gokku
+#     default: true
+EOF
+        log_success "Client config created"
+    else
+        log "Client config already exists"
+    fi
+}
+
+setup_server() {
+    log "Setting up server deployment..."
+
+    local BASE_DIR="/opt/gokku"
+
+    # Create base directory
+    if [ ! -d "$BASE_DIR" ]; then
+        sudo mkdir -p $BASE_DIR
+        sudo chown -R $USER:$USER $BASE_DIR
+        log_success "Base directory created: $BASE_DIR"
+    fi
+
+    # Download server scripts
+    cd $INSTALL_DIR/tmp
+
+    local scripts=(
+        "scripts/config-loader.sh"
+        "scripts/deploy-server-setup.sh"
+        "scripts/docker-helpers.sh"
+        "scripts/mise-helpers.sh"
+    )
+
+    mkdir -p $BASE_DIR/scripts
+
+    for script in "${scripts[@]}"; do
+        log "Downloading $script..."
+        if ! curl -fsSL "$REPO_URL/$script" -o "$BASE_DIR/$script"; then
+            log_error "Failed to download $script"
+            exit 1
+        fi
+        chmod +x "$BASE_DIR/$script"
+    done
+
+    # Download hook templates
+    mkdir -p $BASE_DIR/hooks
+
+    local hooks=(
+        "hooks/post-receive-docker.template"
+        "hooks/post-receive-systemd.template"
+    )
+
+    for hook in "${hooks[@]}"; do
+        log "Downloading $hook..."
+        if ! curl -fsSL "$REPO_URL/$hook" -o "$BASE_DIR/$hook"; then
+            log_error "Failed to download $hook"
+            exit 1
+        fi
+    done
+
+    # Download Dockerfile templates
+    mkdir -p $BASE_DIR/templates
+
+    local templates=(
+        "templates/Dockerfile.go.template"
+        "templates/Dockerfile.python.template"
+    )
+
+    for template in "${templates[@]}"; do
+        log "Downloading $template..."
+        if ! curl -fsSL "$REPO_URL/$template" -o "$BASE_DIR/$template"; then
+            log_warn "Failed to download $template (optional)"
+        fi
+    done
+
+    # Download sample config
+    if [ ! -f "$BASE_DIR/gokku.yml" ]; then
+        log "Downloading sample gokku.yml..."
+        if ! curl -fsSL "$REPO_URL/gokku.yml" -o "$BASE_DIR/gokku.yml"; then
+            log_warn "Failed to download gokku.yml"
+        else
+            log_success "Sample config downloaded"
+        fi
+    fi
+
+    log_success "Server setup complete"
+}
+
+print_usage_client() {
+    echo ""
+    echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║                                                        ║${NC}"
+    echo -e "${GREEN}║         Client Installation Complete! 🚀              ║${NC}"
+    echo -e "${GREEN}║                                                        ║${NC}"
+    echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${CYAN}Gokku CLI installed successfully!${NC}"
+    echo ""
+    echo -e "${YELLOW}Quick Start:${NC}"
+    echo ""
+    echo "1. Add git remote for your app:"
+    echo "   ${CYAN}git remote add api-production ubuntu@server:/opt/gokku/repos/api.git${NC}"
+    echo ""
+    echo "2. Configure environment variables:"
+    echo "   ${CYAN}gokku config set PORT=8080 --remote api-production${NC}"
+    echo "   ${CYAN}gokku config list --remote api-production${NC}"
+    echo ""
+    echo "3. Deploy:"
+    echo "   ${CYAN}git push api-production main${NC}"
+    echo ""
+    echo "4. View logs:"
+    echo "   ${CYAN}gokku logs api production --remote api-production${NC}"
+    echo ""
+    echo "5. Check status:"
+    echo "   ${CYAN}gokku status api production --remote api-production${NC}"
+    echo ""
+    echo -e "${CYAN}Configuration:${NC} $INSTALL_DIR/config.yml"
+    echo -e "${CYAN}Binary:${NC} $BIN_DIR/gokku"
+    echo ""
+    echo -e "${CYAN}Get help:${NC}"
+    echo "   ${CYAN}gokku --help${NC}"
+    echo ""
+}
+
+print_usage_server() {
+    local server_ip=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}' || echo "YOUR_SERVER_IP")
+
+    echo ""
+    echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║                                                        ║${NC}"
+    echo -e "${GREEN}║         Server Installation Complete! 🚀              ║${NC}"
+    echo -e "${GREEN}║                                                        ║${NC}"
+    echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${CYAN}Server:${NC} $USER@$server_ip"
+    echo -e "${CYAN}Base Directory:${NC} /opt/gokku"
+    echo ""
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${CYAN}Next Steps:${NC}"
+    echo ""
+    echo -e "${YELLOW}1. Configure your apps in gokku.yml:${NC}"
+    echo "   ${CYAN}nano /opt/gokku/gokku.yml${NC}"
+    echo ""
+    echo -e "${YELLOW}2. Setup your apps:${NC}"
+    echo "   ${CYAN}cd /opt/gokku && ./scripts/deploy-server-setup.sh api production${NC}"
+    echo ""
+    echo -e "${YELLOW}3. On your local machine, add git remote:${NC}"
+    echo "   ${CYAN}git remote add api-production $USER@$server_ip:/opt/gokku/repos/api.git${NC}"
+    echo ""
+    echo -e "${YELLOW}4. Configure environment variables:${NC}"
+    echo "   ${CYAN}gokku config set PORT=8080 -a api -e production${NC}"
+    echo ""
+    echo -e "${YELLOW}5. Deploy:${NC}"
+    echo "   ${CYAN}git push api-production main${NC}"
+    echo ""
+    echo -e "${CYAN}Management Commands:${NC}"
+    echo "  gokku config list -a api -e production"
+    echo "  sudo systemctl status api-production"
+    echo "  sudo journalctl -u api-production -f"
+    echo ""
+}
+
+cleanup() {
+    rm -rf $INSTALL_DIR/tmp
+}
+
+main() {
+    print_banner
+    detect_mode
+    detect_os
+    check_requirements
+    download_source
+    build_binary
+    install_binary
+
+    if [ "$MODE" = "server" ]; then
+        setup_server
+        print_usage_server
+    else
+        setup_client
+        print_usage_client
+    fi
+
+    cleanup
+
+    echo ""
+    log_success "Installation complete! 🎉"
+    echo ""
+    echo "Run: ${CYAN}gokku --help${NC} to get started"
+    echo ""
+}
+
+trap 'log_error "Installation failed at line $LINENO"' ERR
+
+main
+

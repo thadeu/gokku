@@ -1,0 +1,113 @@
+#!/bin/bash
+set -e
+
+APP_NAME="__APP_NAME__"
+ENVIRONMENT="__ENVIRONMENT__"
+BASE_DIR="__BASE_DIR__"
+APP_DIR="$BASE_DIR/apps/$APP_NAME/$ENVIRONMENT"
+REPO_DIR="$BASE_DIR/repos/$APP_NAME.git"
+RELEASE_DIR="$APP_DIR/releases/$(date +%Y%m%d-%H%M%S)"
+SERVICE_NAME="$APP_NAME-$ENVIRONMENT"
+BINARY_NAME="__BINARY_NAME__"
+BUILD_PATH="__BUILD_PATH__"
+BUILD_WORKDIR="__BUILD_WORKDIR__"
+KEEP_RELEASES="__KEEP_RELEASES__"
+MISE_PLUGINS="__MISE_PLUGINS__"
+
+# Source mise helpers
+SCRIPT_DIR="$(dirname "$0")/../.."
+if [ -f "$SCRIPT_DIR/mise-helpers.sh" ]; then
+    source "$SCRIPT_DIR/mise-helpers.sh"
+fi
+
+echo "-----> Deploying $APP_NAME to $ENVIRONMENT..."
+
+# Create release directory
+mkdir -p $RELEASE_DIR
+
+# Extract pushed code
+echo "-----> Extracting code..."
+GIT_WORK_TREE=$RELEASE_DIR git checkout -f __ENV_BRANCH__ 2>/dev/null || \
+GIT_WORK_TREE=$RELEASE_DIR git checkout -f main 2>/dev/null || \
+GIT_WORK_TREE=$RELEASE_DIR git checkout -f master
+
+# Check for .tool-versions and setup mise if needed
+if [ -f "$RELEASE_DIR/.tool-versions" ]; then
+    echo "-----> Detected .tool-versions, setting up mise..."
+
+    # Install mise if not present
+    install_mise || exit 1
+
+    # Install plugins if configured
+    if [ -n "$MISE_PLUGINS" ]; then
+        install_mise_plugins "$MISE_PLUGINS" || exit 1
+    fi
+
+    # Install tools from .tool-versions
+    run_mise_install "$RELEASE_DIR" || exit 1
+
+    # Activate mise for build
+    activate_mise
+fi
+
+# Build application
+echo "-----> Building $APP_NAME..."
+cd $RELEASE_DIR/$BUILD_WORKDIR
+
+# Verify go.mod exists
+if [ ! -f "go.mod" ]; then
+    echo "ERROR: go.mod not found in $BUILD_WORKDIR"
+    exit 1
+fi
+
+# Build for Linux
+export GOOS=__GOOS__
+export GOARCH=__GOARCH__
+export CGO_ENABLED=__CGO_ENABLED__
+
+go build -o $RELEASE_DIR/$BINARY_NAME $BUILD_PATH
+
+if [ ! -f "$RELEASE_DIR/$BINARY_NAME" ]; then
+    echo "ERROR: Build failed - binary not found at $RELEASE_DIR/$BINARY_NAME"
+    exit 1
+fi
+
+BINARY_SIZE=$(du -h $RELEASE_DIR/$BINARY_NAME | cut -f1)
+echo "-----> Build complete ($BINARY_SIZE)"
+
+# Link shared environment file
+echo "-----> Linking environment variables..."
+ln -sf $APP_DIR/shared/.env $RELEASE_DIR/.env
+
+# Update current symlink (atomic swap)
+echo "-----> Deploying..."
+ln -sfn $RELEASE_DIR $APP_DIR/current
+
+# Restart service
+echo "-----> Restarting $SERVICE_NAME..."
+if sudo systemctl is-active --quiet $SERVICE_NAME; then
+    sudo systemctl restart $SERVICE_NAME
+else
+    sudo systemctl start $SERVICE_NAME
+fi
+
+# Wait and check
+sleep 2
+
+if sudo systemctl is-active --quiet $SERVICE_NAME; then
+    echo "-----> Deploy successful!"
+    echo "-----> App: $APP_NAME"
+    echo "-----> Environment: $ENVIRONMENT"
+    echo "-----> Release: $(basename $RELEASE_DIR)"
+else
+    echo "ERROR: Service failed to start"
+    sudo journalctl -u $SERVICE_NAME -n 20 --no-pager
+    exit 1
+fi
+
+# Cleanup old releases (keep last N)
+echo "-----> Cleaning up old releases..."
+cd $APP_DIR/releases
+ls -t | tail -n +$((KEEP_RELEASES + 1)) | xargs -r rm -rf
+echo "-----> Done"
+
