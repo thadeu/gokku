@@ -65,21 +65,22 @@ jobs:
           git add bin/
 
           echo "Checking if there are changes to commit..."
+
           if git diff --cached --quiet; then
             echo "No binary changes to commit - binaries are up to date"
           else
             echo "Committing binary changes..."
             git commit -m "build: update binary releases
 
-Generated from commit: ${GITHUB_SHA}
-Build triggered by: ${GITHUB_ACTOR}
-Workflow run: ${GITHUB_RUN_ID}
+            Generated from commit: ${GITHUB_SHA}
+            Build triggered by: ${GITHUB_ACTOR}
+            Workflow run: ${GITHUB_RUN_ID}
 
-Binaries built for:
-- Linux AMD64
-- Linux ARM64
-- macOS Intel (AMD64)
-- macOS Apple Silicon (ARM64)" --allow-empty
+            Binaries built for:
+            - Linux AMD64
+            - Linux ARM64
+            - macOS Intel (AMD64)
+            - macOS Apple Silicon (ARM64)" --allow-empty
 
             echo "Pushing changes..."
             git push origin main
