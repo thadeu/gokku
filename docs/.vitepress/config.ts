@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Gokku",
   description: "Lightweight git-push deployment system for Go and multi-language applications",
-  base: '/',
+  base: '/gokku/',
   ignoreDeadLinks: true,
   
   head: [
