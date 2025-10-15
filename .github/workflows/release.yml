@@ -18,16 +18,23 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory /github/workspace
 
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.25.0'
+
+      - name: Verify Go installation
+        run: |
+          go version
+          go env
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -51,19 +58,30 @@ jobs:
 
       - name: Commit and push binaries
         run: |
+          echo "Checking git status..."
+          git status --porcelain
+
+          echo "Adding bin/ directory..."
           git add bin/
+
+          echo "Checking if there are changes to commit..."
           if git diff --cached --quiet; then
-            echo "No binary changes to commit"
+            echo "No binary changes to commit - binaries are up to date"
           else
+            echo "Committing binary changes..."
             git commit -m "build: update binary releases
 
 Generated from commit: ${{ github.sha }}
 Build triggered by: ${{ github.actor }}
+Workflow run: ${{ github.run_id }}
 
 Binaries built for:
 - Linux AMD64
 - Linux ARM64
 - macOS Intel (AMD64)
 - macOS Apple Silicon (ARM64)" --allow-empty
+
+            echo "Pushing changes..."
             git push origin main
+            echo "Successfully pushed binary updates!"
           fi
