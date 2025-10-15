@@ -1,4 +1,4 @@
-name: Release
+name: Build Binaries
 
 on:
   push:
@@ -7,38 +7,64 @@ on:
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
   build:
-    name: Build release binaries
+    name: Build and commit binaries
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux, darwin]
-        goarch: ["386", amd64, arm64]
-        exclude:
-          - goarch: "386"
-            goos: darwin
 
     steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/cache@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25.0'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-modules-
+            ${{ runner.os }}-go-
 
-      - name: Build Go binaries
-        uses: wangyoucao577/go-release-action@v1
-        with:
-          pre_command: "export CGO_ENABLED=0"
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          goos: ${{ matrix.goos }}
-          goarch: ${{ matrix.goarch }}
-          goversion: "1.25.0"
-          binary_name: "gokku"
-          project_path: ./cmd/cli
-          ldflags: -s -X main.version=${{ github.event.release.tag_name || inputs.tag }}
+      - name: Build binaries
+        run: |
+          chmod +x scripts/build-binaries.sh
+          ./scripts/build-binaries.sh
+
+      - name: Verify binaries
+        run: |
+          ls -la bin/
+          file bin/*
+
+      - name: Commit and push binaries
+        run: |
+          git add bin/
+          if git diff --cached --quiet; then
+            echo "No binary changes to commit"
+          else
+            git commit -m "build: update binary releases
+
+Generated from commit: ${{ github.sha }}
+Build triggered by: ${{ github.actor }}
+
+Binaries built for:
+- Linux AMD64
+- Linux ARM64
+- macOS Intel (AMD64)
+- macOS Apple Silicon (ARM64)" --allow-empty
+            git push
+          fi
