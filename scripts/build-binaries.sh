@@ -6,9 +6,15 @@ set -e
 
 echo "Building Gokku binaries for multiple platforms..."
 
-# Clean previous builds
+# Clean previous builds (but preserve .gitkeep if exists)
+if [ -f "bin/.gitkeep" ]; then
+    mv bin/.gitkeep /tmp/.gitkeep
+fi
 rm -rf bin/
 mkdir -p bin/
+if [ -f "/tmp/.gitkeep" ]; then
+    mv /tmp/.gitkeep bin/.gitkeep
+fi
 
 # Build for different platforms
 platforms=(
