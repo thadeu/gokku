@@ -3,7 +3,7 @@
 # Automatically detects if installing on server or client
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/USER/REPO/main/infra/install | bash
+#   curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
 #
 #   Or with options:
 #   curl -fsSL https://...install | bash -s -- --server
@@ -19,7 +19,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Configuration
-REPO_URL="${GOKKU_REPO_URL:-https://raw.githubusercontent.com/thadeu/gokku}"
+REPO_URL="${GOKKU_REPO_URL:-https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main}"
 INSTALL_DIR="${GOKKU_INSTALL_DIR:-$HOME/.gokku}"
 BIN_DIR="/usr/local/bin"
 VERSION="${GOKKU_VERSION:-latest}"
@@ -157,6 +157,7 @@ check_requirements() {
 }
 
 download_binary() {
+    # https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/bin/gokku-darwin-arm64
     log "Downloading gokku binary for $OS/$ARCH..."
 
     mkdir -p $INSTALL_DIR/tmp
@@ -173,8 +174,10 @@ download_binary() {
     )
 
     local downloaded=false
+
     for url in "${binary_urls[@]}"; do
         log "Trying to download from: $url"
+
         if curl -fsSL "$url" -o "gokku"; then
             log_success "Binary downloaded successfully"
             downloaded=true
@@ -215,10 +218,10 @@ install_binary() {
 
     # Try to install to /usr/local/bin
     if [ -w "$BIN_DIR" ]; then
-        cp gokku $BIN_DIR/
+        mv gokku $BIN_DIR/
         chmod +x $BIN_DIR/gokku
     else
-        sudo cp gokku $BIN_DIR/
+        sudo mv gokku $BIN_DIR/
         sudo chmod +x $BIN_DIR/gokku
     fi
 

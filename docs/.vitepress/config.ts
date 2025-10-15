@@ -4,6 +4,7 @@ export default defineConfig({
   title: "Gokku",
   description: "Lightweight git-push deployment system for Go and multi-language applications",
   base: '/',
+  ignoreDeadLinks: true,
   
   head: [
     ['link', { rel: 'icon', href: '/gokku/favicon.ico' }]
