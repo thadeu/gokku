@@ -9,7 +9,7 @@ Local CLI for managing deployments. Abstracts SSH commands for easier server man
 ### Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/main/infra/install | bash
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
 ```
 
 ### Usage

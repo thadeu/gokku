@@ -32,7 +32,7 @@ apps:
       keep_releases: 5
       restart_policy: always
       restart_delay: 5
-    
+
   - name: voice-agent
     lang: go
     build:
@@ -59,7 +59,7 @@ apps:
       keep_releases: 5
       restart_policy: always
       restart_delay: 5
-    
+
   - name: vad
     lang: python
     build:
@@ -103,8 +103,6 @@ user:
   deploy_user: ubuntu
   deploy_group: ubuntu
 
-# Repository URLs (for installation)
-repository:
-  github_url: https://raw.githubusercontent.com/USER/REPO/main/infra
-  s3_bucket: ""
-  s3_prefix: gokku-infra
+  # Repository URLs (for installation)
+  repository:
+    github_url: https://raw.githubusercontent.com/thadeu/gokku

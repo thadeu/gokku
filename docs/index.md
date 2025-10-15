@@ -44,7 +44,7 @@ features:
 Install Gokku on your server:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/main/infra/install | bash
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
 ```
 
 Create a minimal `gokku.yml`:

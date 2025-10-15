@@ -19,7 +19,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Configuration
-REPO_URL="${GOKKU_REPO_URL:-https://raw.githubusercontent.com/thadeu/gooku/main/infra}"
+REPO_URL="${GOKKU_REPO_URL:-https://raw.githubusercontent.com/thadeu/gokku}"
 INSTALL_DIR="${GOKKU_INSTALL_DIR:-$HOME/.gokku}"
 BIN_DIR="/usr/local/bin"
 VERSION="${GOKKU_VERSION:-latest}"
@@ -128,7 +128,8 @@ check_requirements() {
         missing_deps+=("git")
     fi
 
-    if ! command -v go &> /dev/null; then
+    # Go is only required for client development, not for server installation
+    if [ "$MODE" = "client" ] && ! command -v go &> /dev/null; then
         missing_deps+=("go")
     fi
 
@@ -137,9 +138,17 @@ check_requirements() {
         echo ""
         echo "Install them:"
         if [ "$OS" = "linux" ]; then
-            echo "  sudo apt update && sudo apt install -y git curl golang"
+            if [ "$MODE" = "client" ]; then
+                echo "  sudo apt update && sudo apt install -y git curl golang"
+            else
+                echo "  sudo apt update && sudo apt install -y git curl"
+            fi
         else
-            echo "  brew install git go"
+            if [ "$MODE" = "client" ]; then
+                echo "  brew install git go"
+            else
+                echo "  brew install git"
+            fi
         fi
         exit 1
     fi
@@ -147,47 +156,56 @@ check_requirements() {
     log_success "Requirements met"
 }
 
-download_source() {
-    log "Downloading gokku source..."
+download_binary() {
+    log "Downloading gokku binary for $OS/$ARCH..."
 
     mkdir -p $INSTALL_DIR/tmp
     cd $INSTALL_DIR/tmp
 
-    # Download CLI source
-    if [ -d "gokku" ]; then
-        rm -rf gokku
-    fi
+    # Construct binary name based on OS and architecture
+    local binary_name="gokku-$OS-$ARCH"
 
-    mkdir -p gokku/cmd/cli
+    # For backwards compatibility, try different naming schemes
+    local binary_urls=(
+        "$REPO_URL/bin/$binary_name"
+        "$REPO_URL/bin/$binary_name.tar.gz"
+        "$REPO_URL/bin/$binary_name.gz"
+    )
 
-    if ! curl -fsSL "$REPO_URL/cmd/cli/main.go" -o gokku/cmd/cli/main.go; then
-        log_error "Failed to download CLI source"
+    local downloaded=false
+    for url in "${binary_urls[@]}"; do
+        log "Trying to download from: $url"
+        if curl -fsSL "$url" -o "gokku"; then
+            log_success "Binary downloaded successfully"
+            downloaded=true
+            break
+        fi
+    done
+
+    if [ "$downloaded" = false ]; then
+        log_error "Failed to download binary for $OS/$ARCH"
+        echo ""
+        echo "Available binaries should be in the bin/ folder:"
+        echo "  - gokku-linux-amd64"
+        echo "  - gokku-linux-arm64"
+        echo "  - gokku-darwin-amd64"
+        echo "  - gokku-darwin-arm64"
+        echo ""
+        echo "Please ensure the binary exists in the repository."
         exit 1
     fi
 
-    if ! curl -fsSL "$REPO_URL/go.mod" -o gokku/go.mod; then
-        log_error "Failed to download go.mod"
-        exit 1
+    # Make binary executable
+    chmod +x gokku
+
+    # If downloaded compressed file, extract it
+    if [[ "$url" == *.tar.gz ]]; then
+        tar -xzf gokku && rm gokku.tar.gz
+    elif [[ "$url" == *.gz ]]; then
+        gunzip gokku.gz
     fi
 
-    if ! curl -fsSL "$REPO_URL/go.sum" -o gokku/go.sum 2>/dev/null; then
-        log_warn "go.sum not found, will be generated"
-    fi
-
-    log_success "Source downloaded"
-}
-
-build_binary() {
-    log "Building gokku binary..."
-
-    cd $INSTALL_DIR/tmp/gokku
-
-    if ! go build -o gokku ./cmd/cli; then
-        log_error "Failed to build gokku"
-        exit 1
-    fi
-
-    log_success "Binary compiled"
+    log_success "Binary ready for installation"
 }
 
 install_binary() {
@@ -392,8 +410,7 @@ main() {
     detect_mode
     detect_os
     check_requirements
-    download_source
-    build_binary
+    download_binary
     install_binary
 
     if [ "$MODE" = "server" ]; then

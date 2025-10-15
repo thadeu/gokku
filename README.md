@@ -529,7 +529,7 @@ your-project/              # Your Go project
 
 ```bash
 # One-line install (future)
-curl -fsSL https://raw.githubusercontent.com/USER/deployment-system/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
 
 # With custom config
 curl -fsSL https://... | bash -s -- --config ./gokku.yml

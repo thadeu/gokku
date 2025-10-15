@@ -9,24 +9,37 @@ This guide covers installing Gokku on your server and local machine using the un
 - **RAM**: 512MB minimum (1GB+ recommended)
 - **Disk**: 2GB free space
 - **Network**: Port 22 (SSH) open for server
-- **Go**: 1.20+ (for compilation)
+- **Go**: 1.20+ (only required for client development, not for server installation)
 
 ## Universal Installer
 
 Gokku has a single universal installer that automatically detects if you're installing on a server or client.
+
+### How It Works
+
+The installer automatically:
+- **Detects your OS and architecture** (Linux/macOS, x86_64/ARM64)
+- **Downloads pre-compiled binaries** from the repository (no Go compilation needed)
+- **No dependencies required** for server installation (Go only needed for client development)
+
+**Supported platforms:**
+- Linux x86_64 (amd64)
+- Linux ARM64
+- macOS Intel (amd64)
+- macOS Apple Silicon (arm64)
 
 ### Server Installation
 
 SSH into your server and run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/main/infra/install | bash
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
 ```
 
 Or explicitly specify server mode:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/main/infra/install | bash -s -- --server
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash -s -- --server
 ```
 
 This installs:
@@ -41,13 +54,13 @@ This installs:
 On your local machine:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/main/infra/install | bash
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
 ```
 
 Or explicitly specify client mode:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/main/infra/install | bash -s -- --client
+curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash -s -- --client
 ```
 
 This installs:
