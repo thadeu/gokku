@@ -59,7 +59,7 @@ CLIENT COMMANDS (run from local machine):
   server         Manage server connections
   apps           List applications on remote server
   config         Manage environment variables (use --remote)
-  run            Run arbitrary commands on remote server
+  run            Run arbitrary commands (use --remote)
   logs           View application logs (use --remote)
   status         Check services status (use --remote)
   restart        Restart services (use --remote)
@@ -71,6 +71,11 @@ CLIENT COMMANDS (run from local machine):
 
 SERVER COMMANDS (run directly on server):
   config         Manage environment variables locally (--app required)
+  run            Run arbitrary commands locally
+  logs           View application logs locally
+  status         Check services status locally
+  restart        Restart services locally
+  rollback       Rollback to previous release locally
 
 Server Management:
   gokku server add <name> <host>           Add a server
@@ -100,6 +105,12 @@ Server Commands (run on server only):
   gokku config list -a <app> -e production           (explicit env)
   gokku config unset KEY -a <app>
 
+  gokku run <command>                                (run locally)
+  gokku logs <app> <env> [-f]                        (view logs locally)
+  gokku status [app] [env]                           (check status locally)
+  gokku restart <app> <env>                          (restart locally)
+  gokku rollback <app> <env> [release-id]            (rollback locally)
+
 Examples:
   # Setup server connection (client)
   gokku server add prod ubuntu@ec2.compute.amazonaws.com
@@ -117,6 +128,9 @@ Examples:
   # Server usage - run directly on server (no --remote needed)
   gokku config set PORT=8080 --app api
   gokku config list --app api --env production
+  gokku logs api production -f
+  gokku status
+  gokku restart api production
 
 Remote Format:
   --remote <git-remote-name>
@@ -128,12 +142,11 @@ Remote Format:
 
   Examples of git remotes:
   - api-production → ubuntu@server:api
-  - vad-staging    → ubuntu@server:/opt/gokku/repos/vad.git
+  - worker-production    → ubuntu@server:/opt/gokku/repos/worker.git
 
   Environment is extracted from remote name suffix:
   - api-production → app: api, env: production
-  - vad-staging    → app: vad, env: staging
-  - worker-dev     → app: worker, env: dev
+  - worker-production     → app: worker, env: production
 
 Configuration:
   Config file: ~/.gokku/config.yml`)
