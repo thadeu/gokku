@@ -21,7 +21,7 @@ BASE_IMAGE="__BASE_IMAGE__"
 MISE_PLUGINS="__MISE_PLUGINS__"
 
 # Source helpers
-SCRIPT_DIR="$(dirname "$0")/../../scripts"
+SCRIPT_DIR="$(dirname "$0")/../../../scripts"
 if [ -f "$SCRIPT_DIR/mise-helpers.sh" ]; then
     source "$SCRIPT_DIR/mise-helpers.sh"
 fi
