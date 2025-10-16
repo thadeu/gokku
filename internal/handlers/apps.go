@@ -256,7 +256,8 @@ CGO_ENABLED="0"
 export PATH="$PATH:/usr/local/go/bin:/usr/local/bin"
 
 # Source mise helpers if available
-SCRIPT_DIR="/opt/gokku"
+BASE_GOKKU_DIR="/opt/gokku"
+SCRIPT_DIR="/opt/gokku/scripts"
 if [ -f "$SCRIPT_DIR/mise-helpers.sh" ]; then
     source "$SCRIPT_DIR/mise-helpers.sh"
 fi
@@ -290,7 +291,7 @@ fi
 # Update gokku.yml from repository if it exists
 if [ -f "$RELEASE_DIR/gokku.yml" ]; then
     echo "-----> Updating gokku.yml from repository..."
-    cp -f "$RELEASE_DIR/gokku.yml" "$SCRIPT_DIR/gokku.yml" 2>/dev/null || echo "No gokku.yml found"
+    cp -f "$RELEASE_DIR/gokku.yml" "$BASE_GOKKU_DIR/gokku.yml" 2>/dev/null || echo "No gokku.yml found"
 
     # Try to read app-specific configuration from gokku.yml
     if command -v yq >/dev/null 2>&1; then
@@ -317,7 +318,7 @@ if [ -f "$RELEASE_DIR/gokku.yml" ]; then
         fi
     fi
 
-    source "$SCRIPT_DIR/config-loader.sh" 2>/dev/null || echo "Config loader not found"
+    GOKKU_CONFIG="$BASE_GOKKU_DIR/gokku.yml" source "$SCRIPT_DIR/config-loader.sh" 2>/dev/null || echo "Config loader not found"
 else
     echo "-----> No gokku.yml found in repository, using defaults"
 fi
