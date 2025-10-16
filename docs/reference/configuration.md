@@ -197,8 +197,8 @@ deployment:
   restart_policy: on-failure
   restart_delay: 10
   post_deploy:
-    - "cd /opt/gokku/apps/my-app/production/current && npm run db:migrate"
-    - "cd /opt/gokku/apps/my-app/production/current && npm run cache:warm"
+    - npm run db:migrate"
+    - npm run cache:warm"
 ```
 
 ### docker

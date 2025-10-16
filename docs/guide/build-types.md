@@ -89,8 +89,7 @@ apps:
         default_env_vars:
           RAILS_ENV: production
     post_deploy:
-      - "cd /opt/gokku/apps/rails-app/production/current && bundle exec rails db:migrate"
-      - "cd /opt/gokku/apps/rails-app/production/current && bundle exec rails assets:precompile"
+      - bundle exec rails db:migrate"
 ```
 
 **Post-deploy commands:**

@@ -66,8 +66,8 @@ apps:
           JWT_SECRET: "your-jwt-secret-here"
     deployment:
       post_deploy:
-        - "cd /opt/gokku/apps/react-app/production/current && npm run db:migrate"
-        - "cd /opt/gokku/apps/react-app/production/current && npm run cache:warm"
+        - npm run db:migrate"
+        - npm run cache:warm"
 ```
 
 **Alternative without Procfile**: If not using Procfile, you can define individual processes in gokku.yml.

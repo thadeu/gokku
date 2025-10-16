@@ -61,8 +61,8 @@ apps:
           SECRET_KEY_BASE: "your-secret-key-here"
     deployment:
       post_deploy:
-        - "cd /opt/gokku/apps/rails-app/production/current && bundle exec rails db:migrate"
-        - "cd /opt/gokku/apps/rails-app/production/current && bundle exec rails assets:precompile"
+        - bundle exec rails db:migrate"
+        - bundle exec rails db:status"
 ```
 
 **Alternative without Procfile**: If not using Procfile, you can define individual processes in gokku.yml.

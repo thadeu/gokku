@@ -4,9 +4,9 @@ A **100% generic** git-push deployment system for multi-language applications. N
 
 **Gokku** = Go + Dokku - A lightweight alternative to Dokku, focused on Go applications with multi-language support.
 
-<div href="#" style="width: 26%; margin: 0 auto;">
-  <img src="docs/images/gokku-t-2.png" alt="Gokku" style="position: relative; margin: 0 auto; z-index: 1; display: flex; align-items: center; justify-content: center; text-align: center; mix-blend-mode: overlay;">
-</div>
+<a href="#" style="width: 26%; margin: 0 auto;">
+  <img src="./docs/images/gokku-t-2.png" alt="Gokku" style="position: relative; margin: 0 auto; z-index: 1; display: flex; align-items: center; justify-content: center; text-align: center;">
+</a>
 
 ## Key Features
 
