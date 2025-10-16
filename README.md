@@ -1,12 +1,14 @@
+<p align="center">
+  <img src="docs/images/gokku-t-2.png" alt="Descrição da imagem" width="250">
+</p>
+
 # Gokku Deployment System
 
 A **100% generic** git-push deployment system for multi-language applications. No hard-coded app names, ports, or paths. Everything is configurable via `gokku.yml`.
 
 **Gokku** = Go + Dokku - A lightweight alternative to Dokku, focused on Go applications with multi-language support.
 
-<a href="#" style="width: 26%; margin: 0 auto;">
-  <img src="./docs/images/gokku-t-2.png" alt="Gokku" style="position: relative; margin: 0 auto; z-index: 1; display: flex; align-items: center; justify-content: center; text-align: center;">
-</a>
+<h1 style="z-index: 999; text-align: center;"></h1>
 
 ## Key Features
 
