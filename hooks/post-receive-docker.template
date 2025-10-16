@@ -324,14 +324,13 @@ else
         go)
             # For Go, we need to copy from the correct build directory
             if [ "$BUILD_DIR" != "$RELEASE_DIR" ]; then
-                # Build directory is different, copy from subdirectory
+                # Build directory is different, copy subdirectory and cd to it
                 BUILD_CONTEXT=$(basename "$BUILD_DIR")
                 cat > "$DOCKERFILE_PATH" << DOCKERFILE_GO
 FROM __BASE_IMAGE__ AS builder
+COPY $BUILD_CONTEXT /app
 WORKDIR /app
-COPY $BUILD_CONTEXT/go.mod $BUILD_CONTEXT/go.sum* ./
 RUN go mod download
-COPY $BUILD_CONTEXT/ .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o app __BUILD_PATH__
 
 FROM alpine:latest

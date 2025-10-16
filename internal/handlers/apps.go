@@ -403,7 +403,27 @@ if [ -f "$BUILD_DIR/go.mod" ]; then
         # Docker build and deploy - generate Dockerfile in RELEASE_DIR
         cd "$RELEASE_DIR"
         echo "-----> Generating Dockerfile..."
-        cat > Dockerfile << DOCKERFILE_GO_EOF
+
+        if [ "$BUILD_DIR" != "$RELEASE_DIR" ]; then
+            # Build directory is different, copy subdirectory and cd to it
+            BUILD_CONTEXT=$(basename "$BUILD_DIR")
+            cat > Dockerfile << DOCKERFILE_GO_EOF
+FROM golang:1.21-alpine AS builder
+COPY $BUILD_CONTEXT /app
+WORKDIR /app
+RUN go mod download
+RUN CGO_ENABLED=$CGO_ENABLED GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-w -s" -o app $BUILD_PATH
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates tzdata
+WORKDIR /root/
+COPY --from=builder /app/app .
+EXPOSE \${PORT:-8080}
+CMD ["./app"]
+DOCKERFILE_GO_EOF
+        else
+            # Standard build from root directory
+            cat > Dockerfile << DOCKERFILE_GO_EOF
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum* ./
@@ -418,6 +438,7 @@ COPY --from=builder /app/app .
 EXPOSE \${PORT:-8080}
 CMD ["./app"]
 DOCKERFILE_GO_EOF
+        fi
 
         echo "-----> Building Docker image..."
         if ! docker build -t "$APP_NAME:latest" .; then
