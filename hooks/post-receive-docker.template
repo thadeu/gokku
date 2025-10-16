@@ -12,6 +12,7 @@ SERVICE_NAME="$APP_NAME-$ENVIRONMENT"
 CONTAINER_NAME="$APP_NAME-$ENVIRONMENT"
 LANG="__LANG__"
 BUILD_PATH="__BUILD_PATH__"
+BUILD_WORKDIR="__BUILD_WORKDIR__"
 ENTRYPOINT="__ENTRYPOINT__"
 DOCKERFILE="__DOCKERFILE__"
 KEEP_RELEASES="__KEEP_RELEASES__"
@@ -251,6 +252,13 @@ GIT_WORK_TREE=$RELEASE_DIR git checkout -f master
 
 cd $RELEASE_DIR
 
+# Determine build directory
+if [ "$BUILD_WORKDIR" != "." ] && [ -n "$BUILD_WORKDIR" ]; then
+    BUILD_DIR="$RELEASE_DIR/$BUILD_WORKDIR"
+else
+    BUILD_DIR="$RELEASE_DIR"
+fi
+
 # Check if Procfile exists - if so, force docker mode and create multiple processes
 if [ -f "Procfile" ]; then
     echo "-----> Detected Procfile, enabling multi-process deployment..."
@@ -314,7 +322,28 @@ else
     # Generate Dockerfile based on language
     case "$LANG" in
         go)
-            cat > "$DOCKERFILE_PATH" << 'DOCKERFILE_GO'
+            # For Go, we need to copy from the correct build directory
+            if [ "$BUILD_DIR" != "$RELEASE_DIR" ]; then
+                # Build directory is different, copy from subdirectory
+                BUILD_CONTEXT=$(basename "$BUILD_DIR")
+                cat > "$DOCKERFILE_PATH" << DOCKERFILE_GO
+FROM __BASE_IMAGE__ AS builder
+WORKDIR /app
+COPY $BUILD_CONTEXT/go.mod $BUILD_CONTEXT/go.sum* ./
+RUN go mod download
+COPY $BUILD_CONTEXT/ .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o app __BUILD_PATH__
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates tzdata
+WORKDIR /root/
+COPY --from=builder /app/app .
+EXPOSE \${PORT:-8080}
+CMD ["./app"]
+DOCKERFILE_GO
+            else
+                # Standard build from root directory
+                cat > "$DOCKERFILE_PATH" << DOCKERFILE_GO
 FROM __BASE_IMAGE__ AS builder
 WORKDIR /app
 COPY go.mod go.sum* ./
@@ -326,9 +355,10 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /root/
 COPY --from=builder /app/app .
-EXPOSE ${PORT:-8080}
+EXPOSE \${PORT:-8080}
 CMD ["./app"]
 DOCKERFILE_GO
+            fi
             sed -i "s|__BASE_IMAGE__|$BASE_IMAGE|g" "$DOCKERFILE_PATH"
             sed -i "s|__BUILD_PATH__|$BUILD_PATH|g" "$DOCKERFILE_PATH"
             ;;
