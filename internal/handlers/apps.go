@@ -386,7 +386,7 @@ if [ -f "$BUILD_DIR/go.mod" ]; then
 
     # Change to build directory
     cd "$BUILD_DIR"
-    
+
     # Add Go to PATH if available
     export PATH="$PATH:/usr/local/go/bin"
 
@@ -405,7 +405,7 @@ if [ -f "$BUILD_DIR/go.mod" ]; then
         esac
 
         cat > Dockerfile << DOCKERFILE_GO_EOF
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 COPY $COPY_SOURCE /app
 WORKDIR /app
 RUN go mod download
