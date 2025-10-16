@@ -501,6 +501,61 @@ cleanup_old_blue_container() {
     fi
 }
 
+# Recreate active container with new environment variables
+recreate_active_container() {
+    local app_name=$1
+    local env_file=$2
+    local app_dir=$3
+
+    # Determine which container is active
+    local active_container=""
+    if sudo docker ps --format '{{.Names}}' | grep -q "^${app_name}-blue$"; then
+        active_container="${app_name}-blue"
+    elif sudo docker ps --format '{{.Names}}' | grep -q "^${app_name}-green$"; then
+        active_container="${app_name}-green"
+    else
+        echo "ERROR: No active container found for $app_name"
+        return 1
+    fi
+
+    echo "-----> Recreating container: $active_container"
+
+    # Get current image
+    local image=$(sudo docker inspect "$active_container" --format='{{.Config.Image}}' 2>/dev/null)
+    if [ -z "$image" ]; then
+        echo "ERROR: Could not determine container image"
+        return 1
+    fi
+
+    echo "       Using image: $image"
+
+    # Get port from env file
+    local port=$(get_container_port "$env_file" "8080")
+    echo "       Using port: $port"
+
+    # Stop and remove old container
+    echo "       Stopping old container..."
+    sudo docker stop "$active_container" >/dev/null 2>&1 || true
+    sudo docker rm "$active_container" >/dev/null 2>&1 || true
+
+    # Start new container with same name and updated env
+    echo "       Starting new container with updated configuration..."
+    sudo docker run -d \
+        --name "$active_container" \
+        --restart always \
+        -p "${port}:${port}" \
+        --env-file "$env_file" \
+        "$image" >/dev/null
+
+    if [ $? -eq 0 ]; then
+        echo "✓ Container recreated successfully with new environment"
+        return 0
+    else
+        echo "ERROR: Failed to recreate container"
+        return 1
+    fi
+}
+
 # Get container port from env file
 get_container_port() {
     local env_file=$1

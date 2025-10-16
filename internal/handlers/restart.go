@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
 	"infra/internal"
 )
@@ -51,56 +50,36 @@ func handleRestart(args []string) {
 	fmt.Printf("Restarting %s...\n", serviceName)
 
 	if localExecution {
-		// Local execution on server - Docker only
-
-		// Check for blue or green container first, then fallback to service name
-		containerName := serviceName
-		dockerCmd := exec.Command("sudo", "docker", "ps", "-a", "--format", "{{.Names}}")
-		output, err := dockerCmd.Output()
-
-		if err != nil {
-			fmt.Printf("Error checking Docker containers: %v\n", err)
-			os.Exit(1)
+		// Local execution on server - recreate container with new env
+		baseDir := "/opt/gokku"
+		if envVar := os.Getenv("GOKKU_BASE_DIR"); envVar != "" {
+			baseDir = envVar
 		}
 
-		containers := string(output)
-		if strings.Contains(containers, app+"-blue") {
-			containerName = app + "-blue"
-		} else if strings.Contains(containers, app+"-green") {
-			containerName = app + "-green"
-		}
+		envFile := fmt.Sprintf("%s/apps/%s/%s/shared/.env", baseDir, app, env)
+		appDir := fmt.Sprintf("%s/apps/%s/%s", baseDir, app, env)
 
-		// Restart the container
-		cmd := exec.Command("sudo", "docker", "restart", containerName)
+		// Source docker-helpers and recreate container
+		restartScript := fmt.Sprintf(`
+			source /opt/gokku/scripts/docker-helpers.sh
+			recreate_active_container "%s" "%s" "%s"
+		`, app, envFile, appDir)
+
+		cmd := exec.Command("bash", "-c", restartScript)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err == nil {
-			fmt.Printf("✓ Container restarted: %s\n", containerName)
-		} else {
-			fmt.Printf("Error restarting container: %v\n", err)
+		if err := cmd.Run(); err != nil {
+			fmt.Printf("Error recreating container: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
-		// Remote execution via SSH - Docker only
+		// Remote execution via SSH - recreate container with new env
 		sshCmd := fmt.Sprintf(`
-			# Check for blue or green container first
-			CONTAINER_NAME="%s"
-			CONTAINERS=$(sudo docker ps -a --format "{{.Names}}")
-
-			if echo "$CONTAINERS" | grep -q "%s-blue"; then
-				CONTAINER_NAME="%s-blue"
-			elif echo "$CONTAINERS" | grep -q "%s-green"; then
-				CONTAINER_NAME="%s-green"
-			fi
-
-			# Restart the container
-			if sudo docker restart "$CONTAINER_NAME" 2>/dev/null; then
-				echo "✓ Container restarted: $CONTAINER_NAME"
-			else
-				echo "Error: Container '$CONTAINER_NAME' not found or failed to restart"
-				exit 1
-			fi
-		`, serviceName, app, app, app, app)
+			source /opt/gokku/scripts/docker-helpers.sh
+			ENV_FILE="/opt/gokku/apps/%s/%s/shared/.env"
+			APP_DIR="/opt/gokku/apps/%s/%s"
+			recreate_active_container "%s" "$ENV_FILE" "$APP_DIR"
+		`, app, env, app, env, app)
 
 		cmd := exec.Command("ssh", host, sshCmd)
 		cmd.Stdout = os.Stdout
