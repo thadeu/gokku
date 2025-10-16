@@ -127,11 +127,11 @@ See [Configuration](/guide/configuration) for all options.
 On the server, setup your app:
 
 ```bash
-cd /opt/gokku
-./scripts/deploy-server-setup.sh api production
+# Just push - setup happens automatically!
+git push production main
 ```
 
-This creates:
+The first push automatically creates:
 - Git repository at `api`
 - App directory at `/opt/gokku/apps/api/`
 - Systemd service `api-production`
@@ -228,12 +228,9 @@ ssh ubuntu@your-server "sudo journalctl -u api-production -f"
 Setup staging environment:
 
 ```bash
-# On server
-cd /opt/gokku
-./scripts/deploy-server-setup.sh api staging
-
-# On local machine
+# On local machine - just add remote and push
 git remote add staging ubuntu@your-server:api
+git push staging develop
 ```
 
 Deploy to staging:

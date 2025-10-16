@@ -6,6 +6,7 @@ A **100% generic** git-push deployment system for multi-language applications. N
 
 ## Key Features
 
+✅ **Auto-Setup** - Zero manual configuration, just push and deploy  
 ✅ **Zero Hard-coding** - Everything configured via `gokku.yml`  
 ✅ **Multi-Language** - Go, Python, Node.js (extensible)  
 ✅ **Multi-Runtime** - Systemd or Docker deployment  
@@ -216,13 +217,12 @@ apps:
 
 - `gokku.yml` - **Main configuration file**
 - `config-loader.sh` - Reads config and exports variables
-- `deploy-server-setup.sh` - Generic setup script
-- `env-manager.go` - Generic env var manager
+- `hooks/` - Git hooks for automatic deployment
+- `gokku` - CLI binary for management
 
 ### Installers
 
-- `install-server.sh` - One-line server installer
-- `install-client.sh` - One-line client installer
+- `install` - Universal installer (auto-detects server/client)
 - `gokku-cli.go` - CLI source code
 
 ### Documentation
@@ -230,6 +230,31 @@ apps:
 - `README.md` - This file
 - `TESTING.md` - Testing guide
 - `INSTALLERS.md` - Installer documentation
+
+---
+
+## Auto-Setup Feature
+
+Gokku now features **automatic setup** on first deploy. No manual configuration required!
+
+### How It Works
+
+1. **First Push**: When you push to a new app/environment for the first time
+2. **Auto-Detection**: Gokku detects it's a first deploy
+3. **Config Reading**: Reads your `gokku.yml` from the repository
+4. **Infrastructure Creation**: Automatically creates:
+   - Git repository structure
+   - Systemd services
+   - Environment files
+   - Directory structure
+5. **Deploy**: Builds and deploys your application
+
+### Benefits
+
+- **Zero Manual Setup**: No need to run setup scripts
+- **Configuration-Driven**: Uses your `gokku.yml` for all settings
+- **Consistent**: Same setup process for all apps
+- **Error-Free**: No manual steps to forget or get wrong
 
 ---
 
@@ -261,32 +286,33 @@ environments:
 
 ### 2. Setup Server
 
-```bash
-# With config file
-./deploy-server-setup.sh api production
+The server setup is now **automatic**! No manual setup required.
 
-# Or set PAPIS_CONFIG environment variable
-export PAPIS_CONFIG=/path/to/gokku.yml
-./deploy-server-setup.sh api production
+Simply push your code and Gokku will:
+- Detect it's the first deploy
+- Read your `gokku.yml` configuration
+- Create all necessary infrastructure
+- Deploy your application
+
+```bash
+# Just push - setup happens automatically!
+git push api-production main
 ```
 
-### 3. Manage Environment Variables
+### 3. Deploy
 
 ```bash
-# Build env-manager
-cd infra
-go build -o env-manager env-manager.go
-
-# Use it
-./env-manager --app api --env production set API_KEY=xxx
-./env-manager --app api --env production list
-```
-
-### 4. Deploy
-
-```bash
+# First deploy - setup happens automatically
 git push api-production main
 git push worker-staging develop
+```
+
+### 4. Manage Environment Variables
+
+```bash
+# Using gokku CLI
+gokku config set API_KEY=xxx --remote api-production
+gokku config list --remote api-production
 ```
 
 ---
@@ -575,24 +601,25 @@ build:
   work_dir: .  # or apps/trunk for your structure
 ```
 
-### Step 2: Setup Server
+### Step 2: Deploy (Auto-Setup)
 
 ```bash
-./deploy-server-setup.sh api production
-```
-
-### Step 3: Build env-manager
-
-```bash
-go build -o env-manager env-manager.go
-# Copy to server
-scp env-manager server:/usr/local/bin/
-```
-
-### Step 4: Deploy
-
-```bash
+# First push automatically sets up everything
 git push api-production main
+```
+
+The first push will:
+- Create the git repository
+- Set up systemd services
+- Configure environment variables from `gokku.yml`
+- Build and deploy your application
+
+### Step 3: Manage Environment Variables
+
+```bash
+# Using gokku CLI
+gokku config set PORT=8080 --remote api-production
+gokku config list --remote api-production
 ```
 
 ---
@@ -736,34 +763,44 @@ env-manager --app api --env production set \
 
 ```bash
 # 1. Create fresh Ubuntu EC2
-# 2. Install Go
-# 3. Copy files
-scp -r infra/ ubuntu@ec2:/tmp/
+# 2. Install Gokku
+curl -fsSL https://gokku-vm.com/install | bash
 
-# 4. SSH and test
-ssh ubuntu@ec2
-cd /tmp/infra
+# 3. Create test project locally
+mkdir test-project && cd test-project
+git init
 
-# 5. Create test config
+# 4. Create test config
 cat > gokku.yml << EOF
 project:
   name: test-project
   
 apps:
   - name: test-app
-    build_path: ./main.go
-    binary_name: test-app
+    build:
+      path: ./main.go
+      binary_name: test-app
 
 environments:
   - name: production
     branch: main
 EOF
 
-# 6. Run setup
-./deploy-server-setup-v2.sh test-app production
+# 5. Create simple Go app
+cat > main.go << EOF
+package main
+import "fmt"
+func main() { fmt.Println("Hello Gokku!") }
+EOF
+
+# 6. Add git remote and push (auto-setup happens)
+git add .
+git commit -m "Initial commit"
+git remote add production ubuntu@ec2:test-app
+git push production main
 
 # 7. Verify
-sudo systemctl status test-app-production
+ssh ubuntu@ec2 "sudo systemctl status test-app-production"
 ```
 
 ---

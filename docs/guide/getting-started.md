@@ -61,7 +61,7 @@ apps:
       binary_name: api
 ```
 
-### Step 4: Deploy
+### Step 4: Deploy (Auto-Setup)
 
 **Using gokku CLI (Recommended):**
 
@@ -75,7 +75,7 @@ gokku deploy api production
 # Add git remote
 git remote add production ubuntu@your-server:api
 
-# Push
+# Push - setup happens automatically!
 git push production main
 ```
 
@@ -83,6 +83,12 @@ Watch the magic happen:
 
 ```
 -----> Deploying api to production...
+-----> Checking if auto-setup is needed...
+-----> First deploy detected, running auto-setup...
+-----> Found gokku.yml, configuring from repository...
+-----> Created .env file from gokku.yml configuration
+-----> Created systemd service from gokku.yml
+-----> Auto-setup complete!
 -----> Extracting code...
 -----> Building api...
 -----> Build complete (5.2M)
@@ -124,11 +130,12 @@ Your app is live! 🎉
 ## What Happened?
 
 1. **Git push** triggered a post-receive hook
-2. **Code extracted** to a new release directory
-3. **Build executed** (compiled Go binary or built Docker image)
-4. **Symlink updated** to new release (atomic deploy)
-5. **Service restarted** automatically
-6. **Old releases kept** for rollback
+2. **Auto-setup detected** first deploy and configured everything
+3. **Code extracted** to a new release directory
+4. **Build executed** (compiled Go binary or built Docker image)
+5. **Symlink updated** to new release (atomic deploy)
+6. **Service restarted** automatically
+7. **Old releases kept** for rollback
 
 ## Next Steps
 
@@ -157,12 +164,11 @@ ssh ubuntu@your-server "sudo journalctl -u api-production -n 50"
 
 ### Port Already in Use
 
-Set a different port in `.env`:
+Set a different port using gokku CLI:
 
 ```bash
-# On server
-cd /opt/gokku
-./env-manager --app api --env production set PORT=8081
+# Using gokku CLI
+gokku config set PORT=8081 --remote api-production
 ```
 
 ## Troubleshooting

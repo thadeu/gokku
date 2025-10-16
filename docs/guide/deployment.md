@@ -27,21 +27,7 @@ apps:
       path: ./cmd/api
 ```
 
-### 2. Setup on Server
-
-SSH to server and run setup:
-
-```bash
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api production"
-```
-
-This creates:
-- Git repository
-- App directories
-- Systemd service (or Docker setup)
-- Environment file
-
-### 3. Add Git Remote
+### 2. Add Git Remote
 
 On your local machine:
 
@@ -49,11 +35,17 @@ On your local machine:
 git remote add production ubuntu@server:api
 ```
 
-### 4. Deploy
+### 3. Deploy (Auto-Setup)
 
 ```bash
 git push production main
 ```
+
+The first push automatically creates:
+- Git repository
+- App directories
+- Systemd service (or Docker setup)
+- Environment file from `gokku.yml`
 
 Watch the deployment:
 

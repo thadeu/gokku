@@ -29,7 +29,105 @@ if [ -f "$SCRIPT_DIR/docker-helpers.sh" ]; then
     source "$SCRIPT_DIR/docker-helpers.sh"
 fi
 
+# Auto-setup function - detects first deploy and configures everything
+auto_setup_if_needed() {
+    echo "-----> Checking if auto-setup is needed..."
+
+    # Check if this is first deploy (no releases directory or empty)
+    if [ ! -d "$APP_DIR/releases" ] || [ -z "$(ls -A "$APP_DIR/releases" 2>/dev/null)" ]; then
+        echo "-----> First deploy detected, running auto-setup..."
+
+        # Extract code to temp directory to read gokku.yml
+        TEMP_DIR="/tmp/gokku-setup-$$"
+        mkdir -p "$TEMP_DIR"
+
+        # Extract current code
+        GIT_WORK_TREE="$TEMP_DIR" git checkout -f HEAD
+
+        # Check if gokku.yml exists in the repository
+        if [ -f "$TEMP_DIR/gokku.yml" ]; then
+            echo "-----> Found gokku.yml, configuring from repository..."
+
+            # Source config loader if available
+            if [ -f "$SCRIPT_DIR/config-loader.sh" ]; then
+                source "$SCRIPT_DIR/config-loader.sh"
+            fi
+
+            # Create directory structure
+            mkdir -p "$APP_DIR"/{releases,shared}
+
+            # Create initial .env file with defaults from gokku.yml
+            create_env_from_config "$TEMP_DIR/gokku.yml" "$APP_NAME" "$ENVIRONMENT"
+
+            echo "-----> Auto-setup complete!"
+        else
+            echo "-----> No gokku.yml found, using template defaults..."
+
+            # Create directory structure
+            mkdir -p "$APP_DIR"/{releases,shared}
+
+            # Create basic .env file
+            create_basic_env_file
+
+        fi
+
+        # Cleanup temp directory
+        rm -rf "$TEMP_DIR"
+    else
+        echo "-----> App already configured, skipping auto-setup"
+    fi
+}
+
+# Create .env file from gokku.yml configuration
+create_env_from_config() {
+    local config_file="$1"
+    local app_name="$2"
+    local env_name="$3"
+
+    local env_file="$APP_DIR/shared/.env"
+
+    echo "# Environment: $env_name" > "$env_file"
+    echo "# App: $app_name" >> "$env_file"
+    echo "# Generated: $(date)" >> "$env_file"
+    echo "" >> "$env_file"
+
+    # Extract default_env_vars from gokku.yml using yq or basic parsing
+    if command -v yq >/dev/null 2>&1; then
+        # Use yq if available
+        yq eval ".apps[] | select(.name == \"$app_name\") | .environments[] | select(.name == \"$env_name\") | .default_env_vars // {} | to_entries[] | \"\(.key)=\(.value)\"" "$config_file" >> "$env_file" 2>/dev/null || true
+    else
+        # Basic parsing fallback - extract PORT if not set
+        if ! grep -q "^PORT=" "$env_file"; then
+            echo "PORT=8080" >> "$env_file"
+        fi
+    fi
+
+    echo "-----> Created .env file from gokku.yml configuration"
+}
+
+# Create basic .env file when no gokku.yml is available
+create_basic_env_file() {
+    local env_file="$APP_DIR/shared/.env"
+
+    cat > "$env_file" << EOF
+# Environment: $ENVIRONMENT
+# App: $APP_NAME
+# Generated: $(date)
+
+# Add your environment variables here
+# Example:
+# API_KEY=your-key-here
+# DATABASE_URL=postgres://...
+PORT=8080
+EOF
+
+    echo "-----> Created basic .env file"
+}
+
 echo "-----> Deploying $APP_NAME to $ENVIRONMENT (Docker)..."
+
+# Run auto-setup if needed
+auto_setup_if_needed
 
 # Check and install Docker if needed (all-in-one setup)
 echo "-----> Checking Docker installation..."
