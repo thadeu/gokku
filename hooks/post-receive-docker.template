@@ -157,10 +157,11 @@ ln -sf $APP_DIR/shared/.env $RELEASE_DIR/.env
 echo "-----> Deploying..."
 ln -sfn $RELEASE_DIR $APP_DIR/current
 
-# Use Blue/Green deployment for zero-downtime updates
-echo "=====> Starting Blue/Green Deployment (Zero-Downtime)"
-blue_green_deploy "$APP_NAME" "$RELEASE_TAG" "$RELEASE_DIR/.env" "$RELEASE_DIR" "$SERVICE_NAME" 60 || {
-    echo "ERROR: Blue/Green deployment failed"
+# Determine deployment strategy based on ZERO_DOWNTIME env variable
+# Can be set in .env: ZERO_DOWNTIME=1 (enabled) or ZERO_DOWNTIME=0 (disabled)
+# Default: enabled (zero-downtime by default)
+deploy_container "$APP_NAME" "$RELEASE_TAG" "$RELEASE_DIR/.env" "$RELEASE_DIR" "$SERVICE_NAME" 60 || {
+    echo "ERROR: Deployment failed"
     exit 1
 }
 
