@@ -40,7 +40,6 @@ if ! command -v docker &> /dev/null; then
             echo "ERROR: Failed to install Docker"
             exit 1
         }
-        # Reload PATH after installation
         export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
     else
         echo "ERROR: docker-helpers.sh not found, please install Docker manually"
@@ -158,33 +157,78 @@ ln -sf $APP_DIR/shared/.env $RELEASE_DIR/.env
 echo "-----> Deploying..."
 ln -sfn $RELEASE_DIR $APP_DIR/current
 
-# Restart service (systemd will manage the container)
-echo "-----> Restarting $SERVICE_NAME..."
-if sudo systemctl is-active --quiet $SERVICE_NAME; then
-    sudo systemctl restart $SERVICE_NAME
-else
-    sudo systemctl start $SERVICE_NAME
+# Use Blue/Green deployment for zero-downtime updates
+echo "=====> Starting Blue/Green Deployment (Zero-Downtime)"
+blue_green_deploy "$APP_NAME" "$RELEASE_TAG" "$RELEASE_DIR/.env" "$RELEASE_DIR" "$SERVICE_NAME" 60 || {
+    echo "ERROR: Blue/Green deployment failed"
+    exit 1
+}
+
+# Setup systemd service if needed
+SYSTEMD_UNIT="/etc/systemd/system/${SERVICE_NAME}.service"
+if [ ! -f "$SYSTEMD_UNIT" ]; then
+    echo "-----> Creating systemd service: $SERVICE_NAME"
+    
+    CONTAINER_PORT=$(grep "^PORT=" "$RELEASE_DIR/.env" 2>/dev/null | cut -d= -f2 | tr -d ' ')
+    CONTAINER_PORT=${CONTAINER_PORT:-8080}
+    
+    sudo tee "$SYSTEMD_UNIT" > /dev/null << UNIT_EOF
+[Unit]
+Description=Gokku $APP_NAME ($ENVIRONMENT) Docker Container
+After=docker.service
+Requires=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=$(whoami)
+WorkingDirectory=$APP_DIR
+StandardOutput=journal
+StandardError=journal
+
+ExecStart=/usr/bin/docker start -a ${APP_NAME}-blue
+ExecStop=/usr/bin/docker stop ${APP_NAME}-blue
+ExecReload=/usr/bin/docker restart ${APP_NAME}-blue
+
+[Install]
+WantedBy=multi-user.target
+UNIT_EOF
+    
+    sudo systemctl daemon-reload
+    sudo systemctl enable $SERVICE_NAME
 fi
 
-# Wait and check
-sleep 3
+# Ensure service is running
+if ! sudo systemctl is-active --quiet $SERVICE_NAME; then
+    echo "-----> Starting systemd service: $SERVICE_NAME"
+    sudo systemctl start $SERVICE_NAME
+    sleep 3
+fi
 
-if sudo systemctl is-active --quiet $SERVICE_NAME; then
-    # Check if container is running
-    if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-        echo "-----> Deploy successful!"
-        echo "-----> App: $APP_NAME"
-        echo "-----> Environment: $ENVIRONMENT"
-        echo "-----> Release: $(basename $RELEASE_DIR)"
-        echo "-----> Image: $APP_NAME:$RELEASE_TAG"
-    else
-        echo "ERROR: Container is not running"
-        docker logs "$CONTAINER_NAME" 2>&1 | tail -20
-        exit 1
+# Verify deployment
+echo "=====> Verifying Blue/Green Deployment"
+if docker ps --format '{{.Names}}' | grep -q "^${APP_NAME}-blue$"; then
+    CONTAINER_STATUS=$(docker inspect "${APP_NAME}-blue" --format='{{.State.Status}}')
+    CONTAINER_HEALTH=$(docker inspect "${APP_NAME}-blue" --format='{{.State.Health.Status}}' 2>/dev/null || echo "running")
+    
+    echo "-----> Deploy successful (Zero-Downtime)!"
+    echo "-----> App: $APP_NAME"
+    echo "-----> Environment: $ENVIRONMENT"
+    echo "-----> Release: $(basename $RELEASE_DIR)"
+    echo "-----> Image: $APP_NAME:$RELEASE_TAG"
+    echo "-----> Container: ${APP_NAME}-blue (active)"
+    echo "-----> Status: $CONTAINER_STATUS"
+    if [ "$CONTAINER_HEALTH" != "running" ]; then
+        echo "-----> Health: $CONTAINER_HEALTH"
     fi
 else
-    echo "ERROR: Service failed to start"
-    sudo journalctl -u $SERVICE_NAME -n 20 --no-pager
+    echo "ERROR: Blue container is not running after deployment"
+    if docker ps -a --format '{{.Names}}' | grep -q "^${APP_NAME}-blue$"; then
+        docker logs "${APP_NAME}-blue" 2>&1 | tail -30
+    fi
     exit 1
 fi
 
@@ -201,4 +245,3 @@ docker images "$APP_NAME" --format "{{.Tag}}" | grep -v "^latest$" | sort -r | t
 done
 
 echo "-----> Done"
-

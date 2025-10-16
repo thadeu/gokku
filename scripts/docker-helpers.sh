@@ -229,3 +229,295 @@ get_docker_status() {
     fi
 }
 
+# Blue/Green deployment functions for zero-downtime updates
+
+# Start container (green)
+start_green_container() {
+    local app_name=$1
+    local container_port=$2
+    local env_file=$3
+    local image_tag=$4
+    local release_dir=$5
+    local service_name=$6
+    
+    local green_name="${app_name}-green"
+    
+    echo "-----> Starting green container: $green_name"
+    
+    # Stop and remove old green container if exists
+    if docker ps -a --format '{{.Names}}' | grep -q "^${green_name}$"; then
+        echo "       Removing old green container..."
+        docker stop "$green_name" 2>/dev/null || true
+        docker rm "$green_name" 2>/dev/null || true
+    fi
+    
+    # Build docker run command
+    local docker_cmd="docker run -d --name $green_name"
+    
+    # Add restart policy
+    docker_cmd="$docker_cmd --restart no"
+    
+    # Add port mapping
+    docker_cmd="$docker_cmd -p $container_port:${container_port}"
+    
+    # Add environment file if exists
+    if [ -f "$env_file" ]; then
+        docker_cmd="$docker_cmd --env-file $env_file"
+    fi
+    
+    # Add health check if available
+    docker_cmd="$docker_cmd --health-cmd='curl -f http://localhost:${container_port}/health || exit 1' 2>/dev/null"
+    docker_cmd="$docker_cmd --health-interval=5s"
+    docker_cmd="$docker_cmd --health-timeout=2s"
+    docker_cmd="$docker_cmd --health-retries=3"
+    
+    # Add working directory volume
+    docker_cmd="$docker_cmd -v $release_dir:/app"
+    
+    # Add image
+    docker_cmd="$docker_cmd ${app_name}:${image_tag}"
+    
+    # Run container
+    if ! eval "$docker_cmd"; then
+        echo "ERROR: Failed to start green container"
+        return 1
+    fi
+    
+    echo "-----> Green container started ($green_name)"
+    return 0
+}
+
+# Wait for green container to be healthy
+wait_for_green_health() {
+    local app_name=$1
+    local max_wait=${2:-60}  # Default 60 seconds
+    
+    local green_name="${app_name}-green"
+    local start_time=$(date +%s)
+    
+    echo "-----> Waiting for green container to be healthy (max ${max_wait}s)..."
+    
+    while true; do
+        local current_time=$(date +%s)
+        local elapsed=$((current_time - start_time))
+        
+        if [ $elapsed -gt $max_wait ]; then
+            echo "ERROR: Green container failed to become healthy within ${max_wait}s"
+            return 1
+        fi
+        
+        # Check container status
+        local status=$(docker inspect "$green_name" --format='{{.State.Health.Status}}' 2>/dev/null || echo "")
+        
+        case "$status" in
+            "healthy")
+                echo "-----> Green container is healthy!"
+                return 0
+                ;;
+            "starting")
+                echo "       Starting... ($elapsed/${max_wait}s)"
+                sleep 2
+                ;;
+            "unhealthy")
+                echo "ERROR: Green container is unhealthy"
+                docker logs "$green_name" 2>&1 | tail -20
+                return 1
+                ;;
+            "")
+                # No health check, wait a bit and assume ready
+                sleep 3
+                echo "-----> Green container ready (no health check configured)"
+                return 0
+                ;;
+        esac
+    done
+}
+
+# Switch traffic from blue to green
+switch_traffic_blue_to_green() {
+    local app_name=$1
+    local container_port=$2
+    
+    local blue_name="${app_name}-blue"
+    local green_name="${app_name}-green"
+    
+    echo "-----> Switching traffic: blue → green"
+    
+    # Stop accepting connections on blue
+    if docker ps --format '{{.Names}}' | grep -q "^${blue_name}$"; then
+        echo "       Pausing blue container..."
+        docker pause "$blue_name" 2>/dev/null || true
+        sleep 2
+    fi
+    
+    # Rename containers (atomic swap)
+    echo "       Swapping container names..."
+    
+    # Temporary rename old blue to blue-old
+    if docker ps -a --format '{{.Names}}' | grep -q "^${blue_name}$"; then
+        docker rename "$blue_name" "${blue_name}-old" 2>/dev/null || true
+    fi
+    
+    # Rename green to blue
+    docker rename "$green_name" "$blue_name" 2>/dev/null || {
+        echo "ERROR: Failed to rename green container to blue"
+        return 1
+    }
+    
+    # Set proper restart policy for new blue container
+    docker update --restart always "$blue_name" > /dev/null 2>&1 || true
+    
+    echo "-----> Traffic switch complete (green → blue)"
+    return 0
+}
+
+# Cleanup old blue container
+cleanup_old_blue_container() {
+    local app_name=$1
+    
+    local old_blue_name="${app_name}-blue-old"
+    
+    echo "-----> Cleaning up old blue container..."
+    
+    if docker ps -a --format '{{.Names}}' | grep -q "^${old_blue_name}$"; then
+        # Give it time to drain connections
+        echo "       Waiting 5s before removing old container..."
+        sleep 5
+        
+        echo "       Removing old blue container..."
+        docker stop "$old_blue_name" 2>/dev/null || true
+        docker rm "$old_blue_name" 2>/dev/null || true
+        
+        echo "-----> Old container cleaned up"
+    fi
+}
+
+# Get container port from env file
+get_container_port() {
+    local env_file=$1
+    local default_port=${2:-8080}
+    
+    if [ ! -f "$env_file" ]; then
+        echo "$default_port"
+        return
+    fi
+    
+    # Extract PORT from env file
+    local port=$(grep "^PORT=" "$env_file" | cut -d= -f2 | tr -d ' ')
+    
+    if [ -n "$port" ]; then
+        echo "$port"
+    else
+        echo "$default_port"
+    fi
+}
+
+# Check if blue container exists and is healthy
+has_running_blue_container() {
+    local app_name=$1
+    local blue_name="${app_name}-blue"
+    
+    if docker ps --format '{{.Names}}' | grep -q "^${blue_name}$"; then
+        return 0
+    fi
+    return 1
+}
+
+# Perform blue/green deployment
+blue_green_deploy() {
+    local app_name=$1
+    local image_tag=$2
+    local env_file=$3
+    local release_dir=$4
+    local service_name=$5
+    local health_check_timeout=${6:-60}
+    
+    echo "=====> Starting Blue/Green Deployment"
+    
+    # Get port from env file
+    local container_port=$(get_container_port "$env_file" 8080)
+    echo "-----> Using port: $container_port"
+    
+    # Start green container
+    start_green_container "$app_name" "$container_port" "$env_file" "$image_tag" "$release_dir" "$service_name" || {
+        echo "ERROR: Failed to start green container"
+        return 1
+    }
+    
+    # Wait for green to be healthy
+    wait_for_green_health "$app_name" "$health_check_timeout" || {
+        echo "ERROR: Green container failed health check"
+        docker stop "${app_name}-green" 2>/dev/null || true
+        docker rm "${app_name}-green" 2>/dev/null || true
+        return 1
+    }
+    
+    # Check if we have an existing blue container
+    if has_running_blue_container "$app_name"; then
+        # Switch traffic: blue → green
+        switch_traffic_blue_to_green "$app_name" "$container_port" || {
+            echo "ERROR: Failed to switch traffic"
+            docker stop "${app_name}-green" 2>/dev/null || true
+            docker rm "${app_name}-green" 2>/dev/null || true
+            return 1
+        }
+        
+        # Cleanup old blue
+        cleanup_old_blue_container "$app_name"
+    else
+        # First deployment, just rename green to blue
+        echo "-----> First deployment, activating green as blue"
+        docker rename "${app_name}-green" "${app_name}-blue" 2>/dev/null || {
+            echo "ERROR: Failed to rename green to blue"
+            return 1
+        }
+        docker update --restart always "${app_name}-blue" > /dev/null 2>&1 || true
+    fi
+    
+    echo "=====> Blue/Green Deployment Complete!"
+    echo "-----> Active container: ${app_name}-blue"
+    echo "-----> Running image: $image_tag"
+    echo "-----> Port: $container_port"
+    
+    return 0
+}
+
+# Rollback to previous blue container
+blue_green_rollback() {
+    local app_name=$1
+    
+    local blue_name="${app_name}-blue"
+    local old_blue_name="${app_name}-blue-old"
+    
+    echo "=====> Starting Blue/Green Rollback"
+    
+    # Check if old blue exists
+    if ! docker ps -a --format '{{.Names}}' | grep -q "^${old_blue_name}$"; then
+        echo "ERROR: No previous blue container found for rollback"
+        return 1
+    fi
+    
+    echo "-----> Stopping current blue container..."
+    docker stop "$blue_name" 2>/dev/null || true
+    
+    echo "-----> Restoring previous blue container..."
+    docker rename "$old_blue_name" "$blue_name" 2>/dev/null || {
+        echo "ERROR: Failed to restore previous blue container"
+        return 1
+    }
+    
+    echo "-----> Starting previous blue container..."
+    docker start "$blue_name" 2>/dev/null || {
+        echo "ERROR: Failed to start previous blue container"
+        return 1
+    }
+    
+    # Wait for container to be ready
+    sleep 5
+    
+    echo "=====> Blue/Green Rollback Complete!"
+    echo "-----> Active container: $blue_name"
+    
+    return 0
+}
+
