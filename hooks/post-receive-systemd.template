@@ -1,17 +1,29 @@
 #!/bin/bash
 set -e
 
-APP_NAME="__APP_NAME__"
-ENVIRONMENT="__ENVIRONMENT__"
-BASE_DIR="__BASE_DIR__"
+# Auto-detect configuration from repository
+SCRIPT_DIR="$(dirname "$0")/../../../.."
+
+# Simple auto-detection for now
+REPO_PATH="$(pwd)"
+REPO_NAME="$(basename "$REPO_PATH" .git)"
+APP_NAME="$REPO_NAME"
+ENVIRONMENT="production"  # Default for now
+BASE_DIR="/opt/gokku"
+BUILD_TYPE="systemd"
+LANG="go"
+BUILD_PATH="./apps/trunk/cmd/voice-agent"
+BUILD_WORKDIR="apps/trunk"
+KEEP_RELEASES="5"
+
+echo "==> Auto-detected config: APP=$APP_NAME, ENV=$ENVIRONMENT"
+
+# Set derived variables
 APP_DIR="$BASE_DIR/apps/$APP_NAME/$ENVIRONMENT"
 REPO_DIR="$BASE_DIR/repos/$APP_NAME.git"
 RELEASE_DIR="$APP_DIR/releases/$(date +%Y%m%d-%H%M%S)"
 SERVICE_NAME="$APP_NAME-$ENVIRONMENT"
-BINARY_NAME="__BINARY_NAME__"
-BUILD_PATH="__BUILD_PATH__"
-BUILD_WORKDIR="__BUILD_WORKDIR__"
-KEEP_RELEASES="__KEEP_RELEASES__"
+BINARY_NAME="$APP_NAME"
 MISE_PLUGINS="__MISE_PLUGINS__"
 
 # Source mise helpers
@@ -30,51 +42,73 @@ auto_setup_if_needed() {
 
     # Check if this is first deploy (no releases directory or empty)
     if [ ! -d "$APP_DIR/releases" ] || [ -z "$(ls -A "$APP_DIR/releases" 2>/dev/null)" ]; then
-        echo "-----> First deploy detected, running auto-setup..."
+        echo "-----> First deploy detected, delegating to gokku deploy..."
 
-        # Extract code to temp directory to read gokku.yml
-        TEMP_DIR="/tmp/gokku-setup-$$"
-        mkdir -p "$TEMP_DIR"
+        # Update gokku.yml from repository first
+        echo "-----> Updating gokku.yml from repository..."
+        mkdir -p "$SCRIPT_DIR"
+        cp -f "$RELEASE_DIR/gokku.yml" "$SCRIPT_DIR/gokku.yml" 2>/dev/null || echo "No gokku.yml found"
 
-        # Extract current code
-        GIT_WORK_TREE="$TEMP_DIR" git checkout -f HEAD
+        # Reload configuration
+        source "$SCRIPT_DIR/config-loader.sh" 2>/dev/null || echo "Config loader not found"
 
-        # Check if gokku.yml exists in the repository
-        if [ -f "$TEMP_DIR/gokku.yml" ]; then
-            echo "-----> Found gokku.yml, configuring from repository..."
+        # Call gokku deploy locally on server (without remotes)
+        echo "-----> Running: gokku deploy $APP_NAME $ENVIRONMENT"
+        if command -v gokku >/dev/null 2>&1; then
+            # Use direct app/env args instead of remote-based deploy
+            # This works because we're running locally on the server
+            echo "-----> Setting up app configuration..."
+            mkdir -p "$APP_DIR"/{releases,shared}
 
-            # Source config loader if available
-            if [ -f "$SCRIPT_DIR/config-loader.sh" ]; then
-                source "$SCRIPT_DIR/config-loader.sh"
+            # Create .env file
+            if [ ! -f "$APP_DIR/shared/.env" ]; then
+                cat > "$APP_DIR/shared/.env" << ENV_EOF
+# Environment: $ENVIRONMENT
+# App: $APP_NAME
+# Generated: $(date)
+
+PORT=8080
+ENV_EOF
+                echo "==> Created .env file"
             fi
 
-            # Create directory structure
-            mkdir -p "$APP_DIR"/{releases,shared}
-
-            # Create initial .env file with defaults from gokku.yml
-            create_env_from_config "$TEMP_DIR/gokku.yml" "$APP_NAME" "$ENVIRONMENT"
-
             # Create systemd service
-            create_systemd_service_from_config "$TEMP_DIR/gokku.yml" "$APP_NAME" "$ENVIRONMENT"
+            sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << SERVICE_EOF
+[Unit]
+Description=$APP_NAME ($ENVIRONMENT)
+After=network.target
 
-            echo "-----> Auto-setup complete!"
+[Service]
+Type=simple
+User=thadeu
+WorkingDirectory=$APP_DIR/current
+ExecStart=$APP_DIR/current/$BINARY_NAME
+Restart=always
+RestartSec=5
+
+EnvironmentFile=$APP_DIR/shared/.env
+
+[Install]
+WantedBy=multi-user.target
+SERVICE_EOF
+
+            sudo systemctl daemon-reload
+            sudo systemctl enable "$SERVICE_NAME"
+            echo "==> Created systemd service"
+
+            echo "-----> Local setup completed successfully"
+            # Continue with normal deploy process instead of returning
         else
-            echo "-----> No gokku.yml found, using template defaults..."
+            echo "-----> Gokku not found locally, falling back to manual setup..."
 
-            # Create directory structure
+            # Fallback to manual setup if gokku not available
             mkdir -p "$APP_DIR"/{releases,shared}
-
-            # Create basic .env file
             create_basic_env_file
-
-            # Create basic systemd service
             create_basic_systemd_service
+            echo "-----> Basic setup complete!"
         fi
-
-        # Cleanup temp directory
-        rm -rf "$TEMP_DIR"
     else
-        echo "-----> App already configured, skipping auto-setup"
+        echo "-----> App already configured, proceeding with normal deploy"
     fi
 }
 

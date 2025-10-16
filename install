@@ -145,13 +145,19 @@ check_requirements() {
         echo "Install them:"
         if [ "$OS" = "linux" ]; then
             if [ "$MODE" = "client" ]; then
-                echo "  sudo apt update && sudo apt install -y git curl golang"
+                echo "  sudo apt update && sudo apt install -y git curl yq jq"
+
+                sudo apt update && sudo apt install -y yq jq
+
+                if ! command -v mise &> /dev/null; then
+                    curl https://mise.run | sh
+                fi
             else
                 echo "  sudo apt update && sudo apt install -y git curl"
             fi
         else
             if [ "$MODE" = "client" ]; then
-                echo "  brew install git go"
+                echo "  brew install git"
             else
                 echo "  brew install git"
             fi
