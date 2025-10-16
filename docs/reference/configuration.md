@@ -222,19 +222,17 @@ docker:
     python: "python:3.12-slim"
 ```
 
-### user
+### User Configuration
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `deploy_user` | string | ❌ No | `ubuntu` | SSH user for deployment |
-| `deploy_group` | string | ❌ No | `ubuntu` | User group |
+User configuration is **automatically detected** from your git remote URL.
 
 **Example:**
-```yaml
-user:
-  deploy_user: deploy
-  deploy_group: deploy
+```bash
+# Git remote format: user@host:path
+git remote add production ubuntu@server:api
 ```
+
+**No configuration needed** - Gokku automatically uses the user from your git remote.
 
 ## Minimal Examples
 
@@ -335,11 +333,6 @@ docker:
     go: "golang:1.25-alpine"
     python: "python:3.11-slim"
     nodejs: "node:20-alpine"
-
-# Server user
-user:
-  deploy_user: ubuntu
-  deploy_group: ubuntu
 ```
 
 ## Validation

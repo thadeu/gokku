@@ -69,10 +69,6 @@ docker:
     go: "golang:1.25-alpine"
     python: "python:3.11-slim"
     nodejs: "node:20-alpine"
-
-user:
-  deploy_user: ubuntu
-  deploy_group: ubuntu
 ```
 
 ## Configuration Sections
@@ -211,15 +207,18 @@ docker:
 
 Used when `build.type: docker` and no `build.base_image` specified.
 
-### User
+### User Configuration
 
-Server user configuration:
+User configuration is **automatically detected** from your git remote URL.
 
-```yaml
-user:
-  deploy_user: ubuntu    # SSH user
-  deploy_group: ubuntu   # User group
+**Example:**
+```bash
+# Git remote format: user@host:path
+git remote add production ubuntu@server:api
+# The user 'ubuntu' is automatically extracted and used
 ```
+
+**No configuration needed** - Gokku automatically uses the user from your git remote.
 
 ## Configuration by Language
 

@@ -97,12 +97,3 @@ docker:
     go: "golang:1.25-alpine"
     python: "python:3.11-slim"
     nodejs: "node:20-alpine"
-
-# User configuration
-user:
-  deploy_user: ubuntu
-  deploy_group: ubuntu
-
-  # Repository URLs (for installation)
-  repository:
-    github_url: https://github.com/thadeu/gokku

@@ -66,7 +66,8 @@ GOARCH=$(get_app_goarch "$APP_NAME")
 CGO_ENABLED=$(get_app_cgo_enabled "$APP_NAME")
 
 BASE_DIR="$GOKKU_BASE_DIR"
-DEPLOY_USER="$GOKKU_DEPLOY_USER"
+# Extract deploy user from git remote or use current user
+DEPLOY_USER=$(git remote get-url origin 2>/dev/null | sed 's/@.*//' || echo "${USER:-ubuntu}")
 REPO_DIR="$BASE_DIR/repos/$APP_NAME.git"
 APP_DIR="$BASE_DIR/apps/$APP_NAME/$ENVIRONMENT"
 SERVICE_NAME="$APP_NAME-$ENVIRONMENT"

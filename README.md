@@ -4,6 +4,10 @@ A **100% generic** git-push deployment system for multi-language applications. N
 
 **Gokku** = Go + Dokku - A lightweight alternative to Dokku, focused on Go applications with multi-language support.
 
+<center>
+<img src="docs/images/gokku-t-2.png" width="200px">
+</center>
+
 ## Key Features
 
 ✅ **Auto-Setup** - Zero manual configuration, just push and deploy  
@@ -123,10 +127,6 @@ docker:
     go: "golang:1.25-alpine"
     python: "python:3.11-slim"
     nodejs: "node:20-alpine"
-
-user:
-  deploy_user: ubuntu
-  deploy_group: ubuntu
 ```
 
 ---
@@ -674,13 +674,18 @@ deployment:
   restart_delay: number           # Seconds between restarts (default: 5)
 ```
 
-### User Section
+### User Configuration
 
-```yaml
-user:
-  deploy_user: string      # User to run services (default: ubuntu)
-  deploy_group: string     # Group for files (default: ubuntu)
+User configuration is **automatically detected** from your git remote URL.
+
+**Example:**
+```bash
+# Git remote format: user@host:path
+git remote add production ubuntu@server:api
+# The user 'ubuntu' is automatically extracted and used
 ```
+
+**No configuration needed** - Gokku automatically uses the user from your git remote.
 
 ---
 

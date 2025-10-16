@@ -18,7 +18,7 @@ parse_yaml() {
     local s='[[:space:]]*'
     local w='[a-zA-Z0-9_-]*'
     local fs=$(echo @|tr @ '\034')
-    
+
     sed -ne "s|^\($s\):|\1|" \
         -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
         -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p" $file |
@@ -39,7 +39,6 @@ eval $(parse_yaml "$CONFIG_FILE" "GOKKU_")
 # Export common variables
 export GOKKU_PROJECT_NAME="${GOKKU_project_name:-gokku}"
 export GOKKU_BASE_DIR="${GOKKU_project_base_dir:-/opt/gokku}"
-export GOKKU_DEPLOY_USER="${GOKKU_user_deploy_user:-ubuntu}"
 export GOKKU_BUILD_WORKDIR="${GOKKU_build_work_dir:-apps/trunk}"
 export GOKKU_KEEP_RELEASES="${GOKKU_deployment_keep_releases:-5}"
 export GOKKU_PORT_STRATEGY="${GOKKU_port_strategy:-manual}"
@@ -58,7 +57,7 @@ get_app_environments() {
         if (in_env && /- name:/) print \$3
         if (in_env && /^    [a-z]/ && !/- name:/ && !/default_env_vars:/ && !/branch:/) in_env=0
     }" "$CONFIG_FILE")
-    
+
     # If no environments defined, return default
     if [ -z "$envs" ]; then
         echo "production"
@@ -97,7 +96,7 @@ get_app_env_branch() {
         if (in_target && /branch:/) { print \$2; exit }
         if (in_target && /- name:/ && !/- name: $env_name/) exit
     }" "$CONFIG_FILE" | sed "s/$env_name//")
-    
+
     # If no branch defined, use defaults based on environment name
     if [ -z "$branch" ]; then
         case "$env_name" in
@@ -107,7 +106,7 @@ get_app_env_branch() {
             *) branch="main" ;;
         esac
     fi
-    
+
     echo "$branch"
 }
 
@@ -168,7 +167,7 @@ get_app_entrypoint() {
     local app_name=$1
     local lang=$2
     local entrypoint=$(awk "/^  - name: $app_name/,/^  - name:/ {if (/entrypoint:/) print \$2}" "$CONFIG_FILE")
-    
+
     # If not found, use defaults based on language
     if [ -z "$entrypoint" ]; then
         case "$lang" in
@@ -178,7 +177,7 @@ get_app_entrypoint() {
             *) entrypoint="main.py" ;;
         esac
     fi
-    
+
     echo "$entrypoint"
 }
 
@@ -186,15 +185,15 @@ get_app_entrypoint() {
 get_app_base_image() {
     local app_name=$1
     local lang=$2
-    
+
     # Try to get from app config first
     local base_image=$(awk "/^  - name: $app_name/,/^  - name:/ {if (/base_image:/) {gsub(/\"/, \"\"); print \$2}}" "$CONFIG_FILE")
-    
+
     # If not found, get from docker defaults
     if [ -z "$base_image" ]; then
         base_image=$(awk "/^docker:/,/^[^ ]/ {if (/${lang}:/) {gsub(/\"/, \"\"); print \$2}}" "$CONFIG_FILE")
     fi
-    
+
     # If still not found, use hardcoded defaults
     if [ -z "$base_image" ]; then
         case "$lang" in
@@ -204,7 +203,7 @@ get_app_base_image() {
             *) base_image="alpine:latest" ;;
         esac
     fi
-    
+
     echo "$base_image"
 }
 
@@ -260,7 +259,7 @@ has_mise_plugins() {
 # Function to get mise plugins for an app
 get_mise_plugins() {
     local app_name=$1
-    
+
     # Extract plugins in format: name:url,name:url
     awk "/^  - name: $app_name/,/^  - name:/ {
         if (/mise:/) in_mise=1
