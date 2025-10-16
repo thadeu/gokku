@@ -16,7 +16,7 @@ Get Gokku up and running in minutes.
 SSH into your server and run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
+curl -fsSL https://gokku-vm.com/install | bash
 ```
 
 This installs:
@@ -29,7 +29,7 @@ This installs:
 Install the `gokku` CLI on your local machine:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
+curl -fsSL https://gokku-vm.com/install | bash
 ```
 
 The CLI makes it easier to manage your deployments without SSH commands.

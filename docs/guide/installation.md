@@ -24,13 +24,13 @@ The installer automatically:
 SSH into your server and run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
+curl -fsSL https://gokku-vm.com/install | bash
 ```
 
 Or explicitly specify server mode:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash -s -- --server
+curl -fsSL https://gokku-vm.com/install | bash -s -- --server
 ```
 
 This installs:
@@ -45,13 +45,13 @@ This installs:
 On your local machine:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
+curl -fsSL https://gokku-vm.com/install | bash
 ```
 
 Or explicitly specify client mode:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash -s -- --client
+curl -fsSL https://gokku-vm.com/install | bash -s -- --client
 ```
 
 This installs:

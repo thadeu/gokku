@@ -3,7 +3,7 @@
 # Automatically detects if installing on server or client
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main/install | bash
+#   curl -fsSL https://gokku-vm.com/install | bash
 #
 #   Or with options:
 #   curl -fsSL https://...install | bash -s -- --server

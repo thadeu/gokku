@@ -105,4 +105,4 @@ user:
 
   # Repository URLs (for installation)
   repository:
-    github_url: https://raw.githubusercontent.com/thadeu/gokku
+    github_url: https://github.com/thadeu/gokku
