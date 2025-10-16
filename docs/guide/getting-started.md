@@ -61,21 +61,34 @@ apps:
       binary_name: api
 ```
 
-### Step 4: Deploy (Auto-Setup)
+### Step 4: Create Application
 
-**Using gokku CLI (Recommended):**
+First, create the application on the server:
+
+**Using gokku CLI:**
 
 ```bash
-gokku deploy api production
+# Add git remote
+git remote add production ubuntu@your-server:/opt/gokku/repos/api.git
+
+# Create the app (sets up repository and hooks)
+gokku apps create api --remote production
+```
+
+### Step 5: Deploy
+
+Now deploy your application:
+
+**Using gokku CLI:**
+
+```bash
+gokku deploy --remote production
 ```
 
 **Or manual git push:**
 
 ```bash
-# Add git remote
-git remote add production ubuntu@your-server:api
-
-# Push - setup happens automatically!
+# Push - deployment happens automatically!
 git push production main
 ```
 
@@ -97,7 +110,7 @@ Watch the magic happen:
 -----> Deploy successful!
 ```
 
-### Step 5: Manage Your App
+### Step 6: Manage Your App
 
 **Using gokku CLI:**
 
@@ -129,13 +142,14 @@ Your app is live! 🎉
 
 ## What Happened?
 
-1. **Git push** triggered a post-receive hook
-2. **Auto-setup detected** first deploy and configured everything
-3. **Code extracted** to a new release directory
-4. **Build executed** (compiled Go binary or built Docker image)
-5. **Symlink updated** to new release (atomic deploy)
-6. **Service restarted** automatically
-7. **Old releases kept** for rollback
+1. **`gokku apps create`** set up the git repository and hooks on server
+2. **Git push** triggered the post-receive hook
+3. **Auto-setup detected** first deploy and configured systemd service
+4. **Code extracted** to a new release directory
+5. **Build executed** (compiled Go binary or built Docker image)
+6. **Symlink updated** to new release (atomic deploy)
+7. **Service restarted** automatically
+8. **Old releases kept** for rollback
 
 ## Next Steps
 
