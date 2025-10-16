@@ -380,12 +380,6 @@ start_green_container() {
         docker_cmd="$docker_cmd --env-file $env_file"
     fi
 
-    # Add health check if available
-    docker_cmd="$docker_cmd --health-cmd='curl -f http://localhost:${container_port}/health || exit 1' 2>/dev/null"
-    docker_cmd="$docker_cmd --health-interval=5s"
-    docker_cmd="$docker_cmd --health-timeout=2s"
-    docker_cmd="$docker_cmd --health-retries=3"
-
     # Add working directory volume
     docker_cmd="$docker_cmd -v $release_dir:/app"
 
