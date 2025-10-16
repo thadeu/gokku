@@ -412,7 +412,10 @@ CMD ["./app"]
 DOCKERFILE_GO_EOF
 
         echo "-----> Building Docker image..."
-        docker build -t "$APP_NAME:latest" .
+        if ! docker build -t "$APP_NAME:latest" .; then
+            echo "ERROR: Docker build failed"
+            exit 1
+        fi
 
         echo "-----> Deploying container..."
         # Stop existing container if running
@@ -420,13 +423,25 @@ DOCKERFILE_GO_EOF
         docker rm "$SERVICE_NAME" 2>/dev/null || true
 
         # Start new container
+        PORT=$(grep "^PORT=" "$APP_DIR/shared/.env" 2>/dev/null | cut -d= -f2 | tr -d ' ' || echo "8080")
+        echo "-----> Using port: $PORT"
         docker run -d --name "$SERVICE_NAME" \
             --env-file "$APP_DIR/shared/.env" \
-            -p "${PORT:-8080}:${PORT:-8080}" \
+            -p "$PORT:$PORT" \
             --restart unless-stopped \
             "$APP_NAME:latest"
 
-        echo "-----> Docker deployment complete!"
+        # Verify container is running
+        sleep 2
+        if docker ps --format '{{.Names}}' | grep -q "^${SERVICE_NAME}$"; then
+            CONTAINER_STATUS=$(docker inspect "${SERVICE_NAME}" --format='{{.State.Status}}')
+            echo "-----> Container $SERVICE_NAME is running ($CONTAINER_STATUS)"
+            echo "-----> Docker deployment complete!"
+        else
+            echo "ERROR: Container failed to start"
+            docker logs "$SERVICE_NAME" 2>&1 | tail -20
+            exit 1
+        fi
     else
         # Systemd build and deploy
         # Go build
