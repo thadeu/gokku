@@ -13,6 +13,38 @@ worker: bundle exec sidekiq -c 5
 scheduler: bundle exec whenever
 ```
 
+## Procfile vs gokku.yml
+
+### When to use Procfile (Single App, Multiple Processes)
+
+Use **Procfile** para aplicações **single-app com múltiplos processos** (caso de uso 1):
+
+- ✅ **Rails apps** com web, worker, scheduler
+- ✅ **Node.js apps** com web, api, worker
+- ✅ **Qualquer app monolítica** que precisa de múltiplos processos
+- ✅ **Migração fácil do Dokku**
+
+**Características:**
+- Procfile define os processos executados
+- Docker é automaticamente usado
+- gokku.yml é opcional (apenas configurações de ambiente)
+- **Procfile tem prioridade** sobre gokku.yml
+
+### When to use gokku.yml (Multiple Independent Apps)
+
+Use **gokku.yml** para aplicações **multi-app independentes** (caso de uso 2):
+
+- ✅ **Microserviços** com deploy independente
+- ✅ **Apps Go** com cmd/api, cmd/worker, cmd/scheduler
+- ✅ **Deploy granular** - atualize apenas um serviço
+- ✅ **Flexibilidade total** de configuração por app
+
+**Características:**
+- Cada app é independente
+- Pode usar systemd ou docker
+- Deploy separado por app
+- Controle total de cada processo
+
 ## Process Types
 
 ### web

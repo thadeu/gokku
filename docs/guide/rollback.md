@@ -323,16 +323,6 @@ ssh ubuntu@server "sudo systemctl restart api-production"
 
 ## Environment Variables
 
-Rolling back doesn't restore environment variables.
-
-### Before Rollback
-
-Backup current env vars:
-
-```bash
-ssh ubuntu@server "cat /opt/gokku/apps/api/production/.env" > backup.env
-```
-
 ### After Rollback
 
 Check if env vars are compatible:
