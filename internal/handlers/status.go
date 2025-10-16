@@ -69,9 +69,9 @@ func handleStatus(args []string) {
 
 		if localExecution {
 			// Local execution for all services
-			fmt.Println("==> Systemd Services")
-			systemdCmd := exec.Command("sudo", "systemctl", "list-units", "--all")
-			output, err := systemdCmd.Output()
+			fmt.Println("==> Docker Containers")
+			dockerCmd := exec.Command("docker", "ps", "-a", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}")
+			output, err := dockerCmd.Output()
 			if err == nil {
 				lines := strings.Split(string(output), "\n")
 				for _, line := range lines {
@@ -85,7 +85,7 @@ func handleStatus(args []string) {
 			}
 			fmt.Println("")
 			fmt.Println("==> Docker Containers")
-			dockerCmd := exec.Command("docker", "ps", "-a", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}")
+			dockerCmd = exec.Command("docker", "ps", "-a", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}")
 			output, err = dockerCmd.Output()
 			if err == nil {
 				lines := strings.Split(string(output), "\n")
@@ -105,13 +105,11 @@ func handleStatus(args []string) {
 		} else {
 			// Remote execution for all services
 			sshCmd := fmt.Sprintf(`
-				echo "==> Systemd Services"
+				echo "==> Docker Containers"
 				for svc in $(ls %s/repos/*.git 2>/dev/null | xargs -n1 basename | sed 's/.git//'); do
-					sudo systemctl list-units --all | grep $svc- | awk '{print "  " $1, $3, $4}'
+					docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null | grep $svc- | awk '{print "  " $1, $3, $4}'
 				done
 				echo ""
-				echo "==> Docker Containers"
-				docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null | grep -E "production|staging|develop" || echo "  No containers found"
 			`, baseDir)
 
 			cmd := exec.Command("ssh", host, sshCmd)
@@ -128,21 +126,14 @@ func handleStatus(args []string) {
 		// Local execution for specific app/env
 		var cmd *exec.Cmd
 
-		// Check systemd first
-		systemdCmd := exec.Command("sudo", "systemctl", "list-units", "--all")
-		output, err := systemdCmd.Output()
+		dockerCmd := exec.Command("docker", "ps", "-a")
+		output, err := dockerCmd.Output()
 		if err == nil && strings.Contains(string(output), serviceName) {
-			cmd = exec.Command("sudo", "systemctl", "status", serviceName)
+			cmd = exec.Command("docker", "ps", "-a", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}", "--filter", fmt.Sprintf("name=%s", serviceName))
 		} else {
 			// Try docker
-			dockerCmd := exec.Command("docker", "ps", "-a")
-			output, err := dockerCmd.Output()
-			if err == nil && strings.Contains(string(output), serviceName) {
-				cmd = exec.Command("docker", "ps", "-a", "--filter", fmt.Sprintf("name=%s", serviceName))
-			} else {
-				fmt.Printf("Service or container '%s' not found\n", serviceName)
-				os.Exit(1)
-			}
+			fmt.Printf("Service or container '%s' not found\n", serviceName)
+			os.Exit(1)
 		}
 
 		cmd.Stdout = os.Stdout

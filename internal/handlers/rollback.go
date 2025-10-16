@@ -93,34 +93,27 @@ func handleRollback(args []string) {
 		// Local execution on server
 		var rollbackCmd string
 
-		// Check if systemd service exists
-		systemdCmd := exec.Command("sudo", "systemctl", "list-units", "--all")
-		output, err := systemdCmd.Output()
+		// Check if docker service exists
+		dockerCmd := exec.Command("docker", "ps", "-a")
+		output, err := dockerCmd.Output()
 		if err == nil && strings.Contains(string(output), serviceName) {
 			rollbackCmd = fmt.Sprintf(`
 				cd %s && \
-				sudo systemctl stop %s && \
-				ln -sfn releases/%s current && \
-				sudo systemctl start %s && \
+				docker stop %s && \
+				docker rm -f %s && \
+				docker run -d --name %s --env-file .env -p 8080:8080 %s:release-%s && \
+				docker start %s && \
 				echo "✓ Rollback complete"
-			`, appDir, serviceName, releaseID, serviceName)
-		} else {
-			// Try docker
-			dockerCmd := exec.Command("docker", "ps", "-a")
-			output, err := dockerCmd.Output()
-			if err == nil && strings.Contains(string(output), serviceName) {
-				rollbackCmd = fmt.Sprintf(`
-					cd %s && \
-					docker stop %s && \
-					docker rm %s && \
-					docker run -d --name %s --env-file .env -p 8080:8080 %s:release-%s && \
-					echo "✓ Rollback complete"
-				`, appDir, serviceName, serviceName, serviceName, app, releaseID)
-			} else {
-				fmt.Printf("Error: Service or container '%s' not found\n", serviceName)
-				os.Exit(1)
-			}
+			`, appDir, serviceName, serviceName, app, releaseID)
 		}
+
+		rollbackCmd = fmt.Sprintf(`
+			cd %s && \
+			docker stop %s && \
+			docker rm -f %s && \
+			docker run -d --name %s --env-file .env -p 8080:8080 %s:release-%s && \
+			echo "✓ Rollback complete"
+		`, appDir, serviceName, serviceName, app, releaseID)
 
 		cmd := exec.Command("bash", "-c", rollbackCmd)
 		cmd.Stdout = os.Stdout
@@ -133,14 +126,9 @@ func handleRollback(args []string) {
 		// Remote execution via SSH
 		rollbackCmd := fmt.Sprintf(`
 			cd %s && \
-			if sudo systemctl list-units --all | grep -q %s; then
-				sudo systemctl stop %s && \
-				ln -sfn %s/releases/%s current && \
-				sudo systemctl start %s && \
-				echo "✓ Rollback complete"
-			elif docker ps -a | grep -q %s; then
+			if docker ps -a | grep -q %s; then
 				docker stop %s && \
-				docker rm %s && \
+				docker rm -f %s && \
 				docker run -d --name %s --env-file %s/.env -p 8080:8080 %s:release-%s && \
 				echo "✓ Rollback complete"
 			else

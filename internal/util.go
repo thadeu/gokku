@@ -30,15 +30,10 @@ func ExtractRemoteFlag(args []string) (string, []string) {
 }
 
 // IsRunningOnServer returns true if running on the server environment
-// Server environment: Linux + systemd + /opt/gokku directory exists and is writable
+// Server environment: Linux + /opt/gokku directory exists and is writable
 func IsRunningOnServer() bool {
 	// Check if running on Linux
 	if runtime.GOOS != "linux" {
-		return false
-	}
-
-	// Check if systemd directory exists (server indicator)
-	if _, err := os.Stat("/etc/systemd/system"); os.IsNotExist(err) {
 		return false
 	}
 

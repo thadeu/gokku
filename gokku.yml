@@ -9,7 +9,7 @@ apps:
   - name: speech-to-text
     lang: go
     build:
-      type: systemd
+      type: docker
       path: ./cmd/speech-to-text
       binary_name: speech-to-text
       work_dir: apps/trunk
@@ -36,7 +36,7 @@ apps:
   - name: voice-agent
     lang: go
     build:
-      type: systemd
+      type: docker
       path: ./cmd/voice-agent
       binary_name: voice-agent
       work_dir: apps/trunk

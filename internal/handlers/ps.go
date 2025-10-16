@@ -118,13 +118,6 @@ func handlePSList(args []string) {
 				# Extract process type from service name (app-env-processtype)
 				process_type=$(echo "$service" | sed "s/$app-$env-//")
 
-				# Check systemd status
-				if sudo systemctl is-active --quiet "$service"; then
-					systemd_status="running"
-				else
-					systemd_status="stopped"
-				fi
-
 				# Check Docker container status
 				container_name="$service"
 				if docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
@@ -134,7 +127,6 @@ func handlePSList(args []string) {
 				fi
 
 				echo "$process_type:"
-				echo "  Systemd: $systemd_status"
 				echo "  Container: $container_status"
 				echo ""
 			done
@@ -169,7 +161,7 @@ func handlePSList(args []string) {
 		cmd := exec.Command("sudo", "systemctl", "list-units", "--all")
 		output, err := cmd.Output()
 		if err != nil {
-			fmt.Printf("Error checking systemd services: %v\n", err)
+			fmt.Printf("Error checking docker services: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -184,11 +176,6 @@ func handlePSList(args []string) {
 					serviceName := strings.TrimSuffix(parts[0], ".service")
 					processType := strings.TrimPrefix(serviceName, servicePattern)
 
-					// Check systemd status
-					systemdCmd := exec.Command("sudo", "systemctl", "is-active", serviceName)
-					systemdOutput, _ := systemdCmd.Output()
-					systemdStatus := strings.TrimSpace(string(systemdOutput))
-
 					// Check Docker container status
 					containerName := serviceName
 					dockerCmd := exec.Command("docker", "ps", "--format", "{{.Names}}")
@@ -199,7 +186,6 @@ func handlePSList(args []string) {
 					}
 
 					fmt.Printf("%s:\n", processType)
-					fmt.Printf("  Systemd: %s\n", systemdStatus)
 					fmt.Printf("  Container: %s\n", containerStatus)
 					fmt.Println("")
 					found = true
@@ -324,10 +310,10 @@ func handlePSLogs(args []string) {
 		}
 
 		// Get all Procfile processes
-		cmd := exec.Command("sudo", "systemctl", "list-units", "--all")
+		cmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
 		output, err := cmd.Output()
 		if err != nil {
-			fmt.Printf("Error checking systemd services: %v\n", err)
+			fmt.Printf("Error checking docker services: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -336,19 +322,13 @@ func handlePSLogs(args []string) {
 		found := false
 
 		for _, line := range lines {
-			if strings.Contains(line, servicePattern) && strings.Contains(line, ".service") {
+			if strings.Contains(line, servicePattern) {
 				parts := strings.Fields(line)
 				if len(parts) >= 4 {
-					serviceName := strings.TrimSuffix(parts[0], ".service")
-					processType := strings.TrimPrefix(serviceName, servicePattern)
-
-					// Filter by process if specified
-					if process != "" && processType != process {
-						continue
-					}
+					serviceName := parts[0]
+					processType := serviceName
 
 					containerName := serviceName
-
 					// Check if container exists
 					dockerCmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
 					dockerOutput, err := dockerCmd.Output()
@@ -418,7 +398,7 @@ func handlePSRestart(args []string) {
 			env="%s"
 
 			# Get Procfile processes
-			services=$(sudo systemctl list-units --all | grep "$app-$env-" | awk '{print $1}' | sed 's/.service//' %s)
+			services=$(docker ps -a --format '{{.Names}}' | grep "$app-$env-" %s)
 
 			if [ -z "$services" ]; then
 				echo "No Procfile processes found for $app ($env)"
@@ -426,16 +406,10 @@ func handlePSRestart(args []string) {
 			fi
 
 			for service in $services; do
-				process_type=$(echo "$service" | sed "s/$app-$env-//")
+				process_type="$service"
 				echo "Restarting $process_type..."
-				sudo systemctl restart "$service"
+				docker restart "$service"
 				sleep 1
-
-				if sudo systemctl is-active --quiet "$service"; then
-					echo "✓ $process_type restarted successfully"
-				else
-					echo "✗ Failed to restart $process_type"
-				fi
 			done
 		`, app, env, processFilter)
 
@@ -467,10 +441,10 @@ func handlePSRestart(args []string) {
 		}
 
 		// Get all Procfile processes
-		cmd := exec.Command("sudo", "systemctl", "list-units", "--all")
+		cmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
 		output, err := cmd.Output()
 		if err != nil {
-			fmt.Printf("Error checking systemd services: %v\n", err)
+			fmt.Printf("Error checking docker services: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -479,38 +453,27 @@ func handlePSRestart(args []string) {
 		found := false
 
 		for _, line := range lines {
-			if strings.Contains(line, servicePattern) && strings.Contains(line, ".service") {
-				parts := strings.Fields(line)
-				if len(parts) >= 4 {
-					serviceName := strings.TrimSuffix(parts[0], ".service")
-					processType := strings.TrimPrefix(serviceName, servicePattern)
+			if strings.Contains(line, servicePattern) {
+				serviceName := line
+				processType := serviceName
 
-					// Filter by process if specified
-					if process != "" && processType != process {
-						continue
-					}
+				fmt.Printf("Restarting %s...\n", processType)
 
-					fmt.Printf("Restarting %s...\n", processType)
-
-					// Restart systemd service
-					restartCmd := exec.Command("sudo", "systemctl", "restart", serviceName)
-					err := restartCmd.Run()
-					if err != nil {
-						fmt.Printf("✗ Failed to restart %s: %v\n", processType, err)
+				restartCmd := exec.Command("docker", "restart", serviceName)
+				err := restartCmd.Run()
+				if err != nil {
+					fmt.Printf("✗ Failed to restart %s: %v\n", processType, err)
+				} else {
+					// Check if service is active
+					checkCmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
+					output, _ := checkCmd.Output()
+					if err == nil && strings.Contains(string(output), serviceName) {
+						fmt.Printf("✓ %s restarted successfully\n", processType)
 					} else {
-						// Check if service is active
-						checkCmd := exec.Command("sudo", "systemctl", "is-active", serviceName)
-						output, _ := checkCmd.Output()
-						status := strings.TrimSpace(string(output))
-						if status == "active" {
-							fmt.Printf("✓ %s restarted successfully\n", processType)
-						} else {
-							fmt.Printf("✗ %s status: %s\n", processType, status)
-						}
+						fmt.Printf("✗ Failed to restart %s: %v\n", processType, err)
 					}
-
-					found = true
 				}
+				found = true
 			}
 		}
 
@@ -562,7 +525,7 @@ func handlePSStart(args []string) {
 			env="%s"
 
 			# Get Procfile processes
-			services=$(sudo systemctl list-units --all | grep "$app-$env-" | awk '{print $1}' | sed 's/.service//' %s)
+			services=$(docker ps -a --format '{{.Names}}' | grep "$app-$env-" %s)
 
 			if [ -z "$services" ]; then
 				echo "No Procfile processes found for $app ($env)"
@@ -570,12 +533,12 @@ func handlePSStart(args []string) {
 			fi
 
 			for service in $services; do
-				process_type=$(echo "$service" | sed "s/$app-$env-//")
+				process_type="$service"
 				echo "Starting $process_type..."
-				sudo systemctl start "$service"
+				docker start "$service"
 				sleep 1
 
-				if sudo systemctl is-active --quiet "$service"; then
+				if docker ps -a --format '{{.Names}}' | grep -q "^${service}$"; then
 					echo "✓ $process_type started successfully"
 				else
 					echo "✗ Failed to start $process_type"
@@ -611,10 +574,10 @@ func handlePSStart(args []string) {
 		}
 
 		// Get all Procfile processes
-		cmd := exec.Command("sudo", "systemctl", "list-units", "--all")
+		cmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
 		output, err := cmd.Output()
 		if err != nil {
-			fmt.Printf("Error checking systemd services: %v\n", err)
+			fmt.Printf("Error checking docker services: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -636,20 +599,18 @@ func handlePSStart(args []string) {
 
 					fmt.Printf("Starting %s...\n", processType)
 
-					// Start systemd service
-					startCmd := exec.Command("sudo", "systemctl", "start", serviceName)
+					startCmd := exec.Command("docker", "start", serviceName)
 					err := startCmd.Run()
 					if err != nil {
 						fmt.Printf("✗ Failed to start %s: %v\n", processType, err)
 					} else {
 						// Check if service is active
-						checkCmd := exec.Command("sudo", "systemctl", "is-active", serviceName)
+						checkCmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
 						output, _ := checkCmd.Output()
-						status := strings.TrimSpace(string(output))
-						if status == "active" {
+						if err == nil && strings.Contains(string(output), serviceName) {
 							fmt.Printf("✓ %s started successfully\n", processType)
 						} else {
-							fmt.Printf("✗ %s status: %s\n", processType, status)
+							fmt.Printf("✗ Failed to start %s: %v\n", processType, err)
 						}
 					}
 
@@ -755,10 +716,10 @@ func handlePSStop(args []string) {
 		}
 
 		// Get all Procfile processes
-		cmd := exec.Command("sudo", "systemctl", "list-units", "--all")
+		cmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
 		output, err := cmd.Output()
 		if err != nil {
-			fmt.Printf("Error checking systemd services: %v\n", err)
+			fmt.Printf("Error checking docker services: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -767,33 +728,26 @@ func handlePSStop(args []string) {
 		found := false
 
 		for _, line := range lines {
-			if strings.Contains(line, servicePattern) && strings.Contains(line, ".service") {
+			if strings.Contains(line, servicePattern) {
 				parts := strings.Fields(line)
 				if len(parts) >= 4 {
-					serviceName := strings.TrimSuffix(parts[0], ".service")
-					processType := strings.TrimPrefix(serviceName, servicePattern)
-
-					// Filter by process if specified
-					if process != "" && processType != process {
-						continue
-					}
+					serviceName := line
+					processType := serviceName
 
 					fmt.Printf("Stopping %s...\n", processType)
 
-					// Stop systemd service
-					stopCmd := exec.Command("sudo", "systemctl", "stop", serviceName)
+					stopCmd := exec.Command("docker", "stop", serviceName)
 					err := stopCmd.Run()
 					if err != nil {
 						fmt.Printf("✗ Failed to stop %s: %v\n", processType, err)
 					} else {
 						// Check if service is inactive
-						checkCmd := exec.Command("sudo", "systemctl", "is-active", serviceName)
+						checkCmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
 						output, _ := checkCmd.Output()
-						status := strings.TrimSpace(string(output))
-						if status == "inactive" || status == "failed" {
+						if err == nil && !strings.Contains(string(output), serviceName) {
 							fmt.Printf("✓ %s stopped successfully\n", processType)
 						} else {
-							fmt.Printf("✗ %s still running (status: %s)\n", processType, status)
+							fmt.Printf("✗ Failed to stop %s: %v\n", processType, err)
 						}
 					}
 
@@ -857,7 +811,7 @@ func handlePSScale(args []string) {
 		fmt.Printf("→ %s/%s (%s)\n\n", app, env, remoteInfo.Host)
 
 		// For now, implement basic scaling (0 or 1 instance)
-		// Full scaling with multiple instances would require more complex systemd setup
+		// Full scaling with multiple instances would require more complex
 		sshCmd := fmt.Sprintf(`
 			app="%s"
 			env="%s"
@@ -868,16 +822,14 @@ func handlePSScale(args []string) {
 
 			if [ "$count" -eq 0 ]; then
 				echo "Stopping $process (scaling to 0)..."
-				sudo systemctl stop "$service_name" 2>/dev/null || true
-				sudo systemctl disable "$service_name" 2>/dev/null || true
+				docker stop "$service_name" 2>/dev/null || true
 				echo "✓ $process scaled to 0 instances"
 			else
 				echo "Starting $process (scaling to $count)..."
-				sudo systemctl enable "$service_name" 2>/dev/null || true
-				sudo systemctl start "$service_name"
+				docker start "$service_name" 2>/dev/null || true
 				sleep 2
 
-				if sudo systemctl is-active --quiet "$service_name"; then
+				if docker ps -a --format '{{.Names}}' | grep -q "^${service_name}$"; then
 					echo "✓ $process scaled to $count instance(s)"
 				else
 					echo "✗ Failed to scale $process"
@@ -902,36 +854,29 @@ func handlePSScale(args []string) {
 		serviceName := fmt.Sprintf("%s-%s-%s", app, env, process)
 
 		// For now, implement basic scaling (0 or 1 instance)
-		// Full scaling with multiple instances would require more complex systemd setup
+		// Full scaling with multiple instances would require more complex
 		if count == 0 {
 			fmt.Printf("Stopping %s (scaling to 0)...\n", process)
 
-			stopCmd := exec.Command("sudo", "systemctl", "stop", serviceName)
+			stopCmd := exec.Command("docker", "stop", serviceName)
 			stopCmd.Run() // Ignore errors if service doesn't exist
-
-			disableCmd := exec.Command("sudo", "systemctl", "disable", serviceName)
-			disableCmd.Run() // Ignore errors
 
 			fmt.Printf("✓ %s scaled to 0 instances\n", process)
 		} else {
 			fmt.Printf("Starting %s (scaling to %d)...\n", process, count)
 
-			enableCmd := exec.Command("sudo", "systemctl", "enable", serviceName)
-			enableCmd.Run() // Ignore errors if service doesn't exist
-
-			startCmd := exec.Command("sudo", "systemctl", "start", serviceName)
+			startCmd := exec.Command("docker", "start", serviceName)
 			err := startCmd.Run()
 			if err != nil {
 				fmt.Printf("✗ Failed to start %s: %v\n", process, err)
 			} else {
 				// Check if service is active
-				checkCmd := exec.Command("sudo", "systemctl", "is-active", serviceName)
+				checkCmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
 				output, _ := checkCmd.Output()
-				status := strings.TrimSpace(string(output))
-				if status == "active" {
+				if err == nil && strings.Contains(string(output), serviceName) {
 					fmt.Printf("✓ %s scaled to %d instance(s)\n", process, count)
 				} else {
-					fmt.Printf("✗ %s failed to start (status: %s)\n", process, status)
+					fmt.Printf("✗ Failed to start %s: %v\n", process, err)
 				}
 			}
 		}

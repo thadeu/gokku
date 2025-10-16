@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
 	"infra/internal"
 )
@@ -71,32 +70,12 @@ func handleLogs(args []string) {
 			followFlag = "-f"
 		}
 
-		// Try systemd logs first, fallback to docker logs
 		if follow {
 			// For follow mode, use journalctl/docker logs directly
-			systemdCmd := exec.Command("sudo", "systemctl", "list-units", "--all")
-			if err := systemdCmd.Run(); err == nil {
-				cmd = exec.Command("sudo", "journalctl", "-u", serviceName, followFlag, "-n", "100")
-			} else {
-				cmd = exec.Command("docker", "logs", followFlag, serviceName)
-			}
+			cmd = exec.Command("docker", "logs", followFlag, serviceName)
 		} else {
-			// Check systemd first
-			systemdCmd := exec.Command("sudo", "systemctl", "list-units", "--all")
-			output, err := systemdCmd.Output()
-			if err == nil && strings.Contains(string(output), serviceName) {
-				cmd = exec.Command("sudo", "journalctl", "-u", serviceName, "-n", "100")
-			} else {
-				// Try docker
-				dockerCmd := exec.Command("docker", "ps", "-a")
-				output, err := dockerCmd.Output()
-				if err == nil && strings.Contains(string(output), serviceName) {
-					cmd = exec.Command("docker", "logs", serviceName)
-				} else {
-					fmt.Printf("Service or container '%s' not found\n", serviceName)
-					os.Exit(1)
-				}
-			}
+			// Try docker
+			cmd = exec.Command("docker", "logs", serviceName)
 		}
 
 		cmd.Stdout = os.Stdout

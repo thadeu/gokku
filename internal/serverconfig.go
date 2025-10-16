@@ -32,7 +32,7 @@ type App struct {
 
 // Build represents build configuration
 type Build struct {
-	Type       string `yaml:"type"` // "systemd" or "docker"
+	Type       string `yaml:"type"` // "docker"
 	Path       string `yaml:"path"`
 	BinaryName string `yaml:"binary_name,omitempty"`
 	GoVersion  string `yaml:"go_version,omitempty"`
@@ -125,8 +125,8 @@ func (c *ServerConfig) Validate() error {
 			return fmt.Errorf("app '%s' missing build configuration", app.Name)
 		}
 
-		if app.Build.Type != "systemd" && app.Build.Type != "docker" {
-			return fmt.Errorf("app '%s' has invalid build type: %s (must be 'systemd' or 'docker')", app.Name, app.Build.Type)
+		if app.Build.Type != "docker" {
+			return fmt.Errorf("app '%s' has invalid build type: %s (must be 'docker')", app.Name, app.Build.Type)
 		}
 	}
 

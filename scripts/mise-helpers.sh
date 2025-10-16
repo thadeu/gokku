@@ -12,13 +12,13 @@ install_mise() {
         echo "mise is already installed"
         return 0
     fi
-    
+
     echo "Installing mise..."
     curl https://mise.run | sh
-    
+
     # Add to PATH for current session
     export PATH="$HOME/.local/bin:$PATH"
-    
+
     # Verify installation
     if is_mise_installed; then
         echo "mise installed successfully"
@@ -38,13 +38,13 @@ has_tool_versions() {
 # Install mise plugins from config
 install_mise_plugins() {
     local plugins_json=$1
-    
+
     if [ -z "$plugins_json" ]; then
         return 0
     fi
-    
+
     echo "-----> Installing mise plugins..."
-    
+
     # Parse JSON and install each plugin
     # Format: name1:url1,name2:url2
     IFS=',' read -ra PLUGINS <<< "$plugins_json"
@@ -62,22 +62,22 @@ install_mise_plugins() {
             fi
         fi
     done
-    
+
     echo "-----> Plugins installed"
 }
 
 # Run mise install
 run_mise_install() {
     local dir=$1
-    
+
     if ! has_tool_versions "$dir"; then
         return 0
     fi
-    
+
     echo "-----> Detected .tool-versions"
-    
+
     cd "$dir" || return 1
-    
+
     # Show what will be installed
     echo "       Tools to install:"
     while IFS= read -r line; do
@@ -86,14 +86,14 @@ run_mise_install() {
         [[ -z "$line" ]] && continue
         echo "       - $line"
     done < .tool-versions
-    
+
     # Install tools
     echo "-----> Running mise install..."
     if ! mise install; then
         echo "ERROR: mise install failed"
         return 1
     fi
-    
+
     echo "-----> Tools installed successfully"
     return 0
 }
@@ -114,21 +114,6 @@ has_mise_tool() {
     mise list | grep -q "^${tool}"
 }
 
-# Export mise environment for systemd
-export_mise_env() {
-    local workdir=$1
-    
-    if ! has_tool_versions "$workdir"; then
-        return 0
-    fi
-    
-    # Get mise shims path
-    local shims_path=$(get_mise_shims_path)
-    
-    # Export PATH with mise shims
-    echo "Environment=PATH=${shims_path}:/usr/local/bin:/usr/bin:/bin"
-}
-
 # Generate Dockerfile with mise support
 generate_dockerfile_with_mise() {
     local lang=$1
@@ -136,7 +121,7 @@ generate_dockerfile_with_mise() {
     local entrypoint=$3
     local plugins=$4
     local output=$5
-    
+
     cat > "$output" << 'DOCKERFILE_MISE'
 # Generated Dockerfile with mise support
 FROM ubuntu:22.04
@@ -175,7 +160,7 @@ EXPOSE ${PORT:-8080}
 # Run application
 CMD ["__ENTRYPOINT__"]
 DOCKERFILE_MISE
-    
+
     # Replace plugins section
     if [ -n "$plugins" ]; then
         local plugins_cmd="RUN "
@@ -185,12 +170,12 @@ DOCKERFILE_MISE
             plugins_cmd+="mise plugins install $name $url && "
         done
         plugins_cmd="${plugins_cmd% && }"
-        
+
         sed -i "s|__PLUGINS_INSTALL__|$plugins_cmd|g" "$output"
     else
         sed -i "s|__PLUGINS_INSTALL__|# No extra plugins|g" "$output"
     fi
-    
+
     # Replace entrypoint based on language
     case "$lang" in
         python)
