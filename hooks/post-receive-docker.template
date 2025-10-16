@@ -553,7 +553,17 @@ sudo docker images "$APP_NAME" --format "{{.Tag}}" | grep -v "^latest$" | sort -
 done
 
 # Execute post_deploy commands if configured
-POST_DEPLOY_COMMANDS=$(get_app_post_deploy "$APP_NAME")
+# Load config-loader if available for post_deploy commands
+if [ -f "$SCRIPT_DIR/config-loader.sh" ]; then
+    GOKKU_CONFIG="$BASE_GOKKU_DIR/gokku.yml" source "$SCRIPT_DIR/config-loader.sh" 2>/dev/null || true
+fi
+
+if command -v get_app_post_deploy >/dev/null 2>&1; then
+    POST_DEPLOY_COMMANDS=$(get_app_post_deploy "$APP_NAME")
+else
+    POST_DEPLOY_COMMANDS=""
+fi
+
 if [ -n "$POST_DEPLOY_COMMANDS" ]; then
     echo "-----> Running post-deploy commands..."
 
