@@ -342,7 +342,6 @@ EXPOSE \${PORT:-8080}
 CMD ["./app"]
 DOCKERFILE_GO
             ;;
-            ;;
 
         python)
             cat > "$DOCKERFILE_PATH" << 'DOCKERFILE_PYTHON'
