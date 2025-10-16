@@ -56,3 +56,8 @@ func HandleSSH(args []string) {
 func HandlePS(args []string) {
 	handlePS(args)
 }
+
+// HandleTool provides utility commands for scripts
+func HandleTool(args []string) {
+	handleTool(args)
+}

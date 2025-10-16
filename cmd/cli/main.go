@@ -40,6 +40,8 @@ func main() {
 		handlers.HandleSSH(os.Args[2:])
 	case "ps":
 		handlers.HandlePS(os.Args[1:])
+	case "tool":
+		handlers.HandleTool(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Printf("gokku version %s\n", version)
 	case "help", "--help", "-h":
@@ -69,6 +71,7 @@ CLIENT COMMANDS (run from local machine):
   rollback       Rollback to previous release
   ssh            SSH to server
   ps             Manage Procfile processes (Dokku-style)
+  tool           Utility commands for scripts
   version        Show version
   help           Show this help
 

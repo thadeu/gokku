@@ -250,18 +250,7 @@ get_app_restart_delay() {
 # Function to get post_deploy commands for an app
 get_app_post_deploy() {
     local app_name=$1
-    awk "/^  - name: $app_name/,/^  - name:/ {
-        if (/post_deploy:/) {
-            in_post_deploy=1
-            getline
-            while (in_post_deploy && /^      - /) {
-                cmd = substr(\$0, 7)
-                if (cmd != \"\") print cmd
-                getline
-            }
-            in_post_deploy=0
-        }
-    }" "$CONFIG_FILE"
+    /usr/local/bin/gokku tool get-post-deploy "$app_name"
 }
 
 # Function to check if app has mise plugins configured
