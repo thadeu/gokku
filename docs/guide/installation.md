@@ -2,15 +2,6 @@
 
 This guide covers installing Gokku on your server and local machine using the universal installer.
 
-## Requirements
-
-- **OS**: Ubuntu 20.04+ / Debian 11+ / macOS (Linux for server)
-- **CPU**: 1 core minimum (2+ recommended)
-- **RAM**: 512MB minimum (1GB+ recommended)
-- **Disk**: 2GB free space
-- **Network**: Port 22 (SSH) open for server
-- **Go**: 1.20+ (only required for client development, not for server installation)
-
 ## Universal Installer
 
 Gokku has a single universal installer that automatically detects if you're installing on a server or client.
