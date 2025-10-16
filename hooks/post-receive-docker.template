@@ -226,13 +226,13 @@ if ! command -v docker &> /dev/null; then
         exit 1
     fi
 else
-    DOCKER_VERSION=$(docker --version)
+    DOCKER_VERSION=$(sudo docker --version)
     echo "-----> Docker is installed ($DOCKER_VERSION)"
 fi
 
 # Verify Docker daemon is running
 echo "-----> Verifying Docker daemon..."
-if ! docker ps > /dev/null 2>&1; then
+if ! sudo docker ps > /dev/null 2>&1; then
     echo "-----> Starting Docker daemon..."
     if ! sudo systemctl start docker 2>/dev/null; then
         echo "ERROR: Failed to start Docker daemon"
@@ -370,13 +370,13 @@ fi  # End of Dockerfile exists check
 
 # Build Docker image
 echo "-----> Building Docker image: $APP_NAME:$RELEASE_TAG..."
-if ! docker build -f "$DOCKERFILE_PATH" -t "$APP_NAME:$RELEASE_TAG" .; then
+if ! sudo docker build -f "$DOCKERFILE_PATH" -t "$APP_NAME:$RELEASE_TAG" .; then
     echo "ERROR: Docker build failed"
     exit 1
 fi
 
 # Tag as latest
-docker tag "$APP_NAME:$RELEASE_TAG" "$APP_NAME:latest"
+sudo docker tag "$APP_NAME:$RELEASE_TAG" "$APP_NAME:latest"
 
 IMAGE_SIZE=$(docker images "$APP_NAME:$RELEASE_TAG" --format "{{.Size}}")
 echo "-----> Build complete ($IMAGE_SIZE)"
@@ -406,13 +406,13 @@ if [ "$PROC_FILE_MODE" = true ]; then
 
         # Build image for this specific process
         process_image_tag="$APP_NAME-$process_type:$RELEASE_TAG"
-        if ! docker build -f "$DOCKERFILE_PATH" -t "$process_image_tag" .; then
+        if ! sudo docker build -f "$DOCKERFILE_PATH" -t "$process_image_tag" .; then
             echo "ERROR: Failed to build image for process $process_type"
             exit 1
         fi
 
         # Tag as latest for this process
-        docker tag "$process_image_tag" "$APP_NAME-$process_type:latest"
+        sudo docker tag "$process_image_tag" "$APP_NAME-$process_type:latest"
 
         # Deploy the container for this process
         deploy_procfile_process "$process_type" "$process_command" "$process_image_tag" "$RELEASE_DIR/.env" "$process_service_name" "$process_container_name" || {
@@ -449,14 +449,14 @@ deploy_procfile_process() {
     # Stop existing container if running
     if docker ps -q -f name="$container_name" | grep -q .; then
         echo "       Stopping existing container: $container_name"
-        docker stop "$container_name" >/dev/null 2>&1 || true
-        docker rm "$container_name" >/dev/null 2>&1 || true
+        sudo docker stop "$container_name" >/dev/null 2>&1 || true
+        sudo docker rm "$container_name" >/dev/null 2>&1 || true
     fi
 
     # Start new container with the specific process command
     echo "       Starting container: $container_name"
     if [ -n "$CONTAINER_PORT" ]; then
-        docker run -d --name "$container_name" \
+        sudo docker run -d --name "$container_name" \
             --env-file "$env_file" \
             -p "$CONTAINER_PORT:$CONTAINER_PORT" \
             --restart unless-stopped \
@@ -466,7 +466,7 @@ deploy_procfile_process() {
             return 1
         }
     else
-        docker run -d --name "$container_name" \
+        sudo docker run -d --name "$container_name" \
             --env-file "$env_file" \
             --restart unless-stopped \
             "$image_tag" \
@@ -527,7 +527,7 @@ else
     else
         echo "ERROR: Container is not running after deployment"
         if docker ps -a --format '{{.Names}}' | grep -q "^${APP_NAME}-blue$"; then
-            docker logs "${APP_NAME}-blue" 2>&1 | tail -30
+            sudo docker logs "${APP_NAME}-blue" 2>&1 | tail -30
         fi
         exit 1
     fi
@@ -540,9 +540,9 @@ ls -t | tail -n +$((KEEP_RELEASES + 1)) | xargs -r rm -rf
 
 # Cleanup old images (keep last N)
 echo "-----> Cleaning up old images..."
-docker images "$APP_NAME" --format "{{.Tag}}" | grep -v "^latest$" | sort -r | tail -n +$((KEEP_IMAGES + 1)) | while read tag; do
+sudo docker images "$APP_NAME" --format "{{.Tag}}" | grep -v "^latest$" | sort -r | tail -n +$((KEEP_IMAGES + 1)) | while read tag; do
     echo "       Removing image: $APP_NAME:$tag"
-    docker rmi "$APP_NAME:$tag" 2>/dev/null || true
+    sudo docker rmi "$APP_NAME:$tag" 2>/dev/null || true
 done
 
 # Execute post_deploy commands if configured
