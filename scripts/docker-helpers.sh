@@ -232,20 +232,20 @@ get_docker_status() {
 # Check if zero-downtime deployment is enabled
 is_zero_downtime_enabled() {
     local env_file=$1
-    
+
     if [ ! -f "$env_file" ]; then
         # Default: enabled
         return 0
     fi
-    
+
     # Extract ZERO_DOWNTIME from env file
     local zero_downtime=$(grep "^ZERO_DOWNTIME=" "$env_file" 2>/dev/null | cut -d= -f2 | tr -d ' ')
-    
+
     case "$zero_downtime" in
-        1|true|True|TRUE|yes|Yes|YES|on|On|ON)
+        1|true|True|TRUE|yes|Yes|YES|on|On|ON|y)
             return 0  # Enabled
             ;;
-        0|false|False|FALSE|no|No|NO|off|Off|OFF)
+        0|false|False|FALSE|no|No|NO|off|Off|OFF|n)
             return 1  # Disabled
             ;;
         *)
@@ -262,67 +262,67 @@ standard_deploy() {
     local env_file=$3
     local release_dir=$4
     local service_name=$5
-    
+
     local blue_name="${app_name}-blue"
-    
+
     echo "=====> Starting Standard Deployment"
     echo "-----> Stopping old container: $blue_name"
-    
+
     # Stop and remove old container
     if docker ps -a --format '{{.Names}}' | grep -q "^${blue_name}$"; then
         docker stop "$blue_name" 2>/dev/null || true
         docker rm "$blue_name" 2>/dev/null || true
         sleep 2
     fi
-    
+
     # Get port from env file
     local container_port=$(get_container_port "$env_file" 8080)
     echo "-----> Using port: $container_port"
-    
+
     # Build docker run command
     local docker_cmd="docker run -d --name $blue_name"
-    
+
     # Add restart policy
     docker_cmd="$docker_cmd --restart no"
-    
+
     # Add port mapping
     docker_cmd="$docker_cmd -p $container_port:${container_port}"
-    
+
     # Add environment file if exists
     if [ -f "$env_file" ]; then
         docker_cmd="$docker_cmd --env-file $env_file"
     fi
-    
+
     # Add working directory volume
     docker_cmd="$docker_cmd -v $release_dir:/app"
-    
+
     # Add image
     docker_cmd="$docker_cmd ${app_name}:${image_tag}"
-    
+
     echo "-----> Starting new container: $blue_name"
-    
+
     # Run container
     if ! eval "$docker_cmd"; then
         echo "ERROR: Failed to start container"
         return 1
     fi
-    
+
     # Wait for container to be ready
     echo "-----> Waiting for container to be ready..."
     sleep 5
-    
+
     # Check if container is running
     if ! docker ps --format '{{.Names}}' | grep -q "^${blue_name}$"; then
         echo "ERROR: Container failed to start"
         docker logs "$blue_name" 2>&1 | tail -30
         return 1
     fi
-    
+
     echo "=====> Standard Deployment Complete!"
     echo "-----> Active container: ${blue_name}"
     echo "-----> Running image: $image_tag"
     echo "-----> Port: $container_port"
-    
+
     return 0
 }
 
@@ -334,7 +334,7 @@ deploy_container() {
     local release_dir=$4
     local service_name=$5
     local health_check_timeout=${6:-60}
-    
+
     if is_zero_downtime_enabled "$env_file"; then
         echo "=====> ZERO_DOWNTIME deployment enabled"
         blue_green_deploy "$app_name" "$image_tag" "$env_file" "$release_dir" "$service_name" "$health_check_timeout"

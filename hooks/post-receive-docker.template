@@ -169,10 +169,10 @@ deploy_container "$APP_NAME" "$RELEASE_TAG" "$RELEASE_DIR/.env" "$RELEASE_DIR" "
 SYSTEMD_UNIT="/etc/systemd/system/${SERVICE_NAME}.service"
 if [ ! -f "$SYSTEMD_UNIT" ]; then
     echo "-----> Creating systemd service: $SERVICE_NAME"
-    
+
     CONTAINER_PORT=$(grep "^PORT=" "$RELEASE_DIR/.env" 2>/dev/null | cut -d= -f2 | tr -d ' ')
     CONTAINER_PORT=${CONTAINER_PORT:-8080}
-    
+
     sudo tee "$SYSTEMD_UNIT" > /dev/null << UNIT_EOF
 [Unit]
 Description=Gokku $APP_NAME ($ENVIRONMENT) Docker Container
@@ -197,7 +197,7 @@ ExecReload=/usr/bin/docker restart ${APP_NAME}-blue
 [Install]
 WantedBy=multi-user.target
 UNIT_EOF
-    
+
     sudo systemctl daemon-reload
     sudo systemctl enable $SERVICE_NAME
 fi
@@ -214,7 +214,7 @@ echo "=====> Verifying Blue/Green Deployment"
 if docker ps --format '{{.Names}}' | grep -q "^${APP_NAME}-blue$"; then
     CONTAINER_STATUS=$(docker inspect "${APP_NAME}-blue" --format='{{.State.Status}}')
     CONTAINER_HEALTH=$(docker inspect "${APP_NAME}-blue" --format='{{.State.Health.Status}}' 2>/dev/null || echo "running")
-    
+
     echo "-----> Deploy successful (Zero-Downtime)!"
     echo "-----> App: $APP_NAME"
     echo "-----> Environment: $ENVIRONMENT"
