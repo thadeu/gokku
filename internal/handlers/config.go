@@ -91,6 +91,20 @@ func handleConfig(args []string) {
 		return
 	}
 
+	// Check if we're running on server - local execution only works on server
+	if !internal.IsRunningOnServer() {
+		fmt.Println("Error: Local config commands can only be run on the server")
+		fmt.Println("")
+		fmt.Println("For client usage, use --remote flag:")
+		fmt.Println("  gokku config set KEY=VALUE --remote <git-remote>")
+		fmt.Println("  gokku config get KEY --remote <git-remote>")
+		fmt.Println("  gokku config list --remote <git-remote>")
+		fmt.Println("  gokku config unset KEY --remote <git-remote>")
+		fmt.Println("")
+		fmt.Println("Or run this command directly on your server.")
+		os.Exit(1)
+	}
+
 	// Local execution - parse --app and --env flags
 	var appName, envName string
 	var finalArgs []string

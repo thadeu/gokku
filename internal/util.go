@@ -3,6 +3,7 @@ package internal
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 // GetConfigPath returns the path to the configuration file
@@ -26,4 +27,37 @@ func ExtractRemoteFlag(args []string) (string, []string) {
 	}
 
 	return remote, remaining
+}
+
+// IsRunningOnServer returns true if running on the server environment
+// Server environment: Linux + systemd + /opt/gokku directory exists and is writable
+func IsRunningOnServer() bool {
+	// Check if running on Linux
+	if runtime.GOOS != "linux" {
+		return false
+	}
+
+	// Check if systemd directory exists (server indicator)
+	if _, err := os.Stat("/etc/systemd/system"); os.IsNotExist(err) {
+		return false
+	}
+
+	// Check if /opt/gokku exists and is writable
+	info, err := os.Stat("/opt/gokku")
+	if os.IsNotExist(err) {
+		return false
+	}
+	if !info.IsDir() {
+		return false
+	}
+
+	// Try to create a test file to check write permissions
+	testFile := "/opt/gokku/.gokku-test-write"
+	err = os.WriteFile(testFile, []byte("test"), 0644)
+	if err != nil {
+		return false
+	}
+	os.Remove(testFile) // Clean up
+
+	return true
 }
