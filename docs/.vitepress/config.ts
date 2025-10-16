@@ -3,16 +3,16 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Gokku",
   description: "Lightweight git-push deployment system for Go and multi-language applications",
-  base: '/gokku/',
+  base: '/',
   ignoreDeadLinks: true,
-  
+
   head: [
-    ['link', { rel: 'icon', href: '/gokku/favicon.ico' }]
+    ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],
 
   themeConfig: {
     logo: '/logo.svg',
-    
+
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/guide/getting-started' },
