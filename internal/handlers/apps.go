@@ -300,7 +300,7 @@ if [ -f "$RELEASE_DIR/gokku.yml" ]; then
             [ "$new_BUILD_WORKDIR" != "null" ] && [ -n "$new_BUILD_WORKDIR" ] && BUILD_WORKDIR="$new_BUILD_WORKDIR"
             [ "$new_KEEP_RELEASES" != "null" ] && [ -n "$new_KEEP_RELEASES" ] && KEEP_RELEASES="$new_KEEP_RELEASES"
 
-            echo "==> Config loaded: TYPE=$BUILD_TYPE, LANG=$LANG, WORKDIR=$BUILD_WORKDIR"
+            echo "==> Config loaded: TYPE=$BUILD_TYPE, , WORKDIR=$BUILD_WORKDIR"
         else
             echo "==> App '$APP_NAME' not found in gokku.yml, using defaults"
         fi
@@ -391,7 +391,7 @@ if [ -f "$BUILD_DIR/go.mod" ]; then
     export PATH="$PATH:/usr/local/go/bin"
 
     if [ "$BUILD_TYPE" = "docker" ]; then
-        echo "-----> Generating Dockerfile in $BUILD_DIR..."
+        echo "-----> Generating Dockerfile"
 
         # Always copy from current directory when in BUILD_DIR
         COPY_SOURCE="."

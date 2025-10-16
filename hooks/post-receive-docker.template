@@ -309,7 +309,7 @@ if [ -n "$DOCKERFILE" ] && [ -f "$DOCKERFILE" ]; then
 else
     # Change to build directory
     cd "$BUILD_DIR"
-    echo "-----> Generating Dockerfile for $LANG in $BUILD_DIR..."
+    echo "-----> Generating Dockerfile for $LANG"
     DOCKERFILE_PATH="./Dockerfile"
 
     # Check if .tool-versions exists - use mise-based Dockerfile
