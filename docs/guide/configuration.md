@@ -452,7 +452,7 @@ environments:
       DATABASE_URL: postgres://...
 ```
 
-Use `env-manager` for secrets instead.
+Use `gokku config` for secrets instead.
 
 ### 3. Version Control
 

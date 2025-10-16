@@ -352,22 +352,10 @@ Docker maps: `8080:8080`
 Set via environment variables:
 
 ```bash
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production set PORT=8081"
+gokku config set PORT=8081 --app api --env production --remote api-production
 ```
 
 Then redeploy.
-
-### Port Conflicts
-
-If port already in use:
-
-```bash
-# Check what's using the port
-ssh ubuntu@server "sudo lsof -i :8080"
-
-# Change port
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production set PORT=8085"
-```
 
 ## Container Management
 
@@ -419,7 +407,7 @@ All environment variables are passed to the container:
 
 ```bash
 # Set variable
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production set DATABASE_URL=postgres://..."
+gokku config set DATABASE_URL=postgres://... --app api --env production --remote api-production
 
 # Restart container to pick up changes
 ssh ubuntu@server "docker restart api-production"
@@ -568,16 +556,6 @@ Clean up old images:
 
 ```bash
 ssh ubuntu@server "docker system prune -a"
-```
-
-### Port Already in Use
-
-```bash
-# Find what's using the port
-ssh ubuntu@server "sudo lsof -i :8080"
-
-# Change port
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app my-app --env production set PORT=8085"
 ```
 
 ### Image Pull Failed

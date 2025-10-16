@@ -194,7 +194,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT:-8080}"]
 ```bash
 # On server
 cd /opt/gokku
-./env-manager --app flask-app --env production set DATABASE_URL="postgresql://user:pass@localhost/db"
+gokku config set DATABASE_URL="postgresql://user:pass@localhost/db" --app flask-app --env production
 ```
 
 ### app.py

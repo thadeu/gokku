@@ -51,3 +51,8 @@ func HandleRollback(args []string) {
 func HandleSSH(args []string) {
 	handleSSH(args)
 }
+
+// HandlePS manages Procfile processes
+func HandlePS(args []string) {
+	handlePS(args)
+}

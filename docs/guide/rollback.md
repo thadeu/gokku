@@ -339,7 +339,7 @@ Check if env vars are compatible:
 
 ```bash
 # List current vars
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production list"
+gokku config list --remote api-production
 
 # If needed, restore backup
 scp backup.env ubuntu@server:/opt/gokku/apps/api/production/.env

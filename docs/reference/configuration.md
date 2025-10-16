@@ -353,20 +353,26 @@ Gokku validates your configuration:
 
 ## Environment Variables
 
-Set via `env-manager` on server:
+Set via `gokku config`:
 
 ```bash
-# Set variable
-./env-manager --app api --env production set KEY=value
+# Set variable (remote)
+gokku config set KEY=value --app api --env production --remote api-production
 
-# List variables
-./env-manager --app api --env production list
+# Set variable (local, on server)
+gokku config set KEY=value --app api --env production
 
-# Delete variable
-./env-manager --app api --env production del KEY
+# List variables (remote)
+gokku config list --app api --env production --remote api-production
+
+# List variables (local, on server)
+gokku config list --app api --env production
+
+# Delete variable (remote)
+gokku config unset KEY --app api --env production --remote api-production
 ```
 
-**Don't put secrets in `gokku.yml`!** Use `env-manager` instead.
+**Don't put secrets in `gokku.yml`!** Use `gokku config` instead.
 
 ## Next Steps
 

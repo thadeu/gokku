@@ -29,6 +29,83 @@ if [ -f "$SCRIPT_DIR/docker-helpers.sh" ]; then
     source "$SCRIPT_DIR/docker-helpers.sh"
 fi
 
+# Function to generate Dockerfile for Procfile-based deployments
+generate_procfile_dockerfile() {
+    # Detect language from common files
+    local detected_lang="generic"
+
+    if [ -f "package.json" ]; then
+        detected_lang="nodejs"
+        echo "-----> Detected Node.js application"
+    elif [ -f "requirements.txt" ] || [ -f "Pipfile" ] || [ -f "pyproject.toml" ]; then
+        detected_lang="python"
+        echo "-----> Detected Python application"
+    elif [ -f "Gemfile" ]; then
+        detected_lang="ruby"
+        echo "-----> Detected Ruby application"
+    elif [ -f "go.mod" ]; then
+        detected_lang="go"
+        echo "-----> Detected Go application"
+    fi
+
+    # Generate Dockerfile based on detected language
+    case "$detected_lang" in
+        nodejs)
+            cat > Dockerfile << 'DOCKERFILE_NODEJS'
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE ${PORT:-3000}
+# Default command will be overridden by Procfile processes
+CMD ["echo", "This Dockerfile is for Procfile deployment only"]
+DOCKERFILE_NODEJS
+            ;;
+
+        python)
+            cat > Dockerfile << 'DOCKERFILE_PYTHON'
+FROM python:3.11-slim
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
+COPY requirements*.txt ./
+RUN pip install --no-cache-dir -r requirements.txt 2>/dev/null || echo "No requirements.txt found"
+COPY . .
+EXPOSE ${PORT:-8000}
+# Default command will be overridden by Procfile processes
+CMD ["echo", "This Dockerfile is for Procfile deployment only"]
+DOCKERFILE_PYTHON
+            ;;
+
+        ruby)
+            cat > Dockerfile << 'DOCKERFILE_RUBY'
+FROM ruby:3.2-alpine
+WORKDIR /app
+COPY Gemfile* ./
+RUN bundle install
+COPY . .
+EXPOSE ${PORT:-3000}
+# Default command will be overridden by Procfile processes
+CMD ["echo", "This Dockerfile is for Procfile deployment only"]
+DOCKERFILE_RUBY
+            ;;
+
+        *)
+            # Generic Dockerfile for other languages/frameworks
+            cat > Dockerfile << 'DOCKERFILE_GENERIC'
+FROM alpine:latest
+WORKDIR /app
+COPY . .
+EXPOSE ${PORT:-3000}
+# Default command will be overridden by Procfile processes
+CMD ["echo", "This Dockerfile is for Procfile deployment only"]
+DOCKERFILE_GENERIC
+            ;;
+    esac
+
+    echo "-----> Dockerfile generated for $detected_lang with Procfile support"
+}
+
 # Auto-setup function - detects first deploy and configures everything
 auto_setup_if_needed() {
     echo "-----> Checking if auto-setup is needed..."
@@ -174,6 +251,49 @@ GIT_WORK_TREE=$RELEASE_DIR git checkout -f master
 
 cd $RELEASE_DIR
 
+# Check if Procfile exists - if so, force docker mode and create multiple processes
+if [ -f "Procfile" ]; then
+    echo "-----> Detected Procfile, enabling multi-process deployment..."
+    PROC_FILE_MODE=true
+
+    # Parse Procfile to extract process types and commands
+    parse_procfile() {
+        local procfile="$1"
+        local -n processes_ref="$2"
+
+        while IFS=: read -r process_type command; do
+            # Skip empty lines and comments
+            [[ -z "$process_type" || "$process_type" =~ ^[[:space:]]*# ]] && continue
+
+            # Trim whitespace
+            process_type=$(echo "$process_type" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            command=$(echo "$command" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+            if [ -n "$process_type" ] && [ -n "$command" ]; then
+                processes_ref["$process_type"]="$command"
+                echo "       Found process: $process_type -> $command"
+            fi
+        done < "$procfile"
+    }
+
+    # Parse the Procfile
+    declare -A PROCESSES
+    parse_procfile "Procfile" PROCESSES
+
+    echo "-----> Found ${#PROCESSES[@]} process types"
+
+    # For Procfile mode, we need to create a generic Dockerfile
+    # that will be used as base for all processes
+    if [ ! -f "Dockerfile" ]; then
+        echo "-----> Generating Dockerfile for Procfile deployment..."
+        generate_procfile_dockerfile
+    else
+        echo "-----> Using existing Dockerfile with Procfile processes"
+    fi
+else
+    PROC_FILE_MODE=false
+fi
+
 # Check if Dockerfile exists
 if [ -n "$DOCKERFILE" ] && [ -f "$DOCKERFILE" ]; then
     echo "-----> Using existing Dockerfile: $DOCKERFILE"
@@ -262,20 +382,157 @@ ln -sfn $RELEASE_DIR $APP_DIR/current
 # Determine deployment strategy based on ZERO_DOWNTIME env variable
 # Can be set in .env: ZERO_DOWNTIME=1 (enabled) or ZERO_DOWNTIME=0 (disabled)
 # Default: enabled (zero-downtime by default)
-deploy_container "$APP_NAME" "$RELEASE_TAG" "$RELEASE_DIR/.env" "$RELEASE_DIR" "$SERVICE_NAME" 60 || {
-    echo "ERROR: Deployment failed"
-    exit 1
+if [ "$PROC_FILE_MODE" = true ]; then
+    echo "-----> Deploying Procfile processes..."
+
+    # Deploy each process type from Procfile
+    for process_type in "${!PROCESSES[@]}"; do
+        process_command="${PROCESSES[$process_type]}"
+        process_service_name="$APP_NAME-$ENVIRONMENT-$process_type"
+        process_container_name="$APP_NAME-$ENVIRONMENT-$process_type"
+
+        echo "-----> Deploying process: $process_type"
+        echo "       Command: $process_command"
+
+        # Build image for this specific process
+        process_image_tag="$APP_NAME-$process_type:$RELEASE_TAG"
+        if ! docker build -f "$DOCKERFILE_PATH" -t "$process_image_tag" .; then
+            echo "ERROR: Failed to build image for process $process_type"
+            exit 1
+        fi
+
+        # Tag as latest for this process
+        docker tag "$process_image_tag" "$APP_NAME-$process_type:latest"
+
+        # Deploy the container for this process
+        deploy_procfile_process "$process_type" "$process_command" "$process_image_tag" "$RELEASE_DIR/.env" "$process_service_name" "$process_container_name" || {
+            echo "ERROR: Failed to deploy process $process_type"
+            exit 1
+        }
+    done
+else
+    # Original single-container deployment
+    deploy_container "$APP_NAME" "$RELEASE_TAG" "$RELEASE_DIR/.env" "$RELEASE_DIR" "$SERVICE_NAME" 60 || {
+        echo "ERROR: Deployment failed"
+        exit 1
+    }
+fi
+
+# Function to deploy a single Procfile process
+deploy_procfile_process() {
+    local process_type="$1"
+    local process_command="$2"
+    local image_tag="$3"
+    local env_file="$4"
+    local service_name="$5"
+    local container_name="$6"
+
+    # Get port for this process (web process gets main port, others get sequential)
+    if [ "$process_type" = "web" ]; then
+        CONTAINER_PORT=$(grep "^PORT=" "$env_file" 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        CONTAINER_PORT=${CONTAINER_PORT:-3000}
+    else
+        # For non-web processes, use a different port or no port
+        CONTAINER_PORT=""
+    fi
+
+    # Stop existing container if running
+    if docker ps -q -f name="$container_name" | grep -q .; then
+        echo "       Stopping existing container: $container_name"
+        docker stop "$container_name" >/dev/null 2>&1 || true
+        docker rm "$container_name" >/dev/null 2>&1 || true
+    fi
+
+    # Start new container with the specific process command
+    echo "       Starting container: $container_name"
+    if [ -n "$CONTAINER_PORT" ]; then
+        docker run -d --name "$container_name" \
+            --env-file "$env_file" \
+            -p "$CONTAINER_PORT:$CONTAINER_PORT" \
+            --restart unless-stopped \
+            "$image_tag" \
+            sh -c "$process_command" || {
+            echo "ERROR: Failed to start container for process $process_type"
+            return 1
+        }
+    else
+        docker run -d --name "$container_name" \
+            --env-file "$env_file" \
+            --restart unless-stopped \
+            "$image_tag" \
+            sh -c "$process_command" || {
+            echo "ERROR: Failed to start container for process $process_type"
+            return 1
+        }
+    fi
+
+    # Create systemd service for this process
+    create_procfile_service "$process_type" "$service_name" "$container_name"
+
+    echo "       Process $process_type deployed successfully"
 }
 
-# Setup systemd service if needed
-SYSTEMD_UNIT="/etc/systemd/system/${SERVICE_NAME}.service"
-if [ ! -f "$SYSTEMD_UNIT" ]; then
-    echo "-----> Creating systemd service: $SERVICE_NAME"
+# Function to create systemd service for Procfile process
+create_procfile_service() {
+    local process_type="$1"
+    local service_name="$2"
+    local container_name="$3"
 
-    CONTAINER_PORT=$(grep "^PORT=" "$RELEASE_DIR/.env" 2>/dev/null | cut -d= -f2 | tr -d ' ')
-    CONTAINER_PORT=${CONTAINER_PORT:-8080}
+    local systemd_unit="/etc/systemd/system/${service_name}.service"
 
-    sudo tee "$SYSTEMD_UNIT" > /dev/null << UNIT_EOF
+    if [ ! -f "$systemd_unit" ]; then
+        echo "       Creating systemd service: $service_name"
+
+        sudo tee "$systemd_unit" > /dev/null << UNIT_EOF
+[Unit]
+Description=Gokku $APP_NAME ($ENVIRONMENT) - $process_type process
+After=docker.service
+Requires=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=$(whoami)
+WorkingDirectory=$APP_DIR
+StandardOutput=journal
+StandardError=journal
+
+ExecStart=/usr/bin/docker start -a $container_name
+ExecStop=/usr/bin/docker stop $container_name
+ExecReload=/usr/bin/docker restart $container_name
+
+[Install]
+WantedBy=multi-user.target
+UNIT_EOF
+
+        sudo systemctl daemon-reload
+        sudo systemctl enable "$service_name"
+    fi
+
+    # Start the service
+    if ! sudo systemctl is-active --quiet "$service_name"; then
+        echo "       Starting systemd service: $service_name"
+        sudo systemctl start "$service_name"
+    fi
+}
+
+# Setup systemd services
+if [ "$PROC_FILE_MODE" = true ]; then
+    echo "-----> Procfile processes deployed, systemd services created"
+    # Services are created individually in deploy_procfile_process
+else
+    # Original single systemd service creation
+    SYSTEMD_UNIT="/etc/systemd/system/${SERVICE_NAME}.service"
+    if [ ! -f "$SYSTEMD_UNIT" ]; then
+        echo "-----> Creating systemd service: $SERVICE_NAME"
+
+        CONTAINER_PORT=$(grep "^PORT=" "$RELEASE_DIR/.env" 2>/dev/null | cut -d= -f2 | tr -d ' ')
+        CONTAINER_PORT=${CONTAINER_PORT:-8080}
+
+        sudo tee "$SYSTEMD_UNIT" > /dev/null << UNIT_EOF
 [Unit]
 Description=Gokku $APP_NAME ($ENVIRONMENT) Docker Container
 After=docker.service
@@ -300,39 +557,76 @@ ExecReload=/usr/bin/docker restart ${APP_NAME}-blue
 WantedBy=multi-user.target
 UNIT_EOF
 
-    sudo systemctl daemon-reload
-    sudo systemctl enable $SERVICE_NAME
+        sudo systemctl daemon-reload
+        sudo systemctl enable $SERVICE_NAME
+    fi
 fi
 
-# Ensure service is running
-if ! sudo systemctl is-active --quiet $SERVICE_NAME; then
-    echo "-----> Starting systemd service: $SERVICE_NAME"
-    sudo systemctl start $SERVICE_NAME
-    sleep 3
-fi
+# Ensure services are running
+if [ "$PROC_FILE_MODE" = true ]; then
+    echo "=====> Verifying Procfile Deployment"
 
-# Verify deployment
-echo "=====> Verifying Blue/Green Deployment"
-if docker ps --format '{{.Names}}' | grep -q "^${APP_NAME}-blue$"; then
-    CONTAINER_STATUS=$(docker inspect "${APP_NAME}-blue" --format='{{.State.Status}}')
-    CONTAINER_HEALTH=$(docker inspect "${APP_NAME}-blue" --format='{{.State.Health.Status}}' 2>/dev/null || echo "running")
+    # Check all Procfile processes
+    all_processes_running=true
+    for process_type in "${!PROCESSES[@]}"; do
+        container_name="$APP_NAME-$ENVIRONMENT-$process_type"
+        service_name="$APP_NAME-$ENVIRONMENT-$process_type"
 
-    echo "-----> Deploy successful (Zero-Downtime)!"
-    echo "-----> App: $APP_NAME"
-    echo "-----> Environment: $ENVIRONMENT"
-    echo "-----> Release: $(basename $RELEASE_DIR)"
-    echo "-----> Image: $APP_NAME:$RELEASE_TAG"
-    echo "-----> Container: ${APP_NAME}-blue (active)"
-    echo "-----> Status: $CONTAINER_STATUS"
-    if [ "$CONTAINER_HEALTH" != "running" ]; then
-        echo "-----> Health: $CONTAINER_HEALTH"
+        if docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
+            CONTAINER_STATUS=$(docker inspect "${container_name}" --format='{{.State.Status}}')
+            echo "-----> Process $process_type: running ($CONTAINER_STATUS)"
+        else
+            echo "ERROR: Process $process_type container is not running"
+            all_processes_running=false
+        fi
+
+        if ! sudo systemctl is-active --quiet "$service_name"; then
+            echo "ERROR: Process $process_type systemd service is not active"
+            all_processes_running=false
+        fi
+    done
+
+    if [ "$all_processes_running" = true ]; then
+        echo "-----> Procfile deployment successful!"
+        echo "-----> App: $APP_NAME"
+        echo "-----> Environment: $ENVIRONMENT"
+        echo "-----> Release: $(basename $RELEASE_DIR)"
+        echo "-----> Processes: ${#PROCESSES[@]} (${!PROCESSES[@]})"
+    else
+        echo "ERROR: Some Procfile processes failed to start"
+        exit 1
     fi
 else
-    echo "ERROR: Blue container is not running after deployment"
-    if docker ps -a --format '{{.Names}}' | grep -q "^${APP_NAME}-blue$"; then
-        docker logs "${APP_NAME}-blue" 2>&1 | tail -30
+    # Original single-container verification
+    if ! sudo systemctl is-active --quiet $SERVICE_NAME; then
+        echo "-----> Starting systemd service: $SERVICE_NAME"
+        sudo systemctl start $SERVICE_NAME
+        sleep 3
     fi
-    exit 1
+
+    # Verify deployment
+    echo "=====> Verifying Blue/Green Deployment"
+    if docker ps --format '{{.Names}}' | grep -q "^${APP_NAME}-blue$"; then
+        CONTAINER_STATUS=$(docker inspect "${APP_NAME}-blue" --format='{{.State.Status}}')
+        CONTAINER_HEALTH=$(docker inspect "${APP_NAME}-blue" --format='{{.State.Health.Status}}' 2>/dev/null || echo "running")
+
+        echo "-----> Deploy successful (Zero-Downtime)!"
+        echo "-----> App: $APP_NAME"
+        echo "-----> Environment: $ENVIRONMENT"
+        echo "-----> Release: $(basename $RELEASE_DIR)"
+        echo "-----> Image: $APP_NAME:$RELEASE_TAG"
+        echo "-----> Container: ${APP_NAME}-blue (active)"
+        echo "-----> Status: $CONTAINER_STATUS"
+        if [ "$CONTAINER_HEALTH" != "running" ]; then
+            echo "-----> Health: $CONTAINER_HEALTH"
+        fi
+    else
+        echo "ERROR: Blue container is not running after deployment"
+        if docker ps -a --format '{{.Names}}' | grep -q "^${APP_NAME}-blue$"; then
+            docker logs "${APP_NAME}-blue" 2>&1 | tail -30
+        fi
+        exit 1
+    fi
 fi
 
 # Cleanup old releases (keep last N)

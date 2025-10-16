@@ -160,7 +160,7 @@ git push production main
 ```bash
 # On server
 cd /opt/gokku
-./env-manager --app api --env production set DATABASE_URL="postgres://user:pass@localhost/db"
+gokku config set DATABASE_URL="postgres://user:pass@localhost/db" --app api --env production
 ```
 
 ### main.go

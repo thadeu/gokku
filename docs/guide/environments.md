@@ -144,14 +144,14 @@ environments:
       DEBUG: true
 ```
 
-Override with `env-manager`:
+Override with `gokku config`:
 
 ```bash
 # Production
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production set DATABASE_URL=postgres://..."
+gokku config set DATABASE_URL=postgres://... --remote api-production
 
 # Staging
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env staging set DATABASE_URL=postgres://..."
+gokku config set DATABASE_URL=postgres://... --remote api-staging
 ```
 
 ## Directory Structure
@@ -300,8 +300,8 @@ environments:
 Or set manually:
 
 ```bash
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production set PORT=8080"
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env staging set PORT=8081"
+gokku config set PORT=8080 --remote api-production
+gokku config set PORT=8081 --remote api-staging
 ```
 
 ## Database Per Environment
@@ -353,10 +353,10 @@ git push production main
 
 ```bash
 # Production config
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production list"
+gokku config list --remote api-production
 
 # Staging config
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env staging list"
+gokku config list --remote api-staging
 ```
 
 ### View Code Differences
@@ -404,8 +404,8 @@ func main() {
 Set `APP_ENV`:
 
 ```bash
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production set APP_ENV=production"
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env staging set APP_ENV=staging"
+gokku config set APP_ENV=production --remote api-production
+gokku config set APP_ENV=staging --remote api-staging
 ```
 
 ## Custom Environments
@@ -468,7 +468,7 @@ ssh ubuntu@server "sudo lsof -i :8080"
 Change port:
 
 ```bash
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env staging set PORT=8081"
+gokku config set PORT=8081 --remote api-staging
 ssh ubuntu@server "sudo systemctl restart api-staging"
 ```
 

@@ -202,10 +202,10 @@ CMD ["/usr/bin/supervisord"]
 
 ## Environment Variables
 
-Set via env-manager:
+Set via gokku config:
 
 ```bash
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app my-app --env production set DATABASE_URL=postgres://..."
+gokku config set DATABASE_URL=postgres://... --remote my-app-production
 ```
 
 Access in container:

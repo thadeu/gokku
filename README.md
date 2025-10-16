@@ -10,13 +10,14 @@ A **100% generic** git-push deployment system for multi-language applications. N
 
 ## Key Features
 
-✅ **Auto-Setup** - Zero manual configuration, just push and deploy  
-✅ **Zero Hard-coding** - Everything configured via `gokku.yml`  
-✅ **Multi-Language** - Go, Python, Node.js (extensible)  
-✅ **Multi-Runtime** - Systemd or Docker deployment  
-✅ **Portable** - Can be extracted to separate repository  
-✅ **Config-Driven** - Apps, environments, ports all in config  
-✅ **K3s-Style Installer** - One-line installation  
+✅ **Auto-Setup** - Zero manual configuration, just push and deploy
+✅ **Zero Hard-coding** - Everything configured via `gokku.yml`
+✅ **Multi-Language** - Go, Python, Node.js, Ruby (extensible)
+✅ **Multi-Runtime** - Systemd or Docker deployment
+✅ **Procfile Support** - Dokku-style multi-process apps
+✅ **Portable** - Can be extracted to separate repository
+✅ **Config-Driven** - Apps, environments, ports all in config
+✅ **K3s-Style Installer** - One-line installation
 ✅ **Auto Dockerfile** - Generates Dockerfile if not exists  
 
 ---
@@ -215,21 +216,17 @@ apps:
 
 ### Core Files
 
-- `gokku.yml` - **Main configuration file**
-- `config-loader.sh` - Reads config and exports variables
-- `hooks/` - Git hooks for automatic deployment
 - `gokku` - CLI binary for management
+- `gokku.yml` - **Main configuration file**
+- `hooks/` - Git hooks for automatic deployment
 
 ### Installers
 
 - `install` - Universal installer (auto-detects server/client)
-- `gokku-cli.go` - CLI source code
 
 ### Documentation
 
-- `README.md` - This file
-- `TESTING.md` - Testing guide
-- `INSTALLERS.md` - Installer documentation
+[https://gokku-vm.com/](https://gokku-vm.com/)
 
 ---
 
@@ -316,18 +313,6 @@ gokku config list --remote api-production
 ```
 
 ---
-
-## Port Management
-
-### Manual Strategy (Recommended)
-
-Ports are defined per app/env in `.env` files:
-
-```bash
-env-manager --app api --env production set PORT=8080
-env-manager --app api --env staging set PORT=8081
-env-manager --app worker --env production set PORT=9090
-```
 
 **Advantages:**
 - Full control
@@ -452,35 +437,6 @@ apps:
    ```
 7. **Cleanup old images** (keeps last 5)
 
-### Port Mapping
-
-Docker apps use the same port strategy as systemd apps:
-
-```bash
-# Set PORT in .env
-env-manager --app ml-service --env production set PORT=8080
-
-# Container maps: -p 8080:8080
-```
-
-The container reads `PORT` from the environment and the systemd service maps it.
-
-### Docker Commands
-
-```bash
-# View images
-docker images ml-service
-
-# View logs
-docker logs ml-service-production -f
-
-# Exec into container
-docker exec -it ml-service-production sh
-
-# Inspect container
-docker inspect ml-service-production
-```
-
 ### Rollback with Docker
 
 Images are tagged with timestamps:
@@ -556,9 +512,6 @@ your-project/              # Your Go project
 ```bash
 # One-line install (future)
 curl -fsSL https://gokku-vm.com/install | bash
-
-# With custom config
-curl -fsSL https://... | bash -s -- --config ./gokku.yml
 ```
 
 ### Benefits
@@ -801,16 +754,18 @@ ssh ubuntu@ec2 "sudo systemctl status test-app-production"
 
 ## Contributing
 
-When adding features:
+Once you've made your great commits (include tests, please):
 
-1. Keep everything config-driven
-2. No hard-coded values
-3. Support any Go project structure
-4. Document in gokku.yml.example
-5. Add validation where possible
+1. Fork this repository
+2. Create a topic branch - git checkout -b my_branch
+3. Push to your branch - git push origin my_branch
+4. Create a pull request
+5. That's it!
+
+Please respect the indentation rules and code style. And use 2 spaces, not tabs. And don't touch the version thing or distribution files; this will be made when a new version is going to be release
 
 ---
 
 ## License
-[]
 
+The Dockerfile and associated scripts and documentation in this project are released under the [MIT License](LICENSE).

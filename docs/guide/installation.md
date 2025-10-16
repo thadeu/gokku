@@ -278,20 +278,6 @@ ssh-copy-id ubuntu@your-server
 ssh-add ~/.ssh/id_ed25519
 ```
 
-### Port Already in Use
-
-If deployment fails with "port already in use":
-
-```bash
-# Check what's using the port
-ssh ubuntu@your-server "sudo lsof -i :8080"
-
-# Change port in environment
-ssh ubuntu@your-server
-cd /opt/gokku
-./env-manager --app api --env production set PORT=8081
-```
-
 ### Build Failed
 
 Check deployment logs:

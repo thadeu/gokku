@@ -123,7 +123,7 @@ gokku config unset DEBUG --remote api-staging
 
 **Before (with SSH):**
 ```bash
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production set PORT=8080"
+ssh ubuntu@server "cd /opt/gokku && gokku config set PORT=8080 --app api --env production"
 ```
 
 **Now (with gokku):**
@@ -394,7 +394,7 @@ gokku run "df -h" --remote api-production
 **Before (Manual SSH):**
 ```bash
 # Set environment variable
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production set PORT=8080"
+gokku config set PORT=8080 --app api --env production --remote api-production
 
 # View logs
 ssh ubuntu@server "sudo journalctl -u api-production -f"
@@ -457,18 +457,19 @@ Setup a new application on the server.
 4. Creates systemd service (if `build.type: systemd`)
 5. Creates environment file
 
-### env-manager
+### config
 
 Manage environment variables for applications.
 
 **Usage:**
 ```bash
-./env-manager --app APP_NAME --env ENVIRONMENT COMMAND [KEY[=VALUE]]
+gokku config <command> [KEY[=VALUE]] [options]
 ```
 
-**Arguments:**
-- `--app, -a` - Application name
-- `--env, -e` - Environment name
+**Options:**
+- `--remote <git-remote>` - Execute on remote server via SSH
+- `--app, -a <app>` - Application name (required for local execution)
+- `--env, -e <env>` - Environment name (defaults to 'default' for local)
 
 **Commands:**
 
@@ -477,8 +478,12 @@ Manage environment variables for applications.
 Set an environment variable:
 
 ```bash
-./env-manager --app api --env production set PORT=8080
-./env-manager --app api --env production set DATABASE_URL="postgres://..."
+# Remote execution
+gokku config set PORT=8080 --remote api-production
+gokku config set DATABASE_URL="postgres://..." --remote api-production
+
+# Local execution (on server)
+gokku config set PORT=8080 --app api --env production
 ```
 
 #### get
@@ -486,7 +491,11 @@ Set an environment variable:
 Get a variable value:
 
 ```bash
-./env-manager --app api --env production get PORT
+# Remote
+gokku config get PORT --remote api-production
+
+# Local
+gokku config get PORT --app api --env production
 ```
 
 #### list
@@ -494,7 +503,11 @@ Get a variable value:
 List all variables:
 
 ```bash
-./env-manager --app api --env production list
+# Remote
+gokku config list --remote api-production
+
+# Local
+gokku config list --app api --env production
 ```
 
 Output:
@@ -504,27 +517,31 @@ DATABASE_URL=postgres://...
 LOG_LEVEL=info
 ```
 
-#### del
+#### unset
 
 Delete a variable:
 
 ```bash
-./env-manager --app api --env production del PORT
+# Remote
+gokku config unset PORT --remote api-production
+
+# Local
+gokku config unset PORT --app api --env production
 ```
 
 **Examples:**
 
 ```bash
-# Set multiple variables
-./env-manager -a api -e production set PORT=8080
-./env-manager -a api -e production set LOG_LEVEL=info
-./env-manager -a api -e production set DATABASE_URL="postgres://localhost/db"
+# Remote execution (from local machine)
+gokku config set PORT=8080 --remote api-production
+gokku config set LOG_LEVEL=info DATABASE_URL="postgres://..." --remote api-production
+gokku config list --remote api-production
+gokku config unset LOG_LEVEL --remote api-production
 
-# List all
-./env-manager -a api -e production list
-
-# Delete
-./env-manager -a api -e production del LOG_LEVEL
+# Local execution (on server)
+gokku config set PORT=8080 --app api --env production
+gokku config list --app api --env production
+gokku config unset PORT --app api --env production
 ```
 
 ## Git Commands
@@ -782,7 +799,7 @@ git push production main
 
 ```bash
 # 1. Set variable
-ssh ubuntu@server "cd /opt/gokku && ./env-manager --app api --env production set PORT=8081"
+gokku config set PORT=8081 --app api --env production --remote api-production
 
 # 2. Restart service
 ssh ubuntu@server "sudo systemctl restart api-production"

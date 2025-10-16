@@ -280,7 +280,7 @@ Mise can manage env vars too:
 mise env set NODE_ENV=production
 ```
 
-But Gokku's env-manager is recommended for app config.
+But Gokku's `gokku config` is recommended for app config.
 
 ## Examples
 
