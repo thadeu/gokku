@@ -42,9 +42,13 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --server    Install on server (setup deployment)"
-            echo "  --client    Install CLI only (local machine)"
+            echo "  --server    Install on Linux server (requires systemd)"
+            echo "  --client    Install CLI only (local machine or macOS)"
             echo "  --help      Show this help"
+            echo ""
+            echo "Auto-detection:"
+            echo "  - Server: Linux with systemd"
+            echo "  - Client: macOS, or Linux without systemd"
             echo ""
             echo "If no option is provided, installer will auto-detect."
             exit 0
@@ -89,9 +93,11 @@ detect_mode() {
     fi
 
     # Auto-detect based on environment
-    if [ -f "/etc/systemd/system" ] && [ -d "/opt" ]; then
+    # Server: Linux with systemd and /opt directory
+    # Client: macOS, or Linux without systemd, or explicit client mode
+    if [ "$OS" = "linux" ] && [ -d "/etc/systemd/system" ] && [ -d "/opt" ]; then
         MODE="server"
-        log "Auto-detected: server environment"
+        log "Auto-detected: server environment (Linux + systemd)"
     else
         MODE="client"
         log "Auto-detected: client environment"
@@ -261,9 +267,21 @@ setup_server() {
 
     local BASE_DIR="/opt/gokku"
 
+    # macOS doesn't have systemd, so server mode shouldn't be used on macOS
+    if [ "$OS" = "darwin" ]; then
+        log_error "Server mode is not supported on macOS"
+        log_error "macOS can only be used as a client to deploy to remote servers"
+        log_error "Use --client flag or run without arguments for client installation"
+        exit 1
+    fi
+
     # Create base directory
     if [ ! -d "$BASE_DIR" ]; then
-        sudo mkdir -p $BASE_DIR
+        if ! sudo mkdir -p $BASE_DIR 2>/dev/null; then
+            log_error "Failed to create directory: $BASE_DIR"
+            log_error "Make sure you have sudo privileges or the directory is writable"
+            exit 1
+        fi
         sudo chown -R $USER:$USER $BASE_DIR
         log_success "Base directory created: $BASE_DIR"
     fi
