@@ -21,7 +21,8 @@ ENVIRONMENT="$2"
 
 # Load configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${GOKKU_CONFIG:-$SCRIPT_DIR/gokku.yml}"
+BASE_GOKKU_DIR="$(dirname "$SCRIPT_DIR")"
+CONFIG_FILE="${GOKKU_CONFIG:-$BASE_GOKKU_DIR/gokku.yml}"
 
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "Error: Configuration file $CONFIG_FILE not found"

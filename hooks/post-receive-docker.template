@@ -307,11 +307,13 @@ if [ -n "$DOCKERFILE" ] && [ -f "$DOCKERFILE" ]; then
     echo "-----> Using existing Dockerfile: $DOCKERFILE"
     DOCKERFILE_PATH="$DOCKERFILE"
 else
-    echo "-----> Generating Dockerfile for $LANG..."
+    # Change to build directory
+    cd "$BUILD_DIR"
+    echo "-----> Generating Dockerfile for $LANG in $BUILD_DIR..."
     DOCKERFILE_PATH="./Dockerfile"
 
     # Check if .tool-versions exists - use mise-based Dockerfile
-    if [ -f "$RELEASE_DIR/.tool-versions" ]; then
+    if [ -f ".tool-versions" ]; then
         echo "-----> Detected .tool-versions, generating Dockerfile with mise support..."
         generate_dockerfile_with_mise "$LANG" "$BASE_IMAGE" "$ENTRYPOINT" "$MISE_PLUGINS" "$DOCKERFILE_PATH"
         echo "-----> Dockerfile generated with mise support"
@@ -322,12 +324,8 @@ else
     # Generate Dockerfile based on language
     case "$LANG" in
         go)
-            # Determine copy source - use BUILD_WORKDIR if set, otherwise copy everything
-            if [ -n "$BUILD_WORKDIR" ] && [ "$BUILD_WORKDIR" != "." ]; then
-                COPY_SOURCE="$BUILD_WORKDIR"
-            else
-                COPY_SOURCE="."
-            fi
+            # Always copy from current directory when in BUILD_DIR
+            COPY_SOURCE="."
 
             cat > "$DOCKERFILE_PATH" << DOCKERFILE_GO
 FROM __BASE_IMAGE__ AS builder
