@@ -8,3 +8,4 @@ env-manager
 # Backup files
 *.bak
 *.tmp
+gokku-cli
