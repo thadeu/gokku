@@ -41,6 +41,9 @@ jobs:
       - name: Build with VitePress
         run: cd docs && yarn docs:build
 
+      - name: Copy install script to docs dist
+        run: cp install docs/.vitepress/dist/install
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
