@@ -24,7 +24,7 @@ The installer automatically:
 SSH into your server and run:
 
 ```bash
-curl -fsSL https://gokku-vm.com/install | bash
+curl -fsSL https://gokku-vm.com/install | bash -s -- --server
 ```
 
 Or explicitly specify server mode:
