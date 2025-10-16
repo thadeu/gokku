@@ -231,7 +231,7 @@ SERVICE_NAME="$APP_NAME-$ENVIRONMENT"
 BINARY_NAME="$APP_NAME"
 
 # Default values (will be overridden by gokku.yml if available)
-BUILD_TYPE="systemd"
+BUILD_TYPE="docker"
 LANG="go"
 BUILD_PATH="./cmd/$APP_NAME"
 BUILD_WORKDIR="."
@@ -326,32 +326,6 @@ if [ ! -f "$APP_DIR/shared/.env" ]; then
 # Add your environment variables here
 PORT=8080
 ENV_EOF
-fi
-
-# Create systemd service if it doesn't exist and BUILD_TYPE is systemd
-if [ "$BUILD_TYPE" = "systemd" ] && [ ! -f "/etc/systemd/system/$SERVICE_NAME.service" ]; then
-    echo "==> Creating systemd service"
-    sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << SERVICE_EOF
-[Unit]
-Description=$APP_NAME ($ENVIRONMENT)
-After=network.target
-
-[Service]
-Type=simple
-User=thadeu
-WorkingDirectory=$APP_DIR/current
-ExecStart=$APP_DIR/current/$BINARY_NAME
-Restart=always
-RestartSec=5
-
-EnvironmentFile=$APP_DIR/shared/.env
-
-[Install]
-WantedBy=multi-user.target
-SERVICE_EOF
-
-    sudo systemctl daemon-reload
-    sudo systemctl enable "$SERVICE_NAME"
 fi
 
 # Setup mise if .tool-versions exists
@@ -449,23 +423,6 @@ DOCKERFILE_GO_EOF
             sudo docker logs "$SERVICE_NAME" 2>&1 | tail -20
             exit 1
         fi
-    else
-        # Systemd build and deploy
-        # Go build
-        export GOOS="$GOOS"
-        export GOARCH="$GOARCH"
-        export CGO_ENABLED="$CGO_ENABLED"
-        go build -o "$RELEASE_DIR/$BINARY_NAME" $BUILD_PATH
-
-        # Deploy
-        echo "-----> Deploying..."
-        ln -sf "$RELEASE_DIR" "$APP_DIR/current"
-        ln -sf "$APP_DIR/shared/.env" "$RELEASE_DIR/.env"
-
-        # Restart service
-        sudo systemctl restart "$SERVICE_NAME"
-
-        echo "-----> Systemd deployment complete!"
     fi
 else
     echo "-----> No source code found, skipping build and deploy"
