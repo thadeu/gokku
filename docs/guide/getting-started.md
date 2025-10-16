@@ -2,13 +2,6 @@
 
 Get Gokku up and running in minutes.
 
-## Prerequisites
-
-- Linux server (Ubuntu 20.04+ recommended)
-- SSH access to server
-- Git installed locally and on server
-- Go application to deploy (or Python/Node.js)
-
 ## Installation
 
 ### Step 1: Install on Server
