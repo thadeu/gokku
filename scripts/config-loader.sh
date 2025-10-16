@@ -114,7 +114,7 @@ get_app_env_branch() {
 get_app_build_type() {
     local app_name=$1
     local build_type=$(awk "/^  - name: $app_name/,/^  - name:/ {if (/type:/) print \$2}" "$CONFIG_FILE" | head -1)
-    echo "${build_type:-systemd}"
+    echo "${build_type:-docker}"
 }
 
 # Function to get Go version for an app

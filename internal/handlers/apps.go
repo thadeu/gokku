@@ -211,19 +211,7 @@ func autoSetupRepository(remoteInfo *internal.RemoteInfo) error {
 
 	// Copy the smart hook from local Gokku installation
 	// First try to find the hook in the local Gokku installation
-	localHookPaths := []string{
-		"./hooks/post-receive-systemd.template",                      // If running from source
-		"/usr/local/share/gokku/hooks/post-receive-systemd.template", // Standard install location
-		"/opt/gokku/hooks/post-receive-systemd.template",             // Alternative location
-	}
-
 	var hookPath string
-	for _, path := range localHookPaths {
-		if _, err := os.Stat(path); err == nil {
-			hookPath = path
-			break
-		}
-	}
 
 	if hookPath == "" {
 		// Create a smart hook that calls gokku deploy on server
