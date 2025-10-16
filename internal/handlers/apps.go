@@ -248,6 +248,12 @@ LANG="go"
 BUILD_PATH="./cmd/$APP_NAME"
 BUILD_WORKDIR="."
 KEEP_RELEASES="5"
+GOOS="linux"
+GOARCH="arm64"
+CGO_ENABLED="0"
+
+# Setup environment
+export PATH="$PATH:/usr/local/go/bin:/usr/local/bin"
 
 # Source mise helpers if available
 SCRIPT_DIR="/opt/gokku"
@@ -292,11 +298,18 @@ if [ -f "$RELEASE_DIR/gokku.yml" ]; then
 
         # Read build configuration for this app
         if yq ".apps[] | select(.name == \"$APP_NAME\")" "$RELEASE_DIR/gokku.yml" >/dev/null 2>&1; then
-            BUILD_TYPE=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .build.type // \"$BUILD_TYPE\"" "$RELEASE_DIR/gokku.yml" 2>/dev/null || echo "$BUILD_TYPE")
-            LANG=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .lang // \"$LANG\"" "$RELEASE_DIR/gokku.yml" 2>/dev/null || echo "$LANG")
-            BUILD_PATH=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .build.path // \"$BUILD_PATH\"" "$RELEASE_DIR/gokku.yml" 2>/dev/null | tr -d '"' || echo "$BUILD_PATH")
-            BUILD_WORKDIR=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .build.work_dir // \"$BUILD_WORKDIR\"" "$RELEASE_DIR/gokku.yml" 2>/dev/null | tr -d '"' || echo "$BUILD_WORKDIR")
-            KEEP_RELEASES=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .deployment.keep_releases // \"$KEEP_RELEASES\"" "$RELEASE_DIR/gokku.yml" 2>/dev/null || echo "$KEEP_RELEASES")
+            # Only override if the field exists and is not null
+            new_BUILD_TYPE=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .build.type" "$RELEASE_DIR/gokku.yml" 2>/dev/null)
+            new_LANG=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .lang" "$RELEASE_DIR/gokku.yml" 2>/dev/null)
+            new_BUILD_PATH=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .build.path" "$RELEASE_DIR/gokku.yml" 2>/dev/null | tr -d '"')
+            new_BUILD_WORKDIR=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .build.work_dir" "$RELEASE_DIR/gokku.yml" 2>/dev/null | tr -d '"')
+            new_KEEP_RELEASES=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .deployment.keep_releases" "$RELEASE_DIR/gokku.yml" 2>/dev/null)
+
+            [ "$new_BUILD_TYPE" != "null" ] && [ -n "$new_BUILD_TYPE" ] && BUILD_TYPE="$new_BUILD_TYPE"
+            [ "$new_LANG" != "null" ] && [ -n "$new_LANG" ] && LANG="$new_LANG"
+            [ "$new_BUILD_PATH" != "null" ] && [ -n "$new_BUILD_PATH" ] && BUILD_PATH="$new_BUILD_PATH"
+            [ "$new_BUILD_WORKDIR" != "null" ] && [ -n "$new_BUILD_WORKDIR" ] && BUILD_WORKDIR="$new_BUILD_WORKDIR"
+            [ "$new_KEEP_RELEASES" != "null" ] && [ -n "$new_KEEP_RELEASES" ] && KEEP_RELEASES="$new_KEEP_RELEASES"
 
             echo "==> Config loaded: TYPE=$BUILD_TYPE, LANG=$LANG, WORKDIR=$BUILD_WORKDIR"
         else
@@ -309,14 +322,14 @@ else
     echo "-----> No gokku.yml found in repository, using defaults"
 fi
 
-# Auto-setup if needed
-if [ ! -d "$APP_DIR/releases" ] || [ -z "$(ls -A "$APP_DIR/releases" 2>/dev/null)" ]; then
-    echo "-----> First deploy detected, delegating to gokku deploy..."
-    mkdir -p "$APP_DIR"/{releases,shared}
+# Ensure app structure exists
+echo "-----> Ensuring app structure..."
+mkdir -p "$APP_DIR"/{releases,shared}
 
-    # Create .env file
-    if [ ! -f "$APP_DIR/shared/.env" ]; then
-        cat > "$APP_DIR/shared/.env" << ENV_EOF
+# Create .env file if it doesn't exist
+if [ ! -f "$APP_DIR/shared/.env" ]; then
+    echo "==> Creating .env file"
+    cat > "$APP_DIR/shared/.env" << ENV_EOF
 # Environment: $ENVIRONMENT
 # App: $APP_NAME
 # Generated: $(date)
@@ -324,10 +337,11 @@ if [ ! -d "$APP_DIR/releases" ] || [ -z "$(ls -A "$APP_DIR/releases" 2>/dev/null
 # Add your environment variables here
 PORT=8080
 ENV_EOF
-        echo "==> Created .env file"
-    fi
+fi
 
-    # Create systemd service
+# Create systemd service if it doesn't exist
+if [ ! -f "/etc/systemd/system/$SERVICE_NAME.service" ]; then
+    echo "==> Creating systemd service"
     sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << SERVICE_EOF
 [Unit]
 Description=$APP_NAME ($ENVIRONMENT)
@@ -349,9 +363,6 @@ SERVICE_EOF
 
     sudo systemctl daemon-reload
     sudo systemctl enable "$SERVICE_NAME"
-    echo "==> Created systemd service"
-else
-    echo "-----> App already configured, proceeding with normal deploy"
 fi
 
 # Setup mise if .tool-versions exists
@@ -378,10 +389,13 @@ if [ -d "$RELEASE_DIR/$BUILD_WORKDIR" ] && [ -f "$RELEASE_DIR/$BUILD_WORKDIR/go.
     echo "-----> Building $APP_NAME..."
     cd "$RELEASE_DIR/$BUILD_WORKDIR"
 
+    # Add Go to PATH if available
+    export PATH="$PATH:/usr/local/go/bin"
+
     # Go build
-    export GOOS=linux
-    export GOARCH=arm64
-    export CGO_ENABLED=0
+    export GOOS="$GOOS"
+    export GOARCH="$GOARCH"
+    export CGO_ENABLED="$CGO_ENABLED"
     go build -o "$RELEASE_DIR/$BINARY_NAME" $BUILD_PATH
 
     # Deploy

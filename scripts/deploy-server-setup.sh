@@ -213,40 +213,7 @@ MAIN_HOOK_EOF
 chmod +x $REPO_DIR/hooks/post-receive
 
 # Create systemd service based on build type
-if [ "$BUILD_TYPE" = "docker" ]; then
-    # Docker-based service
-    sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << SERVICE_EOF
-[Unit]
-Description=$APP_NAME ($ENVIRONMENT) - Docker
-After=docker.service
-Requires=docker.service
-
-[Service]
-Type=simple
-User=$DEPLOY_USER
-Restart=$(get_app_restart_policy $APP_NAME)
-RestartSec=$(get_app_restart_delay $APP_NAME)
-
-# Stop old container
-ExecStartPre=-/usr/bin/docker stop $SERVICE_NAME
-ExecStartPre=-/usr/bin/docker rm $SERVICE_NAME
-
-# Start new container
-ExecStart=/usr/bin/docker run --rm --name $SERVICE_NAME \\
-  --env-file $APP_DIR/shared/.env \\
-  -p \${PORT}:\${PORT} \\
-  $APP_NAME:latest
-
-# Cleanup
-ExecStop=/usr/bin/docker stop $SERVICE_NAME
-
-# Load env vars (for PORT mapping)
-EnvironmentFile=$APP_DIR/shared/.env
-
-[Install]
-WantedBy=multi-user.target
-SERVICE_EOF
-else
+if [ "$BUILD_TYPE" = "systemd" ]; then
     # Systemd-based service (binary)
     sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << SERVICE_EOF
 [Unit]
@@ -271,10 +238,13 @@ PrivateTmp=true
 [Install]
 WantedBy=multi-user.target
 SERVICE_EOF
-fi
 
-sudo systemctl daemon-reload
-sudo systemctl enable $SERVICE_NAME
+    sudo systemctl daemon-reload
+    sudo systemctl enable $SERVICE_NAME
+else
+    # Docker build_type - containers managed directly by Docker
+    echo "==> Docker build_type: containers managed directly by Docker (no systemd service)"
+fi
 
 # Create initial .env if doesn't exist
 if [ ! -f "$APP_DIR/shared/.env" ]; then
@@ -310,12 +280,12 @@ echo "  gokku restart $APP_NAME $ENVIRONMENT --remote $APP_NAME-$ENVIRONMENT"
 echo "  gokku logs $APP_NAME $ENVIRONMENT -f --remote $APP_NAME-$ENVIRONMENT"
 echo ""
 echo "On server:"
-echo "  sudo systemctl status $SERVICE_NAME"
-echo "  sudo journalctl -u $SERVICE_NAME -f"
 
-if [ "$BUILD_TYPE" = "docker" ]; then
-    echo ""
-    echo "Docker commands:"
+if [ "$BUILD_TYPE" = "systemd" ]; then
+    echo "  sudo systemctl status $SERVICE_NAME"
+    echo "  sudo journalctl -u $SERVICE_NAME -f"
+else
+    echo "  Docker commands:"
     echo "  Images:     docker images $APP_NAME"
     echo "  Logs:       docker logs $SERVICE_NAME -f"
     echo "  Inspect:    docker inspect $SERVICE_NAME"
