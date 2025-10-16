@@ -383,54 +383,56 @@ fi
 
 if [ -f "$BUILD_DIR/go.mod" ]; then
     echo "-----> Building $APP_NAME..."
-    # Always build from RELEASE_DIR for Docker generation
-    cd "$RELEASE_DIR"
 
+    # Change to build directory
+    cd "$BUILD_DIR"
+    
     # Add Go to PATH if available
     export PATH="$PATH:/usr/local/go/bin"
 
     if [ "$BUILD_TYPE" = "docker" ]; then
-        # Docker build and deploy - generate Dockerfile in RELEASE_DIR
-        cd "$RELEASE_DIR"
-        echo "-----> Generating Dockerfile..."
+        echo "-----> Generating Dockerfile in $BUILD_DIR..."
 
-        # Determine copy source - use BUILD_WORKDIR if set, otherwise copy everything
-        if [ -n "$BUILD_WORKDIR" ] && [ "$BUILD_WORKDIR" != "." ]; then
-            COPY_SOURCE="$BUILD_WORKDIR"
-        else
-            COPY_SOURCE="."
-        fi
+        # Always copy from current directory when in BUILD_DIR
+        COPY_SOURCE="."
+
+        # Detect architecture
+        ARCH=$(uname -m)
+        case "$ARCH" in
+            x86_64) GOARCH="amd64" ;;
+            aarch64|arm64) GOARCH="arm64" ;;
+            *) GOARCH="amd64" ;;
+        esac
 
         cat > Dockerfile << DOCKERFILE_GO_EOF
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-alpine AS builder
 COPY $COPY_SOURCE /app
 WORKDIR /app
 RUN go mod download
-RUN CGO_ENABLED=$CGO_ENABLED GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-w -s" -o app $BUILD_PATH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go build -ldflags="-w -s" -o app $BUILD_PATH
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /root/
 COPY --from=builder /app/app .
-EXPOSE \${PORT:-8080}
 CMD ["./app"]
 DOCKERFILE_GO_EOF
 
         echo "-----> Building Docker image..."
-        if ! docker build -t "$APP_NAME:latest" .; then
+        if ! sudo docker build -t "$APP_NAME:latest" .; then
             echo "ERROR: Docker build failed"
             exit 1
         fi
 
         echo "-----> Deploying container..."
         # Stop existing container if running
-        docker stop "$SERVICE_NAME" 2>/dev/null || true
-        docker rm "$SERVICE_NAME" 2>/dev/null || true
+        sudo docker stop "$SERVICE_NAME" 2>/dev/null || true
+        sudo docker rm "$SERVICE_NAME" 2>/dev/null || true
 
         # Start new container
         PORT=$(grep "^PORT=" "$APP_DIR/shared/.env" 2>/dev/null | cut -d= -f2 | tr -d ' ' || echo "8080")
         echo "-----> Using port: $PORT"
-        docker run -d --name "$SERVICE_NAME" \
+        sudo docker run -d --name "$SERVICE_NAME" \
             --env-file "$APP_DIR/shared/.env" \
             -p "$PORT:$PORT" \
             --restart unless-stopped \
@@ -438,13 +440,13 @@ DOCKERFILE_GO_EOF
 
         # Verify container is running
         sleep 2
-        if docker ps --format '{{.Names}}' | grep -q "^${SERVICE_NAME}$"; then
-            CONTAINER_STATUS=$(docker inspect "${SERVICE_NAME}" --format='{{.State.Status}}')
+        if sudo docker ps --format '{{.Names}}' | grep -q "^${SERVICE_NAME}$"; then
+            CONTAINER_STATUS=$(sudo docker inspect "${SERVICE_NAME}" --format='{{.State.Status}}')
             echo "-----> Container $SERVICE_NAME is running ($CONTAINER_STATUS)"
             echo "-----> Docker deployment complete!"
         else
             echo "ERROR: Container failed to start"
-            docker logs "$SERVICE_NAME" 2>&1 | tail -20
+            sudo docker logs "$SERVICE_NAME" 2>&1 | tail -20
             exit 1
         fi
     else
