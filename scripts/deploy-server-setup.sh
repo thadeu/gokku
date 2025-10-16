@@ -76,14 +76,10 @@ echo "==> Setting up git-push deployment"
 echo "    Project: $GOKKU_PROJECT_NAME"
 echo "    App: $APP_NAME"
 echo "    Environment: $ENVIRONMENT"
-echo "    Build Type: $BUILD_TYPE"
+echo "    Build Type: Docker"
 echo "    Language: $LANG"
 echo "    Service: $SERVICE_NAME"
-if [ "$BUILD_TYPE" = "systemd" ]; then
-    echo "    Binary: $BINARY_NAME"
-else
-    echo "    Image: $APP_NAME:latest"
-fi
+echo "    Image: $APP_NAME:latest"
 echo ""
 
 # Create directory structure
@@ -116,12 +112,8 @@ else
     echo "==> Git repository already exists at $REPO_DIR"
 fi
 
-# Create post-receive hook for this environment based on build type
-if [ "$BUILD_TYPE" = "docker" ]; then
-    HOOK_TEMPLATE="$SCRIPT_DIR/hooks/post-receive-docker.template"
-else
-    HOOK_TEMPLATE="$SCRIPT_DIR/hooks/post-receive-systemd.template"
-fi
+# Create post-receive hook for this environment
+HOOK_TEMPLATE="$SCRIPT_DIR/hooks/post-receive-docker.template"
 
 if [ ! -f "$HOOK_TEMPLATE" ]; then
     echo "Error: Hook template not found: $HOOK_TEMPLATE"
@@ -212,39 +204,7 @@ MAIN_HOOK_EOF
 
 chmod +x $REPO_DIR/hooks/post-receive
 
-# Create systemd service based on build type
-if [ "$BUILD_TYPE" = "systemd" ]; then
-    # Systemd-based service (binary)
-    sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << SERVICE_EOF
-[Unit]
-Description=$APP_NAME ($ENVIRONMENT)
-After=network.target
-
-[Service]
-Type=simple
-User=$DEPLOY_USER
-WorkingDirectory=$APP_DIR/current
-ExecStart=$APP_DIR/current/$BINARY_NAME
-Restart=$(get_app_restart_policy $APP_NAME)
-RestartSec=$(get_app_restart_delay $APP_NAME)
-
-# Load env vars from shared .env file
-EnvironmentFile=$APP_DIR/shared/.env
-
-# Security
-NoNewPrivileges=true
-PrivateTmp=true
-
-[Install]
-WantedBy=multi-user.target
-SERVICE_EOF
-
-    sudo systemctl daemon-reload
-    sudo systemctl enable $SERVICE_NAME
-else
-    # Docker build_type - containers managed directly by Docker
-    echo "==> Docker build_type: containers managed directly by Docker (no systemd service)"
-fi
+echo "==> Docker containers managed directly by Docker"
 
 # Create initial .env if doesn't exist
 if [ ! -f "$APP_DIR/shared/.env" ]; then
@@ -265,7 +225,7 @@ fi
 echo ""
 echo "==> Setup complete for $APP_NAME ($ENVIRONMENT)!"
 echo ""
-echo "Build Type: $BUILD_TYPE"
+echo "Build Type: Docker"
 echo "Language: $LANG"
 echo ""
 echo "Git remote (add to your local repo):"
@@ -280,15 +240,9 @@ echo "  gokku restart $APP_NAME $ENVIRONMENT --remote $APP_NAME-$ENVIRONMENT"
 echo "  gokku logs $APP_NAME $ENVIRONMENT -f --remote $APP_NAME-$ENVIRONMENT"
 echo ""
 echo "On server:"
-
-if [ "$BUILD_TYPE" = "systemd" ]; then
-    echo "  sudo systemctl status $SERVICE_NAME"
-    echo "  sudo journalctl -u $SERVICE_NAME -f"
-else
-    echo "  Docker commands:"
-    echo "  Images:     docker images $APP_NAME"
-    echo "  Logs:       docker logs $SERVICE_NAME -f"
-    echo "  Inspect:    docker inspect $SERVICE_NAME"
-    echo "  Exec:       docker exec -it $SERVICE_NAME sh"
-fi
+echo "  Docker commands:"
+echo "  Images:     docker images $APP_NAME"
+echo "  Logs:       docker logs $SERVICE_NAME -f"
+echo "  Inspect:    docker inspect $SERVICE_NAME"
+echo "  Exec:       docker exec -it $SERVICE_NAME sh"
 
