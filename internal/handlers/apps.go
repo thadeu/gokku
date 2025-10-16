@@ -339,8 +339,8 @@ PORT=8080
 ENV_EOF
 fi
 
-# Create systemd service if it doesn't exist
-if [ ! -f "/etc/systemd/system/$SERVICE_NAME.service" ]; then
+# Create systemd service if it doesn't exist and BUILD_TYPE is systemd
+if [ "$BUILD_TYPE" = "systemd" ] && [ ! -f "/etc/systemd/system/$SERVICE_NAME.service" ]; then
     echo "==> Creating systemd service"
     sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << SERVICE_EOF
 [Unit]
@@ -384,7 +384,7 @@ if [ -f "$RELEASE_DIR/$BUILD_WORKDIR/.tool-versions" ]; then
     eval "$(~/.local/bin/mise activate bash)"
 fi
 
-# Build only if we have source code
+# Build and deploy based on BUILD_TYPE
 if [ -d "$RELEASE_DIR/$BUILD_WORKDIR" ] && [ -f "$RELEASE_DIR/$BUILD_WORKDIR/go.mod" ]; then
     echo "-----> Building $APP_NAME..."
     cd "$RELEASE_DIR/$BUILD_WORKDIR"
@@ -392,21 +392,59 @@ if [ -d "$RELEASE_DIR/$BUILD_WORKDIR" ] && [ -f "$RELEASE_DIR/$BUILD_WORKDIR/go.
     # Add Go to PATH if available
     export PATH="$PATH:/usr/local/go/bin"
 
-    # Go build
-    export GOOS="$GOOS"
-    export GOARCH="$GOARCH"
-    export CGO_ENABLED="$CGO_ENABLED"
-    go build -o "$RELEASE_DIR/$BINARY_NAME" $BUILD_PATH
+    if [ "$BUILD_TYPE" = "docker" ]; then
+        # Docker build and deploy
+        echo "-----> Generating Dockerfile..."
+        cat > Dockerfile << DOCKERFILE_GO_EOF
+FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum* ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=$CGO_ENABLED GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-w -s" -o app $BUILD_PATH
 
-    # Deploy
-    echo "-----> Deploying..."
-    ln -sf "$RELEASE_DIR" "$APP_DIR/current"
-    ln -sf "$APP_DIR/shared/.env" "$RELEASE_DIR/.env"
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates tzdata
+WORKDIR /root/
+COPY --from=builder /app/app .
+EXPOSE \${PORT:-8080}
+CMD ["./app"]
+DOCKERFILE_GO_EOF
 
-    # Restart service
-    sudo systemctl restart "$SERVICE_NAME"
+        echo "-----> Building Docker image..."
+        docker build -t "$APP_NAME:latest" .
 
-    echo "-----> Deploy complete!"
+        echo "-----> Deploying container..."
+        # Stop existing container if running
+        docker stop "$SERVICE_NAME" 2>/dev/null || true
+        docker rm "$SERVICE_NAME" 2>/dev/null || true
+
+        # Start new container
+        docker run -d --name "$SERVICE_NAME" \
+            --env-file "$APP_DIR/shared/.env" \
+            -p "${PORT:-8080}:${PORT:-8080}" \
+            --restart unless-stopped \
+            "$APP_NAME:latest"
+
+        echo "-----> Docker deployment complete!"
+    else
+        # Systemd build and deploy
+        # Go build
+        export GOOS="$GOOS"
+        export GOARCH="$GOARCH"
+        export CGO_ENABLED="$CGO_ENABLED"
+        go build -o "$RELEASE_DIR/$BINARY_NAME" $BUILD_PATH
+
+        # Deploy
+        echo "-----> Deploying..."
+        ln -sf "$RELEASE_DIR" "$APP_DIR/current"
+        ln -sf "$APP_DIR/shared/.env" "$RELEASE_DIR/.env"
+
+        # Restart service
+        sudo systemctl restart "$SERVICE_NAME"
+
+        echo "-----> Systemd deployment complete!"
+    fi
 else
     echo "-----> No source code found, skipping build and deploy"
     echo "-----> This appears to be the initial repository setup"
