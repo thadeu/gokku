@@ -327,18 +327,25 @@ else
             # Always copy from current directory when in BUILD_DIR
             COPY_SOURCE="."
 
+            # Detect architecture
+            ARCH=$(uname -m)
+            case "$ARCH" in
+                x86_64) GOARCH="amd64" ;;
+                aarch64|arm64) GOARCH="arm64" ;;
+                *) GOARCH="amd64" ;;
+            esac
+
             cat > "$DOCKERFILE_PATH" << DOCKERFILE_GO
 FROM __BASE_IMAGE__ AS builder
 COPY $COPY_SOURCE /app
 WORKDIR /app
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o app __BUILD_PATH__
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go build -ldflags="-w -s" -o app __BUILD_PATH__
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /root/
 COPY --from=builder /app/app .
-EXPOSE \${PORT:-8080}
 CMD ["./app"]
 DOCKERFILE_GO
             ;;

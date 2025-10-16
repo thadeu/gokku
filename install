@@ -271,6 +271,8 @@ EOF
 setup_server() {
     log "Setting up server deployment..."
 
+    sudo usermod -aG docker $(whoami)
+
     local BASE_DIR="/opt/gokku"
 
     # Server mode requires Linux
