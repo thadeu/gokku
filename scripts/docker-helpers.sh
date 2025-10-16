@@ -1,153 +1,231 @@
 #!/bin/bash
-# Docker helper functions for deployment
+# Docker helper functions for Gokku deployment
+# Provides all-in-one Docker installation and verification
 
-# Generate Dockerfile from template
-generate_dockerfile() {
-    local lang=$1
-    local app_name=$2
-    local build_path=$3
-    local entrypoint=$4
-    local output_file=$5
-    local base_image=$6
-    
-    local template_file="$SCRIPT_DIR/templates/Dockerfile.${lang}.template"
-    
-    if [ ! -f "$template_file" ]; then
-        echo "ERROR: Template not found: $template_file"
-        return 1
-    fi
-    
-    # Read template and replace placeholders
-    cat "$template_file" | \
-        sed "s|{{APP_NAME}}|$app_name|g" | \
-        sed "s|{{BUILD_PATH}}|$build_path|g" | \
-        sed "s|{{MAIN_FILE}}|$entrypoint|g" | \
-        sed "s|{{GO_BASE_IMAGE}}|$base_image|g" | \
-        sed "s|{{PYTHON_BASE_IMAGE}}|$base_image|g" | \
-        sed "s|{{CGO_ENABLED}}|${GOKKU_build_cgo_enabled:-0}|g" | \
-        sed "s|{{GOOS}}|${GOKKU_build_goos:-linux}|g" | \
-        sed "s|{{GOARCH}}|${GOKKU_build_goarch:-amd64}|g" \
-        > "$output_file"
-    
-    echo "Generated Dockerfile at $output_file"
+# Check if docker is installed
+is_docker_installed() {
+    command -v docker >/dev/null 2>&1
 }
 
-# Build Docker image
-build_docker_image() {
-    local app_name=$1
-    local release_dir=$2
-    local dockerfile=$3
-    local tag=$4
-    
-    echo "-----> Building Docker image: $app_name:$tag"
-    
-    cd "$release_dir"
-    
-    if ! docker build -f "$dockerfile" -t "$app_name:$tag" .; then
-        echo "ERROR: Docker build failed"
-        return 1
-    fi
-    
-    # Tag as latest
-    docker tag "$app_name:$tag" "$app_name:latest"
-    
-    echo "-----> Image built successfully"
-    echo "       Tags: $app_name:$tag, $app_name:latest"
+# Check if docker daemon is running
+is_docker_running() {
+    docker ps > /dev/null 2>&1
 }
 
-# Stop and remove old container
-stop_container() {
-    local container_name=$1
-    
-    if docker ps -a --format '{{.Names}}' | grep -q "^${container_name}$"; then
-        echo "-----> Stopping old container: $container_name"
-        docker stop "$container_name" 2>/dev/null || true
-        docker rm "$container_name" 2>/dev/null || true
+# Detect Linux distribution
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        echo "$ID"
+    elif [ -f /etc/lsb-release ]; then
+        . /etc/lsb-release
+        echo "$DISTRIB_ID" | tr '[:upper:]' '[:lower:]'
+    else
+        echo "unknown"
     fi
 }
 
-# Start Docker container
-start_container() {
-    local container_name=$1
-    local image_name=$2
-    local env_file=$3
-    local port_mapping=$4
+# Install Docker on Ubuntu/Debian
+install_docker_debian() {
+    echo "-----> Installing Docker on Debian/Ubuntu..."
     
-    echo "-----> Starting container: $container_name"
+    # Update package lists
+    sudo apt-get update -qq
     
-    # Build docker run command
-    local docker_cmd="docker run -d --name $container_name --restart always"
+    # Install dependencies
+    echo "-----> Installing dependencies..."
+    sudo apt-get install -y --no-install-recommends \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release > /dev/null 2>&1
     
-    # Add env file if exists
-    if [ -f "$env_file" ]; then
-        docker_cmd="$docker_cmd --env-file $env_file"
-    fi
+    # Add Docker GPG key
+    echo "-----> Adding Docker GPG key..."
+    curl -fsSL https://download.docker.com/linux/$(lsb_release -si | tr '[:upper:]' '[:lower:]')/gpg | \
+        sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg > /dev/null 2>&1
     
-    # Add port mapping if provided
-    if [ -n "$port_mapping" ]; then
-        docker_cmd="$docker_cmd -p $port_mapping"
-    fi
+    # Add Docker repository
+    echo "-----> Adding Docker repository..."
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+        https://download.docker.com/linux/$(lsb_release -si | tr '[:upper:]' '[:lower:]') \
+        $(lsb_release -cs) stable" | \
+        sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     
-    # Add image
-    docker_cmd="$docker_cmd $image_name"
+    # Update and install Docker
+    echo "-----> Installing Docker CE..."
+    sudo apt-get update -qq
+    sudo apt-get install -y --no-install-recommends \
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        docker-compose-plugin > /dev/null 2>&1
     
-    # Run container
-    if ! eval "$docker_cmd"; then
-        echo "ERROR: Failed to start container"
-        return 1
-    fi
-    
-    echo "-----> Container started successfully"
-}
-
-# Check if container is running
-check_container() {
-    local container_name=$1
-    
-    if docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
-        echo "-----> Container is running"
+    if [ $? -eq 0 ]; then
+        echo "-----> Docker installed successfully"
         return 0
     else
-        echo "ERROR: Container is not running"
-        docker logs "$container_name" 2>&1 | tail -20
+        echo "ERROR: Failed to install Docker"
         return 1
     fi
 }
 
-# Cleanup old Docker images
-cleanup_old_images() {
-    local app_name=$1
-    local keep_count=$2
+# Install Docker on Amazon Linux / RHEL / CentOS
+install_docker_rhel() {
+    echo "-----> Installing Docker on RHEL/CentOS/Amazon Linux..."
     
-    echo "-----> Cleaning up old images..."
+    # Update package lists
+    sudo yum update -y -q
     
-    # Get all images for this app (excluding 'latest')
-    local images=$(docker images "$app_name" --format "{{.Tag}}" | grep -v "^latest$" | sort -r | tail -n +$((keep_count + 1)))
+    # Install Docker
+    echo "-----> Installing Docker..."
+    sudo yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin > /dev/null 2>&1
     
-    if [ -n "$images" ]; then
-        for tag in $images; do
-            echo "       Removing image: $app_name:$tag"
-            docker rmi "$app_name:$tag" 2>/dev/null || true
-        done
+    if [ $? -eq 0 ]; then
+        echo "-----> Docker installed successfully"
+        return 0
+    else
+        echo "ERROR: Failed to install Docker"
+        return 1
     fi
 }
 
-# Get port mapping from env file
-get_port_mapping() {
-    local env_file=$1
+# Install Docker on Alpine
+install_docker_alpine() {
+    echo "-----> Installing Docker on Alpine..."
+    sudo apk add --no-cache docker docker-compose
     
-    if [ ! -f "$env_file" ]; then
-        echo ""
-        return
+    if [ $? -eq 0 ]; then
+        echo "-----> Docker installed successfully"
+        return 0
+    else
+        echo "ERROR: Failed to install Docker"
+        return 1
+    fi
+}
+
+# Main install function
+install_docker() {
+    # Check if already installed
+    if is_docker_installed; then
+        echo "-----> Docker is already installed"
+        
+        # Start docker if not running
+        if ! is_docker_running; then
+            echo "-----> Starting Docker daemon..."
+            sudo systemctl start docker
+            
+            # Enable docker to start on boot
+            sudo systemctl enable docker > /dev/null 2>&1
+        fi
+        
+        return 0
     fi
     
-    # Extract PORT from env file
-    local port=$(grep "^PORT=" "$env_file" | cut -d= -f2 | tr -d ' ')
+    # Detect distribution
+    DISTRO=$(detect_distro)
+    echo "-----> Detected Linux distribution: $DISTRO"
     
-    if [ -n "$port" ]; then
-        echo "${port}:${port}"
+    case "$DISTRO" in
+        ubuntu|debian)
+            install_docker_debian
+            ;;
+        centos|rhel|fedora|amzn)
+            install_docker_rhel
+            ;;
+        alpine)
+            install_docker_alpine
+            ;;
+        *)
+            echo "ERROR: Unsupported Linux distribution: $DISTRO"
+            echo "Please install Docker manually from https://docs.docker.com/engine/install/"
+            return 1
+            ;;
+    esac
+    
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+    
+    # Start Docker service
+    echo "-----> Starting Docker daemon..."
+    sudo systemctl start docker || {
+        echo "ERROR: Failed to start Docker daemon"
+        return 1
+    }
+    
+    # Enable Docker to start on boot
+    echo "-----> Enabling Docker to start on boot..."
+    sudo systemctl enable docker > /dev/null 2>&1
+    
+    # Add current user to docker group (optional, for easier use)
+    if id -nG "$USER" | grep -qw "docker"; then
+        echo "-----> User already in docker group"
     else
-        echo ""
+        echo "-----> Adding user to docker group..."
+        sudo usermod -aG docker "$USER" > /dev/null 2>&1
+        echo "       Note: You may need to log out and log back in for group changes to take effect"
+    fi
+    
+    # Wait for Docker daemon
+    echo "-----> Waiting for Docker daemon to be ready..."
+    local max_attempts=10
+    local attempt=0
+    while [ $attempt -lt $max_attempts ]; do
+        if docker ps > /dev/null 2>&1; then
+            echo "-----> Docker is ready"
+            return 0
+        fi
+        attempt=$((attempt + 1))
+        sleep 1
+    done
+    
+    echo "ERROR: Docker daemon failed to start"
+    return 1
+}
+
+# Verify Docker installation and functionality
+verify_docker() {
+    echo "-----> Verifying Docker installation..."
+    
+    if ! is_docker_installed; then
+        echo "ERROR: Docker is not installed"
+        return 1
+    fi
+    
+    DOCKER_VERSION=$(docker --version)
+    echo "       Docker version: $DOCKER_VERSION"
+    
+    if ! is_docker_running; then
+        echo "ERROR: Docker daemon is not running"
+        return 1
+    fi
+    
+    # Test Docker by running hello-world
+    echo "-----> Testing Docker with hello-world image..."
+    if docker run --rm hello-world > /dev/null 2>&1; then
+        echo "-----> Docker is working correctly"
+        return 0
+    else
+        echo "ERROR: Docker test failed"
+        return 1
+    fi
+}
+
+# Get Docker status
+get_docker_status() {
+    if is_docker_installed; then
+        if is_docker_running; then
+            echo "Docker: $(docker --version) - running"
+            return 0
+        else
+            echo "Docker: installed but not running"
+            return 1
+        fi
+    else
+        echo "Docker: not installed"
+        return 1
     fi
 }
 
