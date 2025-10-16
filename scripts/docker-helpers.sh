@@ -28,10 +28,10 @@ detect_distro() {
 # Install Docker on Ubuntu/Debian
 install_docker_debian() {
     echo "-----> Installing Docker on Debian/Ubuntu..."
-    
+
     # Update package lists
     sudo apt-get update -qq
-    
+
     # Install dependencies
     echo "-----> Installing dependencies..."
     sudo apt-get install -y --no-install-recommends \
@@ -40,19 +40,19 @@ install_docker_debian() {
         curl \
         gnupg \
         lsb-release > /dev/null 2>&1
-    
+
     # Add Docker GPG key
     echo "-----> Adding Docker GPG key..."
     curl -fsSL https://download.docker.com/linux/$(lsb_release -si | tr '[:upper:]' '[:lower:]')/gpg | \
         sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg > /dev/null 2>&1
-    
+
     # Add Docker repository
     echo "-----> Adding Docker repository..."
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
         https://download.docker.com/linux/$(lsb_release -si | tr '[:upper:]' '[:lower:]') \
         $(lsb_release -cs) stable" | \
         sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    
+
     # Update and install Docker
     echo "-----> Installing Docker CE..."
     sudo apt-get update -qq
@@ -61,7 +61,7 @@ install_docker_debian() {
         docker-ce-cli \
         containerd.io \
         docker-compose-plugin > /dev/null 2>&1
-    
+
     if [ $? -eq 0 ]; then
         echo "-----> Docker installed successfully"
         return 0
@@ -74,14 +74,14 @@ install_docker_debian() {
 # Install Docker on Amazon Linux / RHEL / CentOS
 install_docker_rhel() {
     echo "-----> Installing Docker on RHEL/CentOS/Amazon Linux..."
-    
+
     # Update package lists
     sudo yum update -y -q
-    
+
     # Install Docker
     echo "-----> Installing Docker..."
     sudo yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin > /dev/null 2>&1
-    
+
     if [ $? -eq 0 ]; then
         echo "-----> Docker installed successfully"
         return 0
@@ -95,7 +95,7 @@ install_docker_rhel() {
 install_docker_alpine() {
     echo "-----> Installing Docker on Alpine..."
     sudo apk add --no-cache docker docker-compose
-    
+
     if [ $? -eq 0 ]; then
         echo "-----> Docker installed successfully"
         return 0
@@ -110,23 +110,23 @@ install_docker() {
     # Check if already installed
     if is_docker_installed; then
         echo "-----> Docker is already installed"
-        
+
         # Start docker if not running
         if ! is_docker_running; then
             echo "-----> Starting Docker daemon..."
             sudo systemctl start docker
-            
+
             # Enable docker to start on boot
             sudo systemctl enable docker > /dev/null 2>&1
         fi
-        
+
         return 0
     fi
-    
+
     # Detect distribution
     DISTRO=$(detect_distro)
     echo "-----> Detected Linux distribution: $DISTRO"
-    
+
     case "$DISTRO" in
         ubuntu|debian)
             install_docker_debian
@@ -143,22 +143,22 @@ install_docker() {
             return 1
             ;;
     esac
-    
+
     if [ $? -ne 0 ]; then
         return 1
     fi
-    
+
     # Start Docker service
     echo "-----> Starting Docker daemon..."
     sudo systemctl start docker || {
         echo "ERROR: Failed to start Docker daemon"
         return 1
     }
-    
+
     # Enable Docker to start on boot
     echo "-----> Enabling Docker to start on boot..."
     sudo systemctl enable docker > /dev/null 2>&1
-    
+
     # Add current user to docker group (optional, for easier use)
     if id -nG "$USER" | grep -qw "docker"; then
         echo "-----> User already in docker group"
@@ -167,7 +167,7 @@ install_docker() {
         sudo usermod -aG docker "$USER" > /dev/null 2>&1
         echo "       Note: You may need to log out and log back in for group changes to take effect"
     fi
-    
+
     # Wait for Docker daemon
     echo "-----> Waiting for Docker daemon to be ready..."
     local max_attempts=10
@@ -180,7 +180,7 @@ install_docker() {
         attempt=$((attempt + 1))
         sleep 1
     done
-    
+
     echo "ERROR: Docker daemon failed to start"
     return 1
 }
@@ -188,20 +188,20 @@ install_docker() {
 # Verify Docker installation and functionality
 verify_docker() {
     echo "-----> Verifying Docker installation..."
-    
+
     if ! is_docker_installed; then
         echo "ERROR: Docker is not installed"
         return 1
     fi
-    
+
     DOCKER_VERSION=$(docker --version)
     echo "       Docker version: $DOCKER_VERSION"
-    
+
     if ! is_docker_running; then
         echo "ERROR: Docker daemon is not running"
         return 1
     fi
-    
+
     # Test Docker by running hello-world
     echo "-----> Testing Docker with hello-world image..."
     if docker run --rm hello-world > /dev/null 2>&1; then
