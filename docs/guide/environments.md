@@ -41,7 +41,7 @@ ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api production"
 ```
 
 Creates:
-- `/opt/gokku/repos/api.git` (Git repo)
+- `api` (Git repo)
 - `/opt/gokku/apps/api/production/` (App directory)
 - `api-production` (Systemd service or Docker container)
 

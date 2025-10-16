@@ -1,7 +1,7 @@
 #!/bin/bash
 # Setup Git shortcuts for simplified remote URLs
 # This allows using: git remote add prod ubuntu@server:api
-# Instead of: git remote add prod ubuntu@server:/opt/gokku/repos/api.git
+# Instead of: git remote add prod ubuntu@server:api
 
 set -e
 
@@ -19,7 +19,7 @@ USER_HOME=$(eval echo ~$DEPLOY_USER)
 echo "==> Creating Git namespace configuration..."
 
 # Create a symbolic link in user's home directory
-# This allows git to resolve short paths like "api" to "/opt/gokku/repos/api.git"
+# This allows git to resolve short paths like "api" to "api"
 if [ ! -L "$USER_HOME/git" ]; then
     sudo -u $DEPLOY_USER ln -sf $BASE_DIR/repos $USER_HOME/git
     echo "✓ Created symlink: $USER_HOME/git -> $BASE_DIR/repos"
@@ -35,7 +35,7 @@ echo ""
 echo "Now you can use simplified remote URLs:"
 echo ""
 echo "  Instead of:"
-echo "    git remote add production $DEPLOY_USER@server:/opt/gokku/repos/api.git"
+echo "    git remote add production $DEPLOY_USER@server:api"
 echo ""
 echo "  Use:"
 echo "    git remote add production $DEPLOY_USER@server:git/api.git"

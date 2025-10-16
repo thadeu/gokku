@@ -107,7 +107,7 @@ Examples:
   gokku server add prod ubuntu@ec2.compute.amazonaws.com
 
   # Setup git remote (standard git)
-  git remote add api-production ubuntu@server:/opt/gokku/repos/api.git
+  git remote add api-production ubuntu@server:api
   git remote add vad-staging ubuntu@server:/opt/gokku/repos/vad.git
 
   # Configuration
@@ -140,7 +140,7 @@ Remote Format:
   - App name from path (/opt/gokku/repos/<app>.git)
 
   Examples of git remotes:
-  - api-production → ubuntu@server:/opt/gokku/repos/api.git
+  - api-production → ubuntu@server:api
   - vad-staging    → ubuntu@server:/opt/gokku/repos/vad.git
 
   Environment is extracted from remote name suffix:

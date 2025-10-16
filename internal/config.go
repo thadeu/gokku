@@ -62,7 +62,7 @@ func GetDefaultServer(config *Config) *Server {
 }
 
 // GetRemoteInfo extracts info from git remote
-// Example: ubuntu@server:/opt/gokku/repos/api.git
+// Example: ubuntu@server:api
 // Returns: RemoteInfo{Host: "ubuntu@server", BaseDir: "/opt/gokku", App: "api"}
 func GetRemoteInfo(remoteName string) (*RemoteInfo, error) {
 	// Get remote URL
@@ -83,7 +83,7 @@ func GetRemoteInfo(remoteName string) (*RemoteInfo, error) {
 	host := parts[0]
 	path := parts[1]
 
-	// Extract app name from path: /opt/gokku/repos/api.git -> api
+	// Extract app name from path: api -> api
 	pathParts := strings.Split(path, "/")
 	if len(pathParts) < 2 {
 		return nil, fmt.Errorf("invalid remote path: %s", path)
@@ -92,7 +92,7 @@ func GetRemoteInfo(remoteName string) (*RemoteInfo, error) {
 	appFile := pathParts[len(pathParts)-1]         // api.git
 	appName := strings.TrimSuffix(appFile, ".git") // api
 
-	// Extract base dir: /opt/gokku/repos/api.git -> /opt/gokku
+	// Extract base dir: api -> /opt/gokku
 	baseDir := strings.TrimSuffix(path, "/repos/"+appFile)
 
 	// Extract environment from remote name

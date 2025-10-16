@@ -66,7 +66,7 @@ Counting objects: 100, done.
 -----> Creating symlink: current -> releases/1
 -----> Restarting api-production...
 -----> Deploy successful!
-To ubuntu@server:/opt/gokku/repos/api.git
+To ubuntu@server:api
    abc1234..def5678  main -> main
 ```
 
@@ -434,13 +434,13 @@ Common issues:
 Check Git hook:
 
 ```bash
-ssh ubuntu@server "ls -la /opt/gokku/repos/api.git/hooks/"
+ssh ubuntu@server "ls -la api/hooks/"
 ```
 
 Make sure `post-receive` is executable:
 
 ```bash
-ssh ubuntu@server "chmod +x /opt/gokku/repos/api.git/hooks/post-receive"
+ssh ubuntu@server "chmod +x api/hooks/post-receive"
 ```
 
 ### Rollback Failed Deploy

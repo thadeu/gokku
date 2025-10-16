@@ -92,7 +92,7 @@ sudo chown -R $DEPLOY_USER:$DEPLOY_USER $BASE_DIR
 
 # Setup Git namespace for short paths
 # This allows using: git remote add prod ubuntu@server:api
-# Instead of: git remote add prod ubuntu@server:/opt/gokku/repos/api.git
+# Instead of: git remote add prod ubuntu@server:api
 USER_HOME=$(eval echo ~$DEPLOY_USER)
 
 # Create Git namespace directory if it doesn't exist

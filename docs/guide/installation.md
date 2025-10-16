@@ -141,7 +141,7 @@ cd /opt/gokku
 ```
 
 This creates:
-- Git repository at `/opt/gokku/repos/api.git`
+- Git repository at `api`
 - App directory at `/opt/gokku/apps/api/`
 - Systemd service `api-production`
 - Environment file
