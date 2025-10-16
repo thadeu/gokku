@@ -1,200 +1,200 @@
 # Build Types
 
-Gokku supports multiple build types to accommodate different application architectures and deployment scenarios.
+Gokku supports two main deployment strategies: **systemd** for compiled binaries and **docker** for containerized applications.
 
-## Overview
+## Build Types
 
-Gokku automatically detects and builds applications based on their structure and configuration files. The build process is optimized for different programming languages and frameworks.
+### systemd (Default)
 
-## Supported Build Types
-
-### Go Applications
-
-**Detection:** Presence of `go.mod` file
-**Build Process:**
-- Installs dependencies with `go mod download`
-- Builds with `go build -o app .`
-- Supports Go modules and vendoring
+**Use for:** Go, Rust, C/C++, and other compiled languages
+**Process:** Compiles binary and runs it directly on the server
+**Benefits:** Fast startup, low resource usage, direct system access
 
 **Configuration:**
 ```yaml
 apps:
-  my-go-app:
+  - name: my-go-app
     build:
-      type: go
-      version: "1.21"
+      type: systemd
+      path: ./cmd/api
+      binary_name: api
 ```
 
-### Python Applications
+**When Gokku detects:** `go.mod`, `Cargo.toml`, `Makefile`, or executable binary
 
-**Detection:** Presence of `requirements.txt`, `pyproject.toml`, or `Pipfile`
-**Build Process:**
-- Creates virtual environment
-- Installs dependencies
-- Supports WSGI/ASGI applications
+### docker
 
-**Configuration:**
-```yaml
-apps:
-  my-python-app:
-    build:
-      type: python
-      version: "3.11"
-      requirements: requirements.txt
-```
-
-### Node.js Applications
-
-**Detection:** Presence of `package.json`
-**Build Process:**
-- Runs `npm install` or `yarn install`
-- Executes build scripts if defined
-- Supports static generation and API routes
+**Use for:** Node.js, Python, Ruby, Java, and interpreted languages
+**Process:** Builds Docker container and runs it with systemd
+**Benefits:** Isolated environment, dependency management, multi-language support
 
 **Configuration:**
 ```yaml
 apps:
-  my-node-app:
-    build:
-      type: nodejs
-      version: "18"
-      build_command: "npm run build"
-```
-
-### Docker Applications
-
-**Detection:** Presence of `Dockerfile`
-**Build Process:**
-- Builds Docker image
-- Uses multi-stage builds when available
-- Supports custom Dockerfiles
-
-**Configuration:**
-```yaml
-apps:
-  my-docker-app:
+  - name: my-node-app
     build:
       type: docker
-      dockerfile: Dockerfile
-      context: .
+      path: .
 ```
 
-### Static Sites
+**When Gokku detects:** `package.json`, `requirements.txt`, `Gemfile`, or `Dockerfile`
 
-**Detection:** Presence of static files (HTML, CSS, JS)
-**Build Process:**
-- Serves static files directly
-- No build process required
-- Supports SPA routing
+## Automatic Detection
 
-**Configuration:**
-```yaml
-apps:
-  my-static-site:
-    build:
-      type: static
-      root: dist/
-```
+Gokku automatically detects the appropriate build type based on your project files:
+
+| Language | Files Detected | Default Build Type |
+|----------|----------------|-------------------|
+| Go | `go.mod` | systemd |
+| Python | `requirements.txt`, `pyproject.toml` | docker |
+| Node.js | `package.json` | docker |
+| Ruby | `Gemfile` | docker |
+| Rust | `Cargo.toml` | systemd |
+| Java | `pom.xml`, `build.gradle` | docker |
+| Other | `Dockerfile` | docker |
 
 ## Build Configuration
 
-### Build Commands
-
-You can customize build commands for each application:
-
-```yaml
-apps:
-  my-app:
-    build:
-      pre_build:
-        - "echo 'Starting build...'"
-      build: "npm run build"
-      post_build:
-        - "echo 'Build completed'"
-        - "./scripts/optimize.sh"
-```
-
 ### Environment Variables
 
-Set build-time environment variables:
+Set build-time and runtime environment variables:
 
 ```yaml
 apps:
-  my-app:
+  - name: my-app
     build:
+      type: docker
       env:
         NODE_ENV: production
-        API_URL: https://api.example.com
+        DATABASE_URL: postgres://localhost:5432/app
+    environments:
+      - name: production
+        default_env_vars:
+          PORT: 3000
+          REDIS_URL: redis://localhost:6379
 ```
 
-### Caching
+### Post-Deploy Commands
 
-Gokku caches build artifacts to speed up subsequent deployments:
+Execute commands after successful deployment:
 
 ```yaml
 apps:
-  my-app:
+  - name: rails-app
     build:
-      cache:
-        - node_modules
-        - .next/cache
+      type: docker
+      path: .
+    environments:
+      - name: production
+        default_env_vars:
+          RAILS_ENV: production
+    post_deploy:
+      - "cd /opt/gokku/apps/rails-app/production/current && bundle exec rails db:migrate"
+      - "cd /opt/gokku/apps/rails-app/production/current && bundle exec rails assets:precompile"
 ```
 
-## Advanced Configuration
+**Post-deploy commands:**
+- Run after successful deployment
+- Execute in the application directory
+- Fail deployment if any command fails
+- Useful for database migrations, asset compilation, cache warming
 
-### Custom Build Scripts
+### Custom Dockerfile
 
-For complex build processes, use custom scripts:
+For Docker builds, you can specify a custom Dockerfile:
 
 ```yaml
 apps:
-  my-app:
+  - name: my-app
     build:
-      type: custom
-      script: "./build.sh"
+      type: docker
+      dockerfile: ./Dockerfile.production
+      path: .
 ```
 
-### Build Hooks
+## Deployment Process
 
-Execute commands at different build stages:
+### systemd Deployment
 
-```yaml
-apps:
-  my-app:
-    build:
-      hooks:
-        before_install: "./scripts/setup.sh"
-        after_build: "./scripts/test.sh"
-        before_deploy: "./scripts/migrate.sh"
-```
+1. Extracts code to release directory
+2. Installs dependencies (if mise/asdf configured)
+3. Builds binary
+4. Updates symlink to new release
+5. Restarts systemd service
+6. **Runs post-deploy commands** (if configured)
+7. Cleans up old releases
+
+### Docker Deployment
+
+1. Extracts code to release directory
+2. Generates or uses existing Dockerfile
+3. Builds Docker image
+4. Creates/updates containers
+5. Updates systemd service for containers
+6. **Runs post-deploy commands** (if configured)
+7. Cleans up old images and releases
 
 ## Troubleshooting
 
-### Common Issues
+### systemd Issues
 
-**Build fails with missing dependencies:**
-- Ensure all required system packages are installed
-- Check that language-specific package managers are available
-
-**Build takes too long:**
-- Enable build caching
-- Use pre-built base images for Docker builds
-- Optimize dependency installation
-
-**Environment variables not available:**
-- Check variable naming (use uppercase)
-- Ensure variables are set before build starts
-
-### Build Logs
-
-View build logs with:
+**Service fails to start:**
 ```bash
-gokku logs my-app build
+# Check service status
+sudo systemctl status my-app-production
+
+# View service logs
+sudo journalctl -u my-app-production -f
+
+# Check binary permissions
+ls -la /opt/gokku/apps/my-app/production/current/my-app
 ```
 
-### Build Cache Management
+**Binary not found:**
+- Check build path configuration
+- Verify Go module setup
+- Check build logs for errors
 
-Clear build cache when needed:
+### Docker Issues
+
+**Container fails to start:**
 ```bash
-gokku build cache clear my-app
+# Check container logs
+docker logs my-app-production
+
+# Check container status
+docker ps -a | grep my-app
+
+# Verify Dockerfile
+docker build -t test-build .
 ```
+
+**Build fails:**
+- Check Dockerfile syntax
+- Verify base image availability
+- Check disk space and permissions
+
+### Post-Deploy Issues
+
+**Commands fail:**
+```bash
+# Debug post-deploy commands
+gokku run "cd /opt/gokku/apps/my-app/production/current && your-command" --remote my-app-production
+```
+
+**Database connection issues:**
+- Verify DATABASE_URL environment variable
+- Check database server status
+- Test connection manually
+
+## Performance Considerations
+
+### systemd
+- **Pros:** Fast startup, low memory overhead
+- **Cons:** Requires system dependencies
+- **Best for:** Microservices, APIs, background workers
+
+### Docker
+- **Pros:** Isolated environment, easy dependency management
+- **Cons:** Higher memory usage, slower startup
+- **Best for:** Web apps, complex dependency trees, multi-language stacks

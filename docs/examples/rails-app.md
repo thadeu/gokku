@@ -59,9 +59,24 @@ apps:
           DATABASE_URL: postgres://user:pass@localhost:5432/rails_app
           REDIS_URL: redis://localhost:6379
           SECRET_KEY_BASE: "your-secret-key-here"
+    deployment:
+      post_deploy:
+        - "cd /opt/gokku/apps/rails-app/production/current && bundle exec rails db:migrate"
+        - "cd /opt/gokku/apps/rails-app/production/current && bundle exec rails assets:precompile"
 ```
 
 **Alternative without Procfile**: If not using Procfile, you can define individual processes in gokku.yml.
+
+## Post-Deploy Commands
+
+The `post_deploy` commands run automatically after successful deployment:
+
+- **Database migrations**: `bundle exec rails db:migrate`
+- **Asset compilation**: `bundle exec rails assets:precompile`
+- **Cache warming**: Pre-populate caches for faster responses
+- **Custom tasks**: Any command needed after deployment
+
+**Commands run in sequence** and **fail deployment** if any command fails. This ensures your app is fully ready before considering the deployment complete.
 
 ## Deployment
 
@@ -92,6 +107,7 @@ Gokku will automatically:
 - Generate a Ruby Dockerfile
 - Create containers for web, worker, and scheduler processes
 - Start all processes
+- **Run post-deploy commands** (database migrations, asset compilation)
 
 ### 4. Check Status
 

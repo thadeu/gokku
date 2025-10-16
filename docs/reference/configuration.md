@@ -183,6 +183,7 @@ environments:
 | `keep_images` | int | ❌ No | `5` | Number of Docker images to keep |
 | `restart_policy` | string | ❌ No | `always` | Systemd restart policy² |
 | `restart_delay` | int | ❌ No | `5` | Delay between restarts (seconds) |
+| `post_deploy` | array | ❌ No | `[]` | Commands to run after successful deployment |
 
 ² **Restart Policies:**
 - `always` - Always restart
@@ -195,6 +196,9 @@ deployment:
   keep_releases: 10
   restart_policy: on-failure
   restart_delay: 10
+  post_deploy:
+    - "cd /opt/gokku/apps/my-app/production/current && npm run db:migrate"
+    - "cd /opt/gokku/apps/my-app/production/current && npm run cache:warm"
 ```
 
 ### docker

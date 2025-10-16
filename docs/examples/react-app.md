@@ -64,9 +64,24 @@ apps:
           DATABASE_URL: mongodb://localhost:27017/react_app
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: "your-jwt-secret-here"
+    deployment:
+      post_deploy:
+        - "cd /opt/gokku/apps/react-app/production/current && npm run db:migrate"
+        - "cd /opt/gokku/apps/react-app/production/current && npm run cache:warm"
 ```
 
 **Alternative without Procfile**: If not using Procfile, you can define individual processes in gokku.yml.
+
+## Post-Deploy Commands
+
+The `post_deploy` commands run automatically after successful deployment:
+
+- **Database migrations**: `npm run db:migrate` (for schema updates)
+- **Cache warming**: `npm run cache:warm` (pre-populate application caches)
+- **Data seeding**: Populate initial data if needed
+- **Custom tasks**: Any command needed after deployment
+
+**Commands run in sequence** and **fail deployment** if any command fails. This ensures your app is fully ready before considering the deployment complete.
 
 ## Deployment
 
@@ -98,6 +113,7 @@ Gokku will automatically:
 - Build the React app
 - Create containers for web, api, and worker processes
 - Start all processes
+- **Run post-deploy commands** (database migrations, cache warming)
 
 ### 4. Check Status
 

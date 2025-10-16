@@ -297,5 +297,31 @@ fi
 echo "-----> Cleaning up old releases..."
 cd $APP_DIR/releases
 ls -t | tail -n +$((KEEP_RELEASES + 1)) | xargs -r rm -rf
+# Execute post_deploy commands if configured
+POST_DEPLOY_COMMANDS=$(get_app_post_deploy "$APP_NAME")
+if [ -n "$POST_DEPLOY_COMMANDS" ]; then
+    echo "-----> Running post-deploy commands..."
+
+    # Change to app directory for proper context
+    APP_DIR="/opt/gokku/apps/$APP_NAME/$ENVIRONMENT"
+    cd "$APP_DIR/current" || {
+        echo "ERROR: Failed to change to app directory: $APP_DIR/current"
+        exit 1
+    }
+
+    while IFS= read -r cmd; do
+        if [ -n "$cmd" ]; then
+            echo "       Running: $cmd"
+            # Execute via gokku run for proper environment and context
+            if ! /usr/local/bin/gokku run "$cmd" --app "$APP_NAME" --env "$ENVIRONMENT"; then
+                echo "ERROR: Post-deploy command failed: $cmd"
+                exit 1
+            fi
+        fi
+    done <<< "$POST_DEPLOY_COMMANDS"
+
+    echo "-----> Post-deploy commands completed"
+fi
+
 echo "-----> Done"
 
