@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"infra/internal"
 )
@@ -96,13 +97,26 @@ func autoSetupRepository(remoteInfo *internal.RemoteInfo) error {
 
 	fmt.Printf("Repository doesn't exist, creating /opt/gokku/repos/%s.git...\n", remoteInfo.App)
 
+	// Get the user from SSH connection (more reliable than os.Getenv)
+	userCmd := exec.Command("ssh", remoteInfo.Host, "whoami")
+	userOutput, err := userCmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get user from server: %v", err)
+	}
+	serverUser := strings.TrimSpace(string(userOutput))
+
 	// Create repository on server
 	setupCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
-		sudo mkdir -p /opt/gokku/repos/%s.git && \
-		sudo git init --bare /opt/gokku/repos/%s.git && \
-		sudo chown -R %s /opt/gokku/repos/%s.git && \
+		set -e
+		echo "Creating repository directory..."
+		sudo mkdir -p /opt/gokku/repos
+		sudo mkdir -p /opt/gokku/repos/%s.git
+		echo "Initializing git repository..."
+		sudo git init --bare /opt/gokku/repos/%s.git
+		echo "Setting permissions..."
+		sudo chown -R %s /opt/gokku/repos/%s.git
 		echo "Repository created successfully"
-	`, remoteInfo.App, remoteInfo.App, os.Getenv("USER"), remoteInfo.App))
+	`, remoteInfo.App, remoteInfo.App, serverUser, remoteInfo.App))
 
 	setupCmd.Stdout = os.Stdout
 	setupCmd.Stderr = os.Stderr
@@ -111,25 +125,56 @@ func autoSetupRepository(remoteInfo *internal.RemoteInfo) error {
 		return fmt.Errorf("failed to create repository: %v", err)
 	}
 
-	// Copy the smart hook to the server
-	hookPath := "/opt/gokku/hooks/post-receive-systemd.template"
-	copyCmd := exec.Command("scp", hookPath, fmt.Sprintf("%s:/tmp/post-receive-template", remoteInfo.Host))
-	if err := copyCmd.Run(); err != nil {
-		return fmt.Errorf("failed to copy hook template: %v", err)
+	// Copy the smart hook from local Gokku installation
+	// First try to find the hook in the local Gokku installation
+	localHookPaths := []string{
+		"./hooks/post-receive-systemd.template",                      // If running from source
+		"/usr/local/share/gokku/hooks/post-receive-systemd.template", // Standard install location
+		"/opt/gokku/hooks/post-receive-systemd.template",             // Alternative location
 	}
 
-	// Configure the hook on server
-	configCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
-		cp /tmp/post-receive-template /opt/gokku/repos/%s.git/hooks/post-receive && \
-		chmod +x /opt/gokku/repos/%s.git/hooks/post-receive && \
-		echo "Hook installed successfully"
-	`, remoteInfo.App, remoteInfo.App))
+	var hookPath string
+	for _, path := range localHookPaths {
+		if _, err := os.Stat(path); err == nil {
+			hookPath = path
+			break
+		}
+	}
 
-	configCmd.Stdout = os.Stdout
-	configCmd.Stderr = os.Stderr
+	if hookPath == "" {
+		// Create a basic hook inline if template not found
+		fmt.Println("Hook template not found locally, creating basic hook...")
+		configCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
+			cat > /opt/gokku/repos/%s.git/hooks/post-receive << 'EOF'
+#!/bin/bash
+echo "==> Gokku post-receive hook executed"
+echo "==> Auto-setup will be handled by push logic"
+EOF
+			chmod +x /opt/gokku/repos/%s.git/hooks/post-receive
+			echo "Basic hook created"
+		`, remoteInfo.App, remoteInfo.App))
 
-	if err := configCmd.Run(); err != nil {
-		return fmt.Errorf("failed to configure hook: %v", err)
+		configCmd.Stdout = os.Stdout
+		configCmd.Stderr = os.Stderr
+
+		if err := configCmd.Run(); err != nil {
+			return fmt.Errorf("failed to create basic hook: %v", err)
+		}
+	} else {
+		// Copy the actual hook template
+		copyCmd := exec.Command("scp", hookPath, fmt.Sprintf("%s:/opt/gokku/repos/%s.git/hooks/post-receive", remoteInfo.Host, remoteInfo.App))
+		copyCmd.Stdout = os.Stdout
+		copyCmd.Stderr = os.Stderr
+
+		if err := copyCmd.Run(); err != nil {
+			return fmt.Errorf("failed to copy hook template: %v", err)
+		}
+
+		// Make it executable
+		execCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf("chmod +x /opt/gokku/repos/%s.git/hooks/post-receive", remoteInfo.App))
+		if err := execCmd.Run(); err != nil {
+			return fmt.Errorf("failed to make hook executable: %v", err)
+		}
 	}
 
 	fmt.Println("✓ Repository auto-setup complete")
