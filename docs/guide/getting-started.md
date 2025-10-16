@@ -16,7 +16,7 @@ Get Gokku up and running in minutes.
 SSH into your server and run:
 
 ```bash
-curl -fsSL https://gokku-vm.com/install | bash
+curl -fsSL https://gokku-vm.com/install | bash -s -- --server
 ```
 
 This installs:
@@ -61,22 +61,7 @@ apps:
       binary_name: api
 ```
 
-### Step 4: Setup App on Server
-
-On your server (via SSH):
-
-```bash
-cd /opt/gokku
-./deploy-server-setup.sh api production
-```
-
-This creates:
-- Git repository
-- App directories
-- Systemd service
-- Environment file
-
-### Step 5: Deploy
+### Step 4: Deploy
 
 **Using gokku CLI (Recommended):**
 
@@ -106,7 +91,7 @@ Watch the magic happen:
 -----> Deploy successful!
 ```
 
-### Step 6: Manage Your App
+### Step 5: Manage Your App
 
 **Using gokku CLI:**
 
