@@ -8,6 +8,3 @@ env-manager
 # Backup files
 *.bak
 *.tmp
-
-# Temporary installation files
-papis-install-*/

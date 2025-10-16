@@ -689,17 +689,6 @@ git remote add production ubuntu@server:api
 
 ---
 
-## Environment Variables in Config
-
-### System Variables
-
-Set via `gokku.yml` or environment:
-
-- `PAPIS_CONFIG` - Path to config file
-- `PAPIS_PROJECT_NAME` - Override project name
-- `PAPIS_BASE_DIR` - Override base directory
-- `PAPIS_DEPLOY_USER` - Override deploy user
-
 ### Application Variables
 
 Set via env-manager for each app/environment:
@@ -823,6 +812,5 @@ When adding features:
 ---
 
 ## License
-
-Internal use / Open source (your choice)
+[]
 

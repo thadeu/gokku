@@ -29,25 +29,12 @@ if [ -f "$SCRIPT_DIR/docker-helpers.sh" ]; then
     source "$SCRIPT_DIR/docker-helpers.sh"
 fi
 
-# Extract deploy user from git remote
-get_deploy_user() {
-    # Get the user from the git remote URL
-    # Format: user@host:path -> extract 'user'
-    local remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-    if [ -n "$remote_url" ]; then
-        echo "$remote_url" | sed 's/@.*//'
-    else
-        # Fallback: try to get from current user or default
-        echo "${USER:-ubuntu}"
-    fi
-}
-
 # Auto-setup function - detects first deploy and configures everything
 auto_setup_if_needed() {
     echo "-----> Checking if auto-setup is needed..."
 
-    # Get deploy user from git remote
-    DEPLOY_USER=$(get_deploy_user)
+    # Get deploy user from current context (SSH user)
+    DEPLOY_USER=$(whoami)
     echo "-----> Using deploy user: $DEPLOY_USER"
 
     # Check if this is first deploy (no releases directory or empty)
