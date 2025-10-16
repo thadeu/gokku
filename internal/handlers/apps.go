@@ -385,15 +385,23 @@ if [ -f "$RELEASE_DIR/$BUILD_WORKDIR/.tool-versions" ]; then
 fi
 
 # Build and deploy based on BUILD_TYPE
-if [ -d "$RELEASE_DIR/$BUILD_WORKDIR" ] && [ -f "$RELEASE_DIR/$BUILD_WORKDIR/go.mod" ]; then
+# Determine build directory - use BUILD_WORKDIR if set and different from ".", otherwise use RELEASE_DIR
+if [ "$BUILD_WORKDIR" != "." ] && [ -n "$BUILD_WORKDIR" ]; then
+    BUILD_DIR="$RELEASE_DIR/$BUILD_WORKDIR"
+else
+    BUILD_DIR="$RELEASE_DIR"
+fi
+
+if [ -f "$BUILD_DIR/go.mod" ]; then
     echo "-----> Building $APP_NAME..."
-    cd "$RELEASE_DIR/$BUILD_WORKDIR"
+    cd "$BUILD_DIR"
 
     # Add Go to PATH if available
     export PATH="$PATH:/usr/local/go/bin"
 
     if [ "$BUILD_TYPE" = "docker" ]; then
-        # Docker build and deploy
+        # Docker build and deploy - generate Dockerfile in RELEASE_DIR
+        cd "$RELEASE_DIR"
         echo "-----> Generating Dockerfile..."
         cat > Dockerfile << DOCKERFILE_GO_EOF
 FROM golang:1.21-alpine AS builder
