@@ -87,7 +87,22 @@ func handleConfig(args []string) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
-		cmd.Run()
+		if err := cmd.Run(); err != nil {
+			os.Exit(1)
+		}
+
+		// Auto-restart container after set/unset to apply changes
+		if subcommand == "set" || subcommand == "unset" {
+			fmt.Printf("\n-----> Restarting container to apply changes...\n")
+			restartCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf("gokku restart %s %s", remoteInfo.App, remoteInfo.Env))
+			restartCmd.Stdout = os.Stdout
+			restartCmd.Stderr = os.Stderr
+			if err := restartCmd.Run(); err != nil {
+				fmt.Printf("Warning: Failed to restart container. Run 'gokku restart --remote %s' manually.\n", remote)
+			} else {
+				fmt.Printf("✓ Container restarted with new configuration\n")
+			}
+		}
 		return
 	}
 
@@ -154,7 +169,7 @@ func handleConfig(args []string) {
 		baseDir = envVar
 	}
 
-	envFile := filepath.Join(baseDir, "apps", appName, envName, ".env")
+	envFile := filepath.Join(baseDir, "apps", appName, envName, "shared", ".env")
 
 	// Ensure directory exists
 	envDir := filepath.Dir(envFile)

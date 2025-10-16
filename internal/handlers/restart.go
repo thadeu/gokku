@@ -51,53 +51,56 @@ func handleRestart(args []string) {
 	fmt.Printf("Restarting %s...\n", serviceName)
 
 	if localExecution {
-		// Local execution on server
-		var cmd *exec.Cmd
+		// Local execution on server - Docker only
 
-		// Check systemd first
-		systemdCmd := exec.Command("sudo", "systemctl", "list-units", "--all")
-		output, err := systemdCmd.Output()
-		if err == nil && strings.Contains(string(output), serviceName) {
-			cmd = exec.Command("sudo", "systemctl", "restart", serviceName)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err == nil {
-				fmt.Println("✓ Service restarted")
-			} else {
-				fmt.Printf("Error restarting service: %v\n", err)
-				os.Exit(1)
-			}
+		// Check for blue or green container first, then fallback to service name
+		containerName := serviceName
+		dockerCmd := exec.Command("sudo", "docker", "ps", "-a", "--format", "{{.Names}}")
+		output, err := dockerCmd.Output()
+
+		if err != nil {
+			fmt.Printf("Error checking Docker containers: %v\n", err)
+			os.Exit(1)
+		}
+
+		containers := string(output)
+		if strings.Contains(containers, app+"-blue") {
+			containerName = app + "-blue"
+		} else if strings.Contains(containers, app+"-green") {
+			containerName = app + "-green"
+		}
+
+		// Restart the container
+		cmd := exec.Command("sudo", "docker", "restart", containerName)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err == nil {
+			fmt.Printf("✓ Container restarted: %s\n", containerName)
 		} else {
-			// Try docker
-			dockerCmd := exec.Command("docker", "ps", "-a")
-			output, err := dockerCmd.Output()
-			if err == nil && strings.Contains(string(output), serviceName) {
-				cmd = exec.Command("docker", "restart", serviceName)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				if err := cmd.Run(); err == nil {
-					fmt.Println("✓ Container restarted")
-				} else {
-					fmt.Printf("Error restarting container: %v\n", err)
-					os.Exit(1)
-				}
-			} else {
-				fmt.Printf("Error: Service or container '%s' not found\n", serviceName)
-				os.Exit(1)
-			}
+			fmt.Printf("Error restarting container: %v\n", err)
+			os.Exit(1)
 		}
 	} else {
-		// Remote execution via SSH
+		// Remote execution via SSH - Docker only
 		sshCmd := fmt.Sprintf(`
-			if sudo systemctl list-units --all | grep -q %s; then
-				sudo systemctl restart %s && echo "✓ Service restarted"
-			elif docker ps -a | grep -q %s; then
-				docker restart %s && echo "✓ Container restarted"
+			# Check for blue or green container first
+			CONTAINER_NAME="%s"
+			CONTAINERS=$(sudo docker ps -a --format "{{.Names}}")
+
+			if echo "$CONTAINERS" | grep -q "%s-blue"; then
+				CONTAINER_NAME="%s-blue"
+			elif echo "$CONTAINERS" | grep -q "%s-green"; then
+				CONTAINER_NAME="%s-green"
+			fi
+
+			# Restart the container
+			if sudo docker restart "$CONTAINER_NAME" 2>/dev/null; then
+				echo "✓ Container restarted: $CONTAINER_NAME"
 			else
-				echo "Error: Service or container '%s' not found"
+				echo "Error: Container '$CONTAINER_NAME' not found or failed to restart"
 				exit 1
 			fi
-		`, serviceName, serviceName, serviceName, serviceName, serviceName)
+		`, serviceName, app, app, app, app)
 
 		cmd := exec.Command("ssh", host, sshCmd)
 		cmd.Stdout = os.Stdout
