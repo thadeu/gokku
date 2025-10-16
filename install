@@ -305,7 +305,6 @@ setup_server() {
     mkdir -p $BASE_DIR/scripts
 
     for script in "${scripts[@]}"; do
-        log "Downloading $script..."
         if ! curl -fsSL "$REPO_URL/$script" -o "$BASE_DIR/$script"; then
             log_error "Failed to download $script"
             exit 1
@@ -322,7 +321,6 @@ setup_server() {
     )
 
     for hook in "${hooks[@]}"; do
-        log "Downloading $hook..."
         if ! curl -fsSL "$REPO_URL/$hook" -o "$BASE_DIR/$hook"; then
             log_error "Failed to download $hook"
             exit 1
@@ -338,7 +336,6 @@ setup_server() {
     )
 
     for template in "${templates[@]}"; do
-        log "Downloading $template..."
         if ! curl -fsSL "$REPO_URL/$template" -o "$BASE_DIR/$template"; then
             log_warn "Failed to download $template (optional)"
         fi
@@ -346,7 +343,6 @@ setup_server() {
 
     # Download sample config
     if [ ! -f "$BASE_DIR/gokku.yml" ]; then
-        log "Downloading sample gokku.yml..."
         if ! curl -fsSL "$REPO_URL/gokku.yml" -o "$BASE_DIR/gokku.yml"; then
             log_warn "Failed to download gokku.yml"
         else
