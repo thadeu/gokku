@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -42,6 +43,25 @@ func handleDeploy(args []string) {
 	if isDirectDeploy {
 		// Direct deployment - execute deployment logic directly
 		fmt.Printf("Deploying %s directly...\n", app)
+
+		// Check if repository exists and has commits
+		baseDir := "/opt/gokku"
+		reposDir := filepath.Join(baseDir, "repos", app+".git")
+		if _, err := os.Stat(reposDir); os.IsNotExist(err) {
+			fmt.Printf("Error: Repository for app '%s' not found at %s\n", app, reposDir)
+			fmt.Printf("Make sure the repository exists on the server.\n")
+			os.Exit(1)
+		}
+
+		// Check if repository has commits before attempting deployment
+		if !hasCommits(reposDir) {
+			fmt.Printf("Error: Repository has no commits yet. You need to push code first.\n")
+			fmt.Printf("From your local repository, run:\n")
+			fmt.Printf("  git remote add %s user@host:/opt/gokku/repos/%s.git\n", app, app)
+			fmt.Printf("  git push -u %s main\n", app)
+			os.Exit(1)
+		}
+
 		if err := executeDirectDeployment(app); err != nil {
 			fmt.Printf("Deploy failed: %v\n", err)
 			os.Exit(1)
@@ -191,22 +211,110 @@ func executeDirectDeployment(appName string) error {
 	return nil
 }
 
+// hasCommits checks if a git repository has any commits
+func hasCommits(repoDir string) bool {
+	checkCmd := exec.Command("git", "--git-dir", repoDir, "rev-parse", "--short", "HEAD")
+	return checkCmd.Run() == nil
+}
+
 // extractCodeFromRepo extracts code from git repository to release directory
 func extractCodeFromRepo(repoDir, releaseDir string) error {
-	// Check if repository has any commits by checking if HEAD exists
-	checkCmd := exec.Command("git", "--git-dir", repoDir, "rev-parse", "--short", "HEAD")
-	output, err := checkCmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("repository has no commits yet - cannot extract code")
+	// Check if repository has any commits
+	if !hasCommits(repoDir) {
+		return fmt.Errorf("repository has no commits yet - you need to push code first. Run: git push <remote> <branch>")
 	}
 
 	// Extract code from HEAD
 	cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
-	output, err = cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
 	}
+
+	// Check if this is the first deployment by looking for gokku.yml in the extracted code
+	gokkuYmlPath := filepath.Join(releaseDir, "gokku.yml")
+	if _, err := os.Stat(gokkuYmlPath); err == nil {
+		// Found gokku.yml in the project - this might be initial setup
+		if err := handleInitialSetup(gokkuYmlPath, releaseDir); err != nil {
+			fmt.Printf("Warning: Initial setup failed: %v\n", err)
+			// Continue with deployment anyway
+		}
+	}
+
 	return nil
+}
+
+// handleInitialSetup handles the initial setup when gokku.yml is found in the project
+func handleInitialSetup(gokkuYmlPath, releaseDir string) error {
+	fmt.Println("-----> Initial setup detected - configuring applications...")
+
+	serverConfigPath := "/opt/gokku/gokku.yml"
+
+	// Copy gokku.yml to server config location
+	if err := copyFile(gokkuYmlPath, serverConfigPath); err != nil {
+		return fmt.Errorf("failed to copy gokku.yml to server: %v", err)
+	}
+
+	fmt.Printf("-----> Copied gokku.yml to %s\n", serverConfigPath)
+
+	// Load the new configuration
+	config, err := internal.LoadServerConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load server config: %v", err)
+	}
+
+	// Create app directories for each app in the config
+	baseDir := "/opt/gokku"
+	for _, app := range config.Apps {
+		appDir := filepath.Join(baseDir, "apps", app.Name)
+		releasesDir := filepath.Join(appDir, "releases")
+		sharedDir := filepath.Join(appDir, "shared")
+
+		// Create directories
+		if err := os.MkdirAll(releasesDir, 0755); err != nil {
+			return fmt.Errorf("failed to create releases directory for %s: %v", app.Name, err)
+		}
+		if err := os.MkdirAll(sharedDir, 0755); err != nil {
+			return fmt.Errorf("failed to create shared directory for %s: %v", app.Name, err)
+		}
+
+		fmt.Printf("-----> Created directories for app '%s'\n", app.Name)
+	}
+
+	fmt.Println("-----> Initial setup complete!")
+	return nil
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	// Create destination directory if it doesn't exist
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
+	}
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	// Copy permissions
+	sourceInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	return os.Chmod(dst, sourceInfo.Mode())
 }
 
 // updateEnvironmentFile updates environment file from gokku.yml if needed
