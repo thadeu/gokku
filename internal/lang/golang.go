@@ -180,14 +180,15 @@ func (l *Golang) GetDefaultConfig() *Build {
 	return &Build{
 		Type:      "docker",
 		BaseImage: "golang:1.25-alpine",
-		Path:      "./cmd/api",
-		Workdir:   "/app",
+		Path:      "",
+		Workdir:   ".",
 	}
 }
 
 func (l *Golang) generateDockerfile(build *Build, app *App) string {
 	// Determine build path
 	buildPath := build.Path
+
 	if buildPath == "" {
 		buildPath = "."
 	}
