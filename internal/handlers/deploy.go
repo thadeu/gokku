@@ -54,6 +54,8 @@ func handleDeploy(args []string) {
 		}
 
 		// Check if repository has commits before attempting deployment
+		// For direct deployments, we expect the repository to have commits
+		// (user should have pushed code first)
 		if !hasCommits(reposDir) {
 			fmt.Printf("Error: Repository has no commits yet. You need to push code first.\n")
 			fmt.Printf("From your local repository, run:\n")
