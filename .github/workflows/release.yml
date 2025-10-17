@@ -62,7 +62,7 @@ jobs:
           git status --porcelain
 
           echo "Adding bin/ directory..."
-          git add bin/
+          git add -f bin/gokku-*
 
           echo "Checking if there are changes to commit..."
 
