@@ -42,7 +42,7 @@ func handleDeploy(args []string) {
 
 	if isDirectDeploy {
 		// Direct deployment - execute deployment logic directly
-		fmt.Printf("Deploying %s directly...\n", app)
+		fmt.Printf("-----> Deploying %s directly...\n", app)
 
 		// Check if repository exists and has commits
 		baseDir := "/opt/gokku"
@@ -73,7 +73,7 @@ func handleDeploy(args []string) {
 	}
 
 	// Legacy mode - git push deployment
-	fmt.Printf("Deploying %s via git push...\n", app)
+	fmt.Printf("----->Deploying %s via git push...\n", app)
 	fmt.Printf("Remote: %s\n", remoteName)
 
 	// Check if remote exists
