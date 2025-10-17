@@ -193,8 +193,21 @@ func executeDirectDeployment(appName string) error {
 
 // extractCodeFromRepo extracts code from git repository to release directory
 func extractCodeFromRepo(repoDir, releaseDir string) error {
+	// Check if repository has any commits
+	checkCmd := exec.Command("git", "--git-dir", repoDir, "rev-list", "--count", "HEAD")
+	output, err := checkCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to check repository state: %v, output: %s", err, string(output))
+	}
+
+	commitCount := strings.TrimSpace(string(output))
+	if commitCount == "0" {
+		return fmt.Errorf("repository has no commits yet - cannot extract code")
+	}
+
+	// Extract code from HEAD
 	cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
-	output, err := cmd.CombinedOutput()
+	output, err = cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
 	}
