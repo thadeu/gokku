@@ -6,9 +6,12 @@ set -e
 
 CONFIG_FILE="${GOKKU_CONFIG:-gokku.yml}"
 
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Error: Configuration file $CONFIG_FILE not found"
-    exit 1
+# Check if config file exists, but don't fail immediately
+# This allows sourcing this file without gokku.yml present
+# Functions will handle the missing file gracefully
+CONFIG_AVAILABLE=false
+if [ -f "$CONFIG_FILE" ]; then
+    CONFIG_AVAILABLE=true
 fi
 
 # Simple YAML parser (supports basic key-value pairs)
@@ -33,10 +36,12 @@ parse_yaml() {
     }'
 }
 
-# Load configuration
-eval $(parse_yaml "$CONFIG_FILE" "GOKKU_")
+# Load configuration only if available
+if [ "$CONFIG_AVAILABLE" = true ]; then
+    eval $(parse_yaml "$CONFIG_FILE" "GOKKU_")
+fi
 
-# Export common variables
+# Export common variables with defaults
 export GOKKU_PROJECT_NAME="${GOKKU_project_name:-gokku}"
 export GOKKU_BASE_DIR="${GOKKU_project_base_dir:-/opt/gokku}"
 export GOKKU_BUILD_WORKDIR="${GOKKU_build_work_dir:-apps/trunk}"
@@ -46,6 +51,10 @@ export GOKKU_BASE_PORT="${GOKKU_base_port:-5060}"
 
 # Function to get list of apps from config
 get_apps() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "Error: Configuration file $CONFIG_FILE not found" >&2
+        return 1
+    fi
     awk '/^apps:/,/^[^ ]/ {if (/^  - name:/) print $3}' "$CONFIG_FILE"
 }
 

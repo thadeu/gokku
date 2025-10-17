@@ -2,7 +2,7 @@
 # Docker helper functions for Gokku deployment
 # Provides all-in-one Docker installation and verification
 
-# Source config loader for configuration functions
+# Source config loader for configuration functions (safe to source without gokku.yml)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$SCRIPT_DIR/config-loader.sh" ]; then
     source "$SCRIPT_DIR/config-loader.sh"
