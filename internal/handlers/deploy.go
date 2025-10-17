@@ -191,6 +191,7 @@ func executeDirectDeployment(appName string) error {
 	// Force rebuild without cache if this is a Docker build
 	if app.Build != nil && app.Build.Type == "docker" {
 		dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
+
 		if _, err := os.Stat(dockerfilePath); err == nil {
 			fmt.Println("-----> Forcing fresh Docker build (no cache)...")
 			// Remove any existing image with the same name
@@ -276,7 +277,19 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 
 	// Parse config to get workdir
 	app, err := internal.LoadAppConfig(appName)
-	if err != nil || app.Build == nil || app.Build.Workdir == "" {
+	if err != nil {
+		fmt.Printf("-----> Error loading app config: %v, extracting full repository...\n", err)
+		os.RemoveAll(releaseDir) // Clean temp files
+		os.MkdirAll(releaseDir, 0755)
+		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
+		}
+		return nil
+	}
+
+	if app.Build == nil || app.Build.Workdir == "" {
 		// No workdir specified, do full checkout
 		fmt.Println("-----> No workdir specified, extracting full repository...")
 		os.RemoveAll(releaseDir) // Clean temp files
@@ -300,6 +313,9 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 
 	workdir := strings.TrimPrefix(app.Build.Workdir, "./")
 	workdir = strings.TrimPrefix(workdir, "/")
+
+	fmt.Printf("-----> Workdir configured: '%s'\n", workdir)
+	fmt.Printf("-----> Using selective extraction (git archive)\n")
 
 	// Step 2: Extract only what we need using git archive
 	// Clean and prepare directory

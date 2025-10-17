@@ -172,7 +172,7 @@ func (dc *DockerClient) CreateContainer(config ContainerConfig) error {
 	}
 
 	// Add environment file
-	if config.EnvFile != "" && fileExists(config.EnvFile) {
+	if config.EnvFile != "" {
 		args = append(args, "--env-file", config.EnvFile)
 	}
 
@@ -196,6 +196,7 @@ func (dc *DockerClient) CreateContainer(config ContainerConfig) error {
 
 	cmd := exec.Command("docker", args...)
 	output, err := cmd.CombinedOutput()
+
 	if err != nil {
 		return fmt.Errorf("failed to create container %s: %v, output: %s", config.Name, err, string(output))
 	}
@@ -311,12 +312,15 @@ func (dc *DockerClient) StandardDeploy(config DeploymentConfig) error {
 	// Stop and remove old container
 	if dc.ContainerExists(containerName) {
 		fmt.Printf("-----> Stopping old container: %s\n", containerName)
+
 		if err := dc.StopContainer(containerName); err != nil {
 			fmt.Printf("Warning: Failed to stop container: %v\n", err)
 		}
+
 		if err := dc.RemoveContainer(containerName, true); err != nil {
 			fmt.Printf("Warning: Failed to remove container: %v\n", err)
 		}
+
 		time.Sleep(2 * time.Second)
 	}
 
@@ -458,7 +462,7 @@ func (dc *DockerClient) startGreenContainer(config DeploymentConfig, containerPo
 		Name:          greenName,
 		Image:         fmt.Sprintf("%s:%s", config.AppName, config.ImageTag),
 		NetworkMode:   config.NetworkMode,
-		RestartPolicy: "no",
+		RestartPolicy: "unless-stopped",
 		WorkingDir:    "/app",
 		Volumes:       []string{fmt.Sprintf("%s:/app", config.ReleaseDir)},
 	}
