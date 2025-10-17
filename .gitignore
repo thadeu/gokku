@@ -1,4 +1,5 @@
 # Compiled binaries
+bin/
 env-manager
 *.exe
 *.dll
@@ -9,4 +10,3 @@ env-manager
 *.bak
 *.tmp
 gokku-cli
-bin/
