@@ -492,7 +492,6 @@ func setupAppCore(remoteInfo *internal.RemoteInfo, appName, deployUser string, i
 		if _, err := exec.LookPath("git"); err != nil {
 			return fmt.Errorf("git command not found: %v", err)
 		}
-		fmt.Println("-----> Git command found")
 
 		// Initialize git repository
 		repoDir := filepath.Join(reposDir, appName+".git")
