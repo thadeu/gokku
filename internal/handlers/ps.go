@@ -106,7 +106,7 @@ func handlePSList(args []string) {
 			echo ""
 
 			# Check if this app has Procfile processes (look for services with -web, -worker, etc.)
-			services=$(sudo systemctl list-units --all | grep "$app-$env-" | awk '{print $1}' | sed 's/.service//')
+			services=$(docker ps -a --format '{{.Names}}' | grep "$app-$env-" | sed 's/-[^-]*$//')
 
 			if [ -z "$services" ]; then
 				echo "No Procfile processes found for $app ($env)"
@@ -115,9 +115,6 @@ func handlePSList(args []string) {
 			fi
 
 			for service in $services; do
-				# Extract process type from service name (app-env-processtype)
-				process_type=$(echo "$service" | sed "s/$app-$env-//")
-
 				# Check Docker container status
 				container_name="$service"
 				if docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
@@ -126,7 +123,7 @@ func handlePSList(args []string) {
 					container_status="stopped"
 				fi
 
-				echo "$process_type:"
+				echo "$service:"
 				echo "  Container: $container_status"
 				echo ""
 			done
@@ -158,7 +155,7 @@ func handlePSList(args []string) {
 		fmt.Printf("=== Procfile Processes: %s (%s) ===\n\n", app, env)
 
 		// Check for Procfile processes (services with app-env-* pattern)
-		cmd := exec.Command("sudo", "systemctl", "list-units", "--all")
+		cmd := exec.Command("docker", "ps", "-a")
 		output, err := cmd.Output()
 		if err != nil {
 			fmt.Printf("Error checking docker services: %v\n", err)
@@ -170,26 +167,17 @@ func handlePSList(args []string) {
 		found := false
 
 		for _, line := range lines {
-			if strings.Contains(line, servicePattern) && strings.Contains(line, ".service") {
-				parts := strings.Fields(line)
-				if len(parts) >= 4 {
-					serviceName := strings.TrimSuffix(parts[0], ".service")
-					processType := strings.TrimPrefix(serviceName, servicePattern)
-
-					// Check Docker container status
-					containerName := serviceName
-					dockerCmd := exec.Command("docker", "ps", "--format", "{{.Names}}")
-					dockerOutput, err := dockerCmd.Output()
-					containerStatus := "stopped"
-					if err == nil && strings.Contains(string(dockerOutput), containerName) {
-						containerStatus = "running"
-					}
-
-					fmt.Printf("%s:\n", processType)
-					fmt.Printf("  Container: %s\n", containerStatus)
-					fmt.Println("")
-					found = true
+			if strings.Contains(line, servicePattern) {
+				serviceName := line
+				containerStatus := "stopped"
+				if strings.Contains(string(output), serviceName) {
+					containerStatus = "running"
 				}
+
+				fmt.Printf("%s:\n", serviceName)
+				fmt.Printf("  Container: %s\n", containerStatus)
+				fmt.Println("")
+				found = true
 			}
 		}
 
@@ -250,7 +238,7 @@ func handlePSLogs(args []string) {
 			env="%s"
 
 			# Get all Procfile processes for this app
-			services=$(sudo systemctl list-units --all | grep "$app-$env-" | awk '{print $1}' | sed 's/.service//' %s)
+			services=$(docker ps -a --format '{{.Names}}' | grep "$app-$env-" %s)
 
 			if [ -z "$services" ]; then
 				echo "No Procfile processes found for $app ($env)"
@@ -258,11 +246,10 @@ func handlePSLogs(args []string) {
 			fi
 
 			for service in $services; do
-				process_type=$(echo "$service" | sed "s/$app-$env-//")
 				container_name="$service"
 
 				if docker ps -a --format '{{.Names}}' | grep -q "^${container_name}$"; then
-					echo "=== $process_type logs ==="
+					echo "=== $container_name logs ==="
 					if [ "%s" = "-f" ]; then
 						docker logs $container_name -f --tail 100
 					else
@@ -270,7 +257,7 @@ func handlePSLogs(args []string) {
 					fi
 					echo ""
 				else
-					echo "Container $container_name not found for process $process_type"
+					echo "Container $container_name not found"
 				fi
 			done
 		`, app, env, processFilter, followFlag)
@@ -667,7 +654,7 @@ func handlePSStop(args []string) {
 			env="%s"
 
 			# Get Procfile processes
-			services=$(sudo systemctl list-units --all | grep "$app-$env-" | awk '{print $1}' | sed 's/.service//' %s)
+			services=$(docker ps -a --format '{{.Names}}' | grep "$app-$env-" %s)
 
 			if [ -z "$services" ]; then
 				echo "No Procfile processes found for $app ($env)"
@@ -675,15 +662,14 @@ func handlePSStop(args []string) {
 			fi
 
 			for service in $services; do
-				process_type=$(echo "$service" | sed "s/$app-$env-//")
-				echo "Stopping $process_type..."
-				sudo systemctl stop "$service"
+				echo "Stopping $service..."
+				docker stop "$service"
 				sleep 1
 
-				if ! sudo systemctl is-active --quiet "$service"; then
-					echo "✓ $process_type stopped successfully"
+				if ! docker ps -a --format '{{.Names}}' | grep -q "^${service}$"; then
+					echo "✓ $service stopped successfully"
 				else
-					echo "✗ Failed to stop $process_type"
+					echo "✗ Failed to stop $service"
 				fi
 			done
 		`, app, env, processFilter)

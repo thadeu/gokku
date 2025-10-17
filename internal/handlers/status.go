@@ -143,10 +143,8 @@ func handleStatus(args []string) {
 	} else {
 		// Remote execution for specific app/env
 		sshCmd := fmt.Sprintf(`
-			if sudo systemctl list-units --all | grep -q %s; then
-				sudo systemctl status %s
-			elif docker ps -a | grep -q %s; then
-				docker ps -a | grep %s
+			if docker ps -a | grep -q %s; then
+				docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" --filter "name=%s"
 			else
 				echo "Service or container '%s' not found"
 				exit 1

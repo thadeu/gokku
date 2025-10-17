@@ -85,15 +85,13 @@ func handleLogs(args []string) {
 	} else {
 		// Execute via SSH
 		sshCmd := fmt.Sprintf(`
-			if sudo systemctl list-units --all | grep -q %s; then
-				sudo journalctl -u %s %s -n 100
-			elif docker ps -a | grep -q %s; then
+			if docker ps -a | grep -q %s; then
 				docker logs %s %s
 			else
-				echo "Service or container '%s' not found"
+				echo "Container '%s' not found"
 				exit 1
 			fi
-		`, serviceName, serviceName, followFlag, serviceName, followFlag, serviceName, serviceName)
+		`, serviceName, serviceName, followFlag, serviceName, followFlag)
 
 		cmd := exec.Command("ssh", "-t", host, sshCmd)
 		cmd.Stdout = os.Stdout
