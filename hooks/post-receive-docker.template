@@ -132,7 +132,7 @@ auto_setup_if_needed() {
 
             # Source config loader if available
             if [ -f "$SCRIPT_DIR/config-loader.sh" ]; then
-                source "$SCRIPT_DIR/config-loader.sh"
+                GOKKU_CONFIG="$TEMP_DIR/gokku.yml" source "$SCRIPT_DIR/config-loader.sh"
             fi
 
             # Create directory structure
