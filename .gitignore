@@ -9,4 +9,3 @@ env-manager
 *.bak
 *.tmp
 gokku-cli
-bin/*
