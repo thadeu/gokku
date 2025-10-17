@@ -73,7 +73,7 @@ func (l *Golang) Restart(app *App) error {
 	}
 
 	// Find active container
-	containerName := app.Name + "-blue"
+	containerName := app.Name
 	if !dc.ContainerExists(containerName) {
 		containerName = app.Name + "-green"
 	}
@@ -197,13 +197,10 @@ func (l *Golang) generateDockerfile(build *Build, app *App) string {
 
 	// Determine base image
 	baseImage := build.BaseImage
+
 	if baseImage == "" {
 		baseImage = "golang:1.25-alpine"
 	}
-
-	// For now, copy everything and build - optimize later
-	goModCopy := "go.mod go.sum*"
-	fmt.Printf("-----> Using simple copy: %s\n", goModCopy)
 
 	// Get the workdir for COPY
 	workDir := "."
@@ -211,6 +208,8 @@ func (l *Golang) generateDockerfile(build *Build, app *App) string {
 	if app.Build != nil && app.Build.Workdir != "" {
 		workDir = app.Build.Workdir
 	}
+
+	fmt.Printf("-----> Using workdir: %s\n", workDir)
 
 	return fmt.Sprintf(`# Generated Dockerfile for Go application
 # App: %s

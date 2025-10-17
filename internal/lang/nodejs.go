@@ -72,7 +72,7 @@ func (l *Nodejs) Restart(app *App) error {
 	}
 
 	// Find active container
-	containerName := app.Name + "-blue"
+	containerName := app.Name
 	if !dc.ContainerExists(containerName) {
 		containerName = app.Name + "-green"
 	}
