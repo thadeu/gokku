@@ -23,7 +23,6 @@ func handleStatus(args []string) {
 			os.Exit(1)
 		}
 		app = remoteInfo.App
-		env = remoteInfo.Env
 		host = remoteInfo.Host
 		baseDir = remoteInfo.BaseDir
 	} else if len(remainingArgs) >= 2 {
@@ -49,22 +48,6 @@ func handleStatus(args []string) {
 			localExecution = true
 			baseDir = "/opt/gokku"
 			fmt.Printf("Checking status on local server...\n\n")
-		} else {
-			config, err := internal.LoadConfig()
-			if err != nil {
-				fmt.Printf("Error loading config: %v\n", err)
-				os.Exit(1)
-			}
-
-			server := internal.GetDefaultServer(config)
-			if server == nil {
-				fmt.Println("No servers configured")
-				os.Exit(1)
-			}
-
-			fmt.Printf("Checking status on %s...\n\n", server.Name)
-			host = server.Host
-			baseDir = server.BaseDir
 		}
 
 		if localExecution {

@@ -24,7 +24,6 @@ func handleRollback(args []string) {
 			os.Exit(1)
 		}
 		app = remoteInfo.App
-		env = remoteInfo.Env
 		host = remoteInfo.Host
 		baseDir = remoteInfo.BaseDir
 

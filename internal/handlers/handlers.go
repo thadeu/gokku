@@ -1,12 +1,5 @@
 package handlers
 
-// This file exports the handler functions for use by main.go
-
-// HandleServer manages server configuration commands
-func HandleServer(args []string) {
-	handleServer(args)
-}
-
 // HandleApps lists applications on the server
 func HandleApps(args []string) {
 	handleApps(args)
@@ -50,11 +43,6 @@ func HandleRollback(args []string) {
 // HandleSSH establishes SSH connections to servers
 func HandleSSH(args []string) {
 	handleSSH(args)
-}
-
-// HandlePS manages Procfile processes
-func HandlePS(args []string) {
-	handlePS(args)
 }
 
 // HandleTool provides utility commands for scripts

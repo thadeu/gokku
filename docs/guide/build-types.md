@@ -116,7 +116,7 @@ apps:
 ### systemd Deployment
 
 1. Extracts code to release directory
-2. Installs dependencies (if mise/asdf configured)
+2. Installs dependencies
 3. Builds binary
 4. Updates symlink to new release
 5. Restarts systemd service

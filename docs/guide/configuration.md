@@ -40,10 +40,6 @@ apps:
       goos: linux
       goarch: amd64
       cgo_enabled: 0
-      mise:
-        plugins:
-          - name: whispercpp
-            url: https://github.com/thadeu/asdf-whispercpp.git
     
     environments:
       - name: production
@@ -129,11 +125,6 @@ apps:
       entrypoint: main.py          # Entrypoint file (non-Go)
       base_image: python:3.11-slim # Base image
       
-      # Mise/asdf plugins (optional)
-      mise:
-        plugins:
-          - name: whispercpp
-            url: https://github.com/thadeu/asdf-whispercpp.git
 ```
 
 **Build Type Defaults:**
@@ -318,39 +309,6 @@ apps:
           WORKERS: 2
 ```
 
-## Mise/ASDF Integration
-
-Manage tool versions with mise:
-
-```yaml
-apps:
-  - name: whisper
-    lang: python
-    build:
-      type: docker
-      path: ./apps/whisper
-      mise:
-        plugins:
-          - name: whispercpp
-            url: https://github.com/thadeu/asdf-whispercpp.git
-          - name: ffmpeg
-            url: https://github.com/acj/asdf-ffmpeg.git
-```
-
-Then create `.tool-versions` in `./apps/whisper/`:
-
-```
-python 3.11
-whispercpp 1.5.0
-ffmpeg 8.0
-```
-
-Gokku automatically:
-1. Installs mise plugins
-2. Runs `mise install`
-3. Uses correct versions
-
-See [Mise Integration](/guide/mise) for details.
 
 ## Validation
 

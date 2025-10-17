@@ -16,7 +16,6 @@ A **100% generic** git-push deployment system for multi-language applications. N
 ✅ **Zero Hard-coding** - Everything configured via `gokku.yml`
 ✅ **Multi-Language** - Go, Python, Node.js, Ruby (extensible)
 ✅ **Multi-Runtime** - Systemd or Docker deployment
-✅ **Procfile Support** - Dokku-style multi-process apps
 ✅ **Portable** - Can be extracted to separate repository
 ✅ **Config-Driven** - Apps, environments, ports all in config
 ✅ **K3s-Style Installer** - One-line installation
@@ -486,30 +485,7 @@ apps:
 
 ---
 
-## Using as Separate Repository
-
-This system can be extracted to its own repository and used across multiple projects.
-
-### Structure
-
-```
-deployment-system/          # Separate repo
-├── gokku.yml.example      # Template config
-├── config-loader.sh
-├── deploy-server-setup-v2.sh
-├── env-manager-v2.go
-├── install.sh
-└── README.md
-
-your-project/              # Your Go project
-├── cmd/
-│   ├── api/
-│   └── worker/
-├── gokku.yml             # Project-specific config
-└── ... (your code)
-```
-
-### Installation from Separate Repo
+### Installation
 
 ```bash
 # One-line install (future)

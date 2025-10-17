@@ -32,12 +32,20 @@ type App struct {
 
 // Build represents build configuration
 type Build struct {
-	Type       string `yaml:"type"` // "docker"
-	Path       string `yaml:"path"`
-	BinaryName string `yaml:"binary_name,omitempty"`
-	GoVersion  string `yaml:"go_version,omitempty"`
-	Dockerfile string `yaml:"dockerfile,omitempty"`
-	BaseImage  string `yaml:"base_image,omitempty"`
+	Type       string            `yaml:"type"` // "docker"
+	Path       string            `yaml:"path"`
+	BinaryName string            `yaml:"binary_name,omitempty"`
+	GoVersion  string            `yaml:"go_version,omitempty"`
+	Dockerfile string            `yaml:"dockerfile,omitempty"`
+	BaseImage  string            `yaml:"base_image,omitempty"`
+	Workdir    string            `yaml:"workdir,omitempty"`
+	Entrypoint string            `yaml:"entrypoint,omitempty"`
+	Command    string            `yaml:"command,omitempty"`
+	Env        map[string]string `yaml:"env,omitempty"`
+	Ports      []string          `yaml:"ports,omitempty"`
+	Volumes    []string          `yaml:"volumes,omitempty"`
+	Networks   []string          `yaml:"networks,omitempty"`
+	Security   string            `yaml:"security,omitempty"`
 }
 
 // Deployment represents deployment configuration

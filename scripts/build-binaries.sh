@@ -1,12 +1,8 @@
 #!/bin/bash
-# Build script to create binaries for multiple platforms
-# Run this when creating releases/tags
-
 set -e
 
 echo "Building Gokku binaries for multiple platforms..."
 
-# Clean previous builds (but preserve .gitkeep if exists)
 if [ -f "bin/.gitkeep" ]; then
     mv bin/.gitkeep /tmp/.gitkeep
 fi
@@ -16,7 +12,6 @@ if [ -f "/tmp/.gitkeep" ]; then
     mv /tmp/.gitkeep bin/.gitkeep
 fi
 
-# Build for different platforms
 platforms=(
     "linux/amd64"
     "linux/arm64"
@@ -30,12 +25,7 @@ for platform in "${platforms[@]}"; do
 
     binary_name="gokku-$os-$arch"
 
-    if [ "$os" = "darwin" ] && [ "$arch" = "arm64" ]; then
-        # Apple Silicon
-        GOOS=$os GOARCH=$arch go build -o "bin/$binary_name" ./cmd/cli
-    else
-        GOOS=$os GOARCH=$arch go build -o "bin/$binary_name" ./cmd/cli
-    fi
+    GOOS=$os GOARCH=$arch go build -o "bin/$binary_name" ./cmd/cli
 
     echo "✓ Built bin/$binary_name"
 done
@@ -44,7 +34,6 @@ echo ""
 echo "Binaries created in bin/ directory:"
 
 ls -la bin/
-
 
 echo ""
 echo "To compress binaries (optional):"

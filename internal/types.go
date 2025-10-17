@@ -2,15 +2,15 @@ package internal
 
 // Config represents the CLI configuration
 type Config struct {
-	Servers []Server `yaml:"servers"`
+	Apps []AppConfig `yaml:"apps"`
 }
 
-// Server represents a deployment server
-type Server struct {
-	Name    string `yaml:"name"`
-	Host    string `yaml:"host"`
-	BaseDir string `yaml:"base_dir"`
-	Default bool   `yaml:"default,omitempty"`
+// App represents a deployment app
+type AppConfig struct {
+	Name       string      `yaml:"name"`
+	Lang       string      `yaml:"lang"`
+	Build      *Build      `yaml:"build"`
+	Deployment *Deployment `yaml:"deployment"`
 }
 
 // RemoteInfo contains information about remote connection
@@ -18,5 +18,4 @@ type RemoteInfo struct {
 	Host    string
 	BaseDir string
 	App     string
-	Env     string
 }

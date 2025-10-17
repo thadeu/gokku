@@ -14,7 +14,6 @@ curl -fsSL https://gokku-vm.com/install | bash -s -- --server
 
 This installs:
 - Gokku scripts
-- mise (for runtime management)
 - Required dependencies
 
 ### Step 2: Install CLI (Optional but Recommended)

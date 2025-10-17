@@ -12,7 +12,7 @@ import (
 func handleLogs(args []string) {
 	remote, remainingArgs := internal.ExtractRemoteFlag(args)
 
-	var app, env, host string
+	var app, host string
 	var follow bool
 	var localExecution bool
 
@@ -23,7 +23,6 @@ func handleLogs(args []string) {
 			os.Exit(1)
 		}
 		app = remoteInfo.App
-		env = remoteInfo.Env
 		host = remoteInfo.Host
 
 		// Check for -f flag
@@ -38,26 +37,25 @@ func handleLogs(args []string) {
 		if internal.IsRunningOnServer() {
 			localExecution = true
 			if len(remainingArgs) < 2 {
-				fmt.Println("Usage: gokku logs <app> <env> [-f]")
+				fmt.Println("Usage: gokku logs <app> [-f]")
 				fmt.Println("   or: gokku logs --remote <git-remote> [-f]")
 				os.Exit(1)
 			}
 			app = remainingArgs[0]
-			env = remainingArgs[1]
-			follow = len(remainingArgs) > 2 && remainingArgs[2] == "-f"
+			follow = len(remainingArgs) > 1 && remainingArgs[1] == "-f"
 		} else {
 			// Client without --remote - show error
 			fmt.Println("Error: Local logs commands can only be run on the server")
 			fmt.Println("")
 			fmt.Println("For client usage, use --remote flag:")
-			fmt.Println("  gokku logs <app> <env> [-f] --remote <git-remote>")
+			fmt.Println("  gokku logs <app> [-f] --remote <git-remote>")
 			fmt.Println("")
 			fmt.Println("Or run this command directly on your server.")
 			os.Exit(1)
 		}
 	}
 
-	serviceName := fmt.Sprintf("%s-%s", app, env)
+	serviceName := app
 	followFlag := ""
 	if follow {
 		followFlag = "-f"

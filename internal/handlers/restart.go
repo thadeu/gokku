@@ -22,7 +22,6 @@ func handleRestart(args []string) {
 			os.Exit(1)
 		}
 		app = remoteInfo.App
-		env = remoteInfo.Env
 		host = remoteInfo.Host
 	} else if len(remainingArgs) >= 2 {
 		// Check if running on server - allow local execution
@@ -50,7 +49,7 @@ func handleRestart(args []string) {
 	fmt.Printf("Restarting %s...\n", serviceName)
 
 	if localExecution {
-		// Local execution on server - recreate container with new env
+		// Local execution on server - recreate container with new env using Go
 		baseDir := "/opt/gokku"
 		if envVar := os.Getenv("GOKKU_BASE_DIR"); envVar != "" {
 			baseDir = envVar
@@ -59,31 +58,27 @@ func handleRestart(args []string) {
 		envFile := fmt.Sprintf("%s/apps/%s/%s/shared/.env", baseDir, app, env)
 		appDir := fmt.Sprintf("%s/apps/%s/%s", baseDir, app, env)
 
-		// Source docker-helpers and recreate container
-		restartScript := fmt.Sprintf(`
-			source /opt/gokku/scripts/docker-helpers.sh
-			recreate_active_container "%s" "%s" "%s"
-		`, app, envFile, appDir)
+		// Use Go Docker client to recreate container
+		dc, err := internal.NewDockerClient()
+		if err != nil {
+			fmt.Printf("Error creating Docker client: %v\n", err)
+			os.Exit(1)
+		}
 
-		cmd := exec.Command("bash", "-c", restartScript)
+		if err := dc.RecreateActiveContainer(app, envFile, appDir); err != nil {
+			fmt.Printf("Error recreating container: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		// Remote execution via SSH - use gokku restart directly
+		sshCmd := fmt.Sprintf("gokku restart %s %s", app, env)
+
+		cmd := exec.Command("ssh", host, sshCmd)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			fmt.Printf("Error recreating container: %v\n", err)
 			os.Exit(1)
 		}
-	} else {
-		// Remote execution via SSH - recreate container with new env
-		sshCmd := fmt.Sprintf(`
-			source /opt/gokku/scripts/docker-helpers.sh
-			ENV_FILE="/opt/gokku/apps/%s/%s/shared/.env"
-			APP_DIR="/opt/gokku/apps/%s/%s"
-			recreate_active_container "%s" "$ENV_FILE" "$APP_DIR"
-		`, app, env, app, env, app)
-
-		cmd := exec.Command("ssh", host, sshCmd)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Run()
 	}
 }

@@ -17,17 +17,9 @@ apps:
       goos: linux
       goarch: amd64
       cgo_enabled: 0
-    environments:
-      - name: production
-        branch: main
-        default_env_vars:
-          AWS_REGION: us-east-1
-          LOG_LEVEL: info
-      - name: staging
-        branch: staging
-        default_env_vars:
-          AWS_REGION: us-east-1
-          LOG_LEVEL: debug
+    env_vars:
+      AWS_REGION: us-east-1
+      LOG_LEVEL: info
     deployment:
       keep_releases: 5
       restart_policy: always
@@ -49,17 +41,9 @@ apps:
       # ports:  # Only used if network_mode != host
       #   - "5064:5064"
       #   - "10000-20000:10000-20000/udp"
-    environments:
-      - name: production
-        branch: main
-        default_env_vars:
-          AWS_REGION: us-east-1
-          LOG_LEVEL: info
-      - name: staging
-        branch: staging
-        default_env_vars:
-          AWS_REGION: us-east-1
-          LOG_LEVEL: debug
+    env_vars:
+      AWS_REGION: us-east-1
+      LOG_LEVEL: info
     deployment:
       keep_releases: 5
       restart_policy: always
@@ -73,17 +57,9 @@ apps:
       dockerfile: ./apps/vad/Dockerfile  # optional, will generate if not exists
       entrypoint: main.py
       base_image: "python:3.11-slim"
-      # Mise config (optional) - if .tool-versions exists, mise is auto-enabled
-      mise:
-        plugins:
-          - name: whispercpp
-            url: https://github.com/thadeu/asdf-whispercpp.git
-    environments:
-      - name: production
-        branch: main
-        default_env_vars:
-          LOG_LEVEL: info
-          PORT: 8080
+    env_vars:
+      LOG_LEVEL: info
+      PORT: 8080
     deployment:
       keep_releases: 3
       keep_images: 5

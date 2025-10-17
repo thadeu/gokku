@@ -383,6 +383,5 @@ Full working examples:
 ## Next Steps
 
 - [Configuration](/guide/configuration) - Customize Docker settings
-- [Mise Integration](/guide/mise) - Auto-install dependencies in Docker
 - [Environment Variables](/guide/env-vars) - Manage secrets
 

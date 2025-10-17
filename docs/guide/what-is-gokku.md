@@ -11,7 +11,6 @@ It's inspired by [Dokku](https://dokku.com/) but focuses on:
 - Simpler configuration
 - Optional Docker (not required)
 - Native systemd support
-- Automatic runtime management with mise/asdf
 
 ## Core Philosophy
 
@@ -19,7 +18,6 @@ It's inspired by [Dokku](https://dokku.com/) but focuses on:
 2. **Configuration as Code**: Everything in `gokku.yml`
 3. **Sensible Defaults**: Minimal config required
 4. **Runtime Flexibility**: Choose systemd, Docker, or native per app
-5. **Tool Version Management**: Automatic via mise/asdf
 
 ## How It Works
 
@@ -27,7 +25,7 @@ It's inspired by [Dokku](https://dokku.com/) but focuses on:
 graph LR
     A[git push] --> B[Git Hook]
     B --> C{Has .tool-versions?}
-    C -->|Yes| D[mise install]
+    C -->|Yes| D[Install Dependencies]
     C -->|No| E[Use defaults]
     D --> F{Build Type?}
     E --> F
@@ -52,9 +50,9 @@ That's it. Your app builds, deploys, and restarts automatically.
 ### 🔧 Multi-Language
 
 - **Go**: Native compilation with systemd
-- **Python**: Docker or native with mise
-- **Node.js**: Docker or native with mise
-- **Ruby, Rust, etc**: Via mise/asdf
+- **Python**: Docker or native
+- **Node.js**: Docker or native
+- **Ruby, Rust, etc**: Via Docker
 
 ### ⚙️ Zero Config (Almost)
 
@@ -88,20 +86,6 @@ apps:
       type: docker   # Python in container
 ```
 
-### 📦 Mise/ASDF Integration
-
-If you have `.tool-versions`:
-
-```
-golang 1.25.0
-python 3.11
-ffmpeg 8.0
-```
-
-Gokku automatically:
-1. Installs mise/asdf
-2. Installs tools
-3. Uses correct versions
 4. Keeps versions per app
 
 ## Who Is It For?

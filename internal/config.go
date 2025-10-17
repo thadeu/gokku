@@ -17,7 +17,7 @@ func LoadConfig() (*Config, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &Config{Servers: []Server{}}, nil
+			return &Config{Apps: []AppConfig{}}, nil
 		}
 		return nil, err
 	}
@@ -28,6 +28,15 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func (c *Config) GetAppConfig(appName string) *AppConfig {
+	for _, app := range c.Apps {
+		if app.Name == appName {
+			return &app
+		}
+	}
+	return nil
 }
 
 // SaveConfig saves the configuration to the config file
@@ -46,19 +55,6 @@ func SaveConfig(config *Config) error {
 	}
 
 	return os.WriteFile(configPath, data, 0644)
-}
-
-// GetDefaultServer returns the default server or the first server if none is marked as default
-func GetDefaultServer(config *Config) *Server {
-	for _, server := range config.Servers {
-		if server.Default {
-			return &server
-		}
-	}
-	if len(config.Servers) > 0 {
-		return &config.Servers[0]
-	}
-	return nil
 }
 
 // GetRemoteInfo extracts info from git remote
@@ -95,20 +91,9 @@ func GetRemoteInfo(remoteName string) (*RemoteInfo, error) {
 	// Extract base dir: api -> /opt/gokku
 	baseDir := strings.TrimSuffix(path, "/repos/"+appFile)
 
-	// Extract environment from remote name
-	// api-production -> production
-	// vad-staging -> staging
-	// worker-dev -> dev
-	env := "production" // default
-	nameParts := strings.Split(remoteName, "-")
-	if len(nameParts) >= 2 {
-		env = nameParts[len(nameParts)-1]
-	}
-
 	return &RemoteInfo{
 		Host:    host,
 		BaseDir: baseDir,
 		App:     appName,
-		Env:     env,
 	}, nil
 }

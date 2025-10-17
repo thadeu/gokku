@@ -18,8 +18,6 @@ func main() {
 	command := os.Args[1]
 
 	switch command {
-	case "server":
-		handlers.HandleServer(os.Args[2:])
 	case "apps":
 		handlers.HandleApps(os.Args[2:])
 	case "config":
@@ -38,8 +36,6 @@ func main() {
 		handlers.HandleRollback(os.Args[2:])
 	case "ssh":
 		handlers.HandleSSH(os.Args[2:])
-	case "ps":
-		handlers.HandlePS(os.Args[1:])
 	case "tool":
 		handlers.HandleTool(os.Args[2:])
 	case "version", "--version", "-v":
@@ -70,7 +66,6 @@ CLIENT COMMANDS (run from local machine):
   deploy         Deploy applications
   rollback       Rollback to previous release
   ssh            SSH to server
-  ps             Manage Procfile processes (Dokku-style)
   tool           Utility commands for scripts
   version        Show version
   help           Show this help
@@ -82,7 +77,6 @@ SERVER COMMANDS (run directly on server):
   status         Check services status locally
   restart        Restart services locally
   rollback       Rollback to previous release locally
-  ps             Manage Procfile processes locally (--app required)
 
 Server Management:
   gokku server add <name> <host>           Add a server
@@ -105,13 +99,6 @@ Client Commands (always use --remote):
   gokku deploy <app> <env> [--remote <git-remote>]
   gokku rollback <app> <env> [--remote <git-remote>]
 
-  # Procfile process management (Dokku-style)
-  gokku ps:list <app> <env> [--remote <git-remote>]
-  gokku ps:logs <app> <env> [process] [-f] [--remote <git-remote>]
-  gokku ps:start <app> <env> [process] [--remote <git-remote>]
-  gokku ps:stop <app> <env> [process] [--remote <git-remote>]
-  gokku ps:restart <app> <env> [process] [--remote <git-remote>]
-  gokku ps:scale <app> <env> <process>=<count> [--remote <git-remote>]
 
 Server Commands (run on server only):
   gokku config set KEY=VALUE --app <app> [--env <env>]
@@ -126,12 +113,6 @@ Server Commands (run on server only):
   gokku restart <app> <env>                          (restart locally)
   gokku rollback <app> <env> [release-id]            (rollback locally)
 
-  gokku ps:list <app> <env>                           (list Procfile processes)
-  gokku ps:logs <app> <env> [process] [-f]           (view process logs)
-  gokku ps:start <app> <env> [process]               (start process)
-  gokku ps:stop <app> <env> [process]                (stop process)
-  gokku ps:restart <app> <env> [process]             (restart process)
-  gokku ps:scale <app> <env> <process>=<count>       (scale process)
 
 Examples:
   # Setup server connection (client)

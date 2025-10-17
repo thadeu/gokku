@@ -1,16 +1,6 @@
-# Rails Application with Procfile
+# Rails Application
 
-Deploy a Ruby on Rails application with multiple processes using Procfile.
-
-## Procfile vs gokku.yml
-
-This example demonstrates **single-app with multiple processes** using Procfile (use case 1). When a `Procfile` is present in the project root:
-
-- ✅ **Procfile takes priority** - Defines the processes that will run
-- ✅ **Docker is required** - Procfile forces container usage
-- ✅ **gokku.yml is optional** - Used only for environment configuration
-
-For **multiple independent apps** (use case 2), use only `gokku.yml` without Procfile.
+Deploy a Ruby on Rails application using gokku.yml configuration.
 
 ## Basic Setup
 
@@ -23,22 +13,11 @@ my-rails-app/
 ├── db/
 ├── Gemfile
 ├── Gemfile.lock
-├── Procfile
-├── gokku.yml
-```
-
-### Procfile
-
-```bash
-# Procfile
-web: bundle exec rails server -p $PORT -e $RAILS_ENV
-worker: bundle exec sidekiq -e $RAILS_ENV
-scheduler: bundle exec whenever --update-crontab && cron -f
+├── Dockerfile
+└── gokku.yml
 ```
 
 ### gokku.yml
-
-**Note**: When a `Procfile` is present, it takes priority over gokku.yml configurations. gokku.yml is used primarily for environment configuration.
 
 ```yaml
 project:
@@ -48,7 +27,7 @@ apps:
   - name: rails-app
     lang: ruby
     build:
-      type: docker  # Automatically set when Procfile is detected
+      type: docker
       path: .
     environments:
       - name: production
@@ -61,11 +40,9 @@ apps:
           SECRET_KEY_BASE: "your-secret-key-here"
     deployment:
       post_deploy:
-        - bundle exec rails db:migrate"
-        - bundle exec rails db:status"
+        - bundle exec rails db:migrate
+        - bundle exec rails assets:precompile
 ```
-
-**Alternative without Procfile**: If not using Procfile, you can define individual processes in gokku.yml.
 
 ## Post-Deploy Commands
 
@@ -103,51 +80,19 @@ git push production main
 ```
 
 Gokku will automatically:
-- Detect the Procfile
-- Generate a Ruby Dockerfile
-- Create containers for web, worker, and scheduler processes
-- Start all processes
+- Use your Dockerfile or generate one for Ruby
+- Build the container
+- Deploy the application
 - **Run post-deploy commands** (database migrations, asset compilation)
 
 ### 4. Check Status
 
 ```bash
-# List all processes
-gokku ps:list rails-app production --remote rails-app-production
+# Check application status
+gokku status rails-app production --remote rails-app-production
 
 # View logs
-gokku ps:logs rails-app production web -f --remote rails-app-production
-```
-
-## Process Management
-
-### Scaling Processes
-
-```bash
-# Scale web to 1 instance (default)
-gokku ps:scale rails-app production web=1 --remote rails-app-production
-
-# Scale workers based on load
-gokku ps:scale rails-app production worker=3 --remote rails-app-production
-
-# Stop scheduler if not needed
-gokku ps:scale rails-app production scheduler=0 --remote rails-app-production
-```
-
-### Managing Individual Processes
-
-```bash
-# Restart web process
-gokku ps:restart rails-app production web --remote rails-app-production
-
-# Restart worker process
-gokku ps:restart rails-app production worker --remote rails-app-production
-
-# Stop worker temporarily
-gokku ps:stop rails-app production worker --remote rails-app-production
-
-# Start worker again
-gokku ps:start rails-app production worker --remote rails-app-production
+gokku logs rails-app production -f --remote rails-app-production
 ```
 
 ## Environment Variables
@@ -189,44 +134,29 @@ gokku config set AWS_ACCESS_KEY_ID="..." --remote rails-app-production
 
 ## Monitoring
 
-### Process Status
+### Application Status
 
 ```bash
-# Check all processes
-gokku ps:list rails-app production --remote rails-app-production
+# Check application status
+gokku status rails-app production --remote rails-app-production
 
 # Output:
-# === Procfile Processes: rails-app (production) ===
+# === Application Status: rails-app (production) ===
 #
-# web:
-#   Systemd: active
-#   Container: running
-#
-# worker:
-#   Systemd: active
-#   Container: running
-#
-# scheduler:
-#   Systemd: active
-#   Container: running
+# Container: running
+# Health: healthy
+# Port: 3000
 ```
 
 ### Application Logs
 
 ```bash
 # Rails application logs
-gokku ps:logs rails-app production web -f --remote rails-app-production
-
-# Sidekiq worker logs
-gokku ps:logs rails-app production worker -f --remote rails-app-production
-
-# Scheduler logs
-gokku ps:logs rails-app production scheduler -f --remote rails-app-production
+gokku logs rails-app production -f --remote rails-app-production
 ```
 
 ## Next Steps
 
-- [Procfile Guide](/guide/procfile) - Complete Procfile documentation
 - [Environment Variables](/guide/environments) - Environment management
 - [Docker Support](/guide/docker) - Container deployment
 - [Configuration](/reference/configuration) - Advanced configuration

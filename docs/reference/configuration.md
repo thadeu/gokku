@@ -95,7 +95,6 @@ apps:
 | `dockerfile` | string | ❌ No | - | Custom Dockerfile path (Docker only) |
 | `entrypoint` | string | ❌ No | Language-specific | Entrypoint file (non-Go) |
 | `base_image` | string | ❌ No | From `docker.base_images` | Base Docker image |
-| `mise` | object | ❌ No | - | Mise/asdf configuration (see below) |
 
 **Entrypoint Defaults:**
 - Python: `main.py`
@@ -121,29 +120,6 @@ build:
   base_image: python:3.11-slim
 ```
 
-### apps[].build.mise
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `plugins` | array | ❌ No | `[]` | Mise/asdf plugins to install |
-
-**plugins[] fields:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | ✅ Yes | Plugin name |
-| `url` | string | ✅ Yes | Plugin repository URL |
-
-**Example:**
-```yaml
-build:
-  mise:
-    plugins:
-      - name: whispercpp
-        url: https://github.com/thadeu/asdf-whispercpp.git
-      - name: ffmpeg
-        url: https://github.com/acj/asdf-ffmpeg.git
-```
 
 ### apps[].environments[]
 
@@ -314,10 +290,6 @@ apps:
       path: ./services/ml
       entrypoint: server.py
       base_image: python:3.11-slim
-      mise:
-        plugins:
-          - name: whispercpp
-            url: https://github.com/thadeu/asdf-whispercpp.git
     
     environments:
       - name: production

@@ -271,25 +271,6 @@ func main() {
 }
 ```
 
-## With Mise (Tool Versions)
-
-### .tool-versions
-
-```
-golang 1.25.0
-```
-
-### gokku.yml
-
-```yaml
-apps:
-  - name: api
-    build:
-      path: ./cmd/api
-      go_version: "1.25"  # Optional, mise takes precedence
-```
-
-Gokku will automatically use Go 1.25.0 from `.tool-versions`.
 
 ## WebSockets
 

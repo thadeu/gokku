@@ -21,21 +21,7 @@ func handleSSH(args []string) {
 			os.Exit(1)
 		}
 		host = remoteInfo.Host
-		fmt.Printf("Connecting to %s (%s/%s)...\n", host, remoteInfo.App, remoteInfo.Env)
-	} else {
-		config, err := internal.LoadConfig()
-		if err != nil {
-			fmt.Printf("Error loading config: %v\n", err)
-			os.Exit(1)
-		}
-
-		server := internal.GetDefaultServer(config)
-		if server == nil {
-			fmt.Println("No servers configured")
-			os.Exit(1)
-		}
-		host = server.Host
-		fmt.Printf("Connecting to %s...\n", server.Name)
+		fmt.Printf("Connecting to %s (%s)...\n", host, remoteInfo.App)
 	}
 
 	cmd := exec.Command("ssh", append([]string{"-t", host}, remainingArgs...)...)

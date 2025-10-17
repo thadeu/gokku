@@ -20,7 +20,7 @@ features:
   
   - icon: 🔧
     title: Multi-Language Support
-    details: Native support for Go, Python, Node.js with automatic runtime detection via mise/asdf.
+    details: Native support for Go, Python, Node.js with automatic runtime detection.
   
   - icon: 🐳
     title: Docker & Systemd
@@ -30,9 +30,6 @@ features:
     title: Zero Configuration
     details: Sensible defaults for everything. Start with minimal config and customize as needed.
   
-  - icon: 📦
-    title: Mise Integration
-    details: Automatic tool version management with mise/asdf. Different versions per app.
   
   - icon: 🔄
     title: Easy Rollback
@@ -76,7 +73,6 @@ That's it! Your app is live. 🎉
 - ✅ Works great with Go applications (but supports Python, Node.js too)
 - ✅ Simple git-push workflow like Heroku/Dokku
 - ✅ No Docker dependency (but Docker is supported)
-- ✅ Automatic runtime management with mise/asdf
 - ✅ Per-app configuration and environments
 - ✅ Open source and hackable
 
@@ -94,7 +90,6 @@ Perfect for:
 | Cost | 💰 Paid | ✅ Free | ✅ Free |
 | Docker Required | ✅ Yes | ✅ Yes | ⚠️ Optional |
 | Go-First | ❌ No | ❌ No | ✅ Yes |
-| Mise/ASDF Support | ❌ No | ❌ No | ✅ Yes |
 | Config File | ❌ No | ❌ No | ✅ Yes |
 | Systemd Option | ❌ No | ❌ No | ✅ Yes |
 

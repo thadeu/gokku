@@ -42,7 +42,6 @@ export default defineConfig({
         {
           text: 'Advanced',
           items: [
-            { text: 'Mise Integration', link: '/guide/mise' },
             { text: 'Docker Support', link: '/guide/docker' },
             { text: 'Environment Variables', link: '/guide/env-vars' },
             { text: 'Rollback', link: '/guide/rollback' }

@@ -217,13 +217,9 @@ Login on server first:
 ssh ubuntu@server "docker login registry.example.com"
 ```
 
-## Mise Integration
+## Custom Dockerfiles
 
-Gokku automatically integrates mise/asdf with Docker.
-
-### Automatic Mise Dockerfile
-
-If `.tool-versions` exists and no custom Dockerfile:
+Gokku supports custom Dockerfiles for advanced use cases.
 
 ```
 python 3.11
@@ -237,14 +233,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install mise
+# Install dependencies
 RUN apt-get update && apt-get install -y curl git build-essential && rm -rf /var/lib/apt/lists/*
-RUN curl https://mise.run | sh
-ENV PATH="/root/.local/share/mise/shims:/root/.local/share/mise/bin:${PATH}"
-
-# Copy .tool-versions and install tools
-COPY .tool-versions .
-RUN mise install
 
 # Copy application
 COPY . .
@@ -262,9 +252,6 @@ apps:
     lang: python
     build:
       type: docker
-      mise:
-        plugins:
-          - name: whispercpp
             url: https://github.com/thadeu/asdf-whispercpp.git
 ```
 
@@ -278,9 +265,8 @@ whispercpp 1.5.0
 Generated Dockerfile includes plugin installation:
 
 ```dockerfile
-# ... mise install ...
-RUN MISE_EXPERIMENTAL=1 mise plugins install whispercpp https://github.com/...
-RUN mise install
+# Install custom dependencies
+RUN apt-get update && apt-get install -y ffmpeg
 # ...
 ```
 
@@ -513,7 +499,7 @@ environments:
 | **Deployment Speed** | Slower (build image) | Faster (compile binary) |
 | **Resource Usage** | Higher | Lower |
 | **Isolation** | Full container | Process only |
-| **Dependencies** | In container | System-wide or mise |
+| **Dependencies** | In container | System-wide |
 | **Best For** | Python/Node/Complex | Go apps |
 | **Rollback** | Image tags | Release directories |
 
@@ -602,7 +588,6 @@ ssh ubuntu@server "docker login registry.example.com"
 
 ## Next Steps
 
-- [Mise Integration](/guide/mise) - Auto-install dependencies
 - [Environment Variables](/guide/env-vars) - Configure containers
 - [Rollback](/guide/rollback) - Rollback to previous images
 - [Examples](/examples/docker-app) - Real-world examples

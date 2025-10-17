@@ -59,29 +59,29 @@ func handleConfig(args []string) {
 				os.Exit(1)
 			}
 			pairs := strings.Join(remainingArgs[1:], " ")
-			sshCmd = fmt.Sprintf("gokku config set %s --app %s --env %s", pairs, remoteInfo.App, remoteInfo.Env)
+			sshCmd = fmt.Sprintf("gokku config set %s --app %s", pairs, remoteInfo.App)
 		case "get":
 			if len(remainingArgs) < 2 {
 				fmt.Println("Usage: gokku config get KEY --remote <git-remote>")
 				os.Exit(1)
 			}
 			key := remainingArgs[1]
-			sshCmd = fmt.Sprintf("gokku config get %s --app %s --env %s", key, remoteInfo.App, remoteInfo.Env)
+			sshCmd = fmt.Sprintf("gokku config get %s --app %s", key, remoteInfo.App)
 		case "list":
-			sshCmd = fmt.Sprintf("gokku config list --app %s --env %s", remoteInfo.App, remoteInfo.Env)
+			sshCmd = fmt.Sprintf("gokku config list --app %s", remoteInfo.App)
 		case "unset":
 			if len(remainingArgs) < 2 {
 				fmt.Println("Usage: gokku config unset KEY [KEY2...] --remote <git-remote>")
 				os.Exit(1)
 			}
 			keys := strings.Join(remainingArgs[1:], " ")
-			sshCmd = fmt.Sprintf("gokku config unset %s --app %s --env %s", keys, remoteInfo.App, remoteInfo.Env)
+			sshCmd = fmt.Sprintf("gokku config unset %s --app %s", keys, remoteInfo.App)
 		default:
 			fmt.Printf("Unknown subcommand: %s\n", subcommand)
 			os.Exit(1)
 		}
 
-		fmt.Printf("→ %s/%s (%s)\n", remoteInfo.App, remoteInfo.Env, remoteInfo.Host)
+		fmt.Printf("→ %s (%s)\n", remoteInfo.App, remoteInfo.Host)
 
 		cmd := exec.Command("ssh", remoteInfo.Host, sshCmd)
 		cmd.Stdout = os.Stdout
@@ -94,7 +94,7 @@ func handleConfig(args []string) {
 		// Auto-restart container after set/unset to apply changes
 		if subcommand == "set" || subcommand == "unset" {
 			fmt.Printf("\n-----> Restarting container to apply changes...\n")
-			restartCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf("gokku restart %s %s", remoteInfo.App, remoteInfo.Env))
+			restartCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf("gokku restart %s", remoteInfo.App))
 			restartCmd.Stdout = os.Stdout
 			restartCmd.Stderr = os.Stderr
 			if err := restartCmd.Run(); err != nil {

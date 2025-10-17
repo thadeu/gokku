@@ -150,9 +150,6 @@ check_requirements() {
             else
                 echo "  sudo apt update && sudo apt install -y build-essential git curl yq jq"
 
-                if ! command -v mise &> /dev/null; then
-                    curl https://mise.run | sh
-                fi
             fi
         else
             if [ "$MODE" = "client" ]; then
@@ -243,6 +240,7 @@ install_binary() {
     log_success "Binary installed"
 }
 
+
 setup_client() {
     log "Setting up client configuration..."
 
@@ -300,7 +298,6 @@ setup_server() {
         "scripts/config-loader.sh"
         "scripts/deploy-server-setup.sh"
         "scripts/docker-helpers.sh"
-        "scripts/mise-helpers.sh"
     )
 
     mkdir -p $BASE_DIR/scripts
@@ -311,34 +308,6 @@ setup_server() {
             exit 1
         fi
         chmod +x "$BASE_DIR/$script"
-    done
-
-    # Download hook templates
-    mkdir -p $BASE_DIR/hooks
-
-    local hooks=(
-        "hooks/post-receive-docker.template"
-    )
-
-    for hook in "${hooks[@]}"; do
-        if ! curl -fsSL "$REPO_URL/$hook" -o "$BASE_DIR/$hook"; then
-            log_error "Failed to download $hook"
-            exit 1
-        fi
-    done
-
-    # Download Dockerfile templates
-    mkdir -p $BASE_DIR/templates
-
-    local templates=(
-        "templates/Dockerfile.go.template"
-        "templates/Dockerfile.python.template"
-    )
-
-    for template in "${templates[@]}"; do
-        if ! curl -fsSL "$REPO_URL/$template" -o "$BASE_DIR/$template"; then
-            log_warn "Failed to download $template (optional)"
-        fi
     done
 
     # Download sample config

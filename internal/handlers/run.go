@@ -30,7 +30,7 @@ func handleRun(args []string) {
 		// Join all remaining args as the command
 		command := strings.Join(remainingArgs, " ")
 
-		fmt.Printf("→ %s/%s (%s)\n", remoteInfo.App, remoteInfo.Env, remoteInfo.Host)
+		fmt.Printf("→ %s (%s)\n", remoteInfo.App, remoteInfo.Host)
 		fmt.Printf("$ %s\n\n", command)
 
 		cmd := exec.Command("ssh", "-t", remoteInfo.Host, command)

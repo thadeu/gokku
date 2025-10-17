@@ -230,29 +230,6 @@ flask-sqlalchemy==3.1.1
 psycopg2-binary==2.9.9
 ```
 
-## With Mise (Python Version)
-
-### .tool-versions
-
-```
-python 3.11
-```
-
-Gokku automatically detects `.tool-versions` and uses Python 3.11.
-
-### gokku.yml
-
-```yaml
-apps:
-  - name: flask-app
-    lang: python
-    build:
-      type: docker
-      path: .
-      entrypoint: app.py
-```
-
-No need to specify Python version - mise handles it!
 
 ## Machine Learning Service
 
@@ -337,7 +314,7 @@ apps:
       entrypoint: server.py
 ```
 
-Gokku automatically installs ffmpeg via mise!
+Gokku will use the system ffmpeg installation!
 
 ### server.py
 
@@ -476,6 +453,5 @@ Full working example: [github.com/thadeu/gokku-examples/python-flask](https://gi
 ## Next Steps
 
 - [Docker Support](/guide/docker) - Advanced Docker configuration
-- [Mise Integration](/guide/mise) - Manage dependencies
 - [Environment Variables](/guide/env-vars) - Configure your app
 

@@ -11,15 +11,10 @@ import (
 
 // handleApps manages applications on the server
 func handleApps(args []string) {
-	if len(args) == 0 {
-		handleAppsList()
-		return
-	}
-
 	subcommand := args[0]
 	switch subcommand {
 	case "list", "ls":
-		handleAppsList()
+		handleAppsList(args[1:])
 	case "create":
 		handleAppsCreate(args[1:])
 	case "destroy", "rm":
@@ -29,7 +24,7 @@ func handleApps(args []string) {
 		fmt.Println("")
 		fmt.Println("Commands:")
 		fmt.Println("  list, ls              List all applications")
-		fmt.Println("  create <app> [env]    Create application and setup deployment")
+		fmt.Println("  create <app>          Create application and setup deployment")
 		fmt.Println("  destroy, rm <app>     Destroy application")
 		fmt.Println("")
 		fmt.Println("Options:")
@@ -39,26 +34,76 @@ func handleApps(args []string) {
 }
 
 // handleAppsList lists applications on the server
-func handleAppsList() {
+func handleAppsList(args []string) {
+	remote, remainingArgs := internal.ExtractRemoteFlag(args)
+
+	if len(remainingArgs) < 1 {
+		fmt.Println("Usage: gokku apps list [--remote <remote>]")
+		os.Exit(1)
+	}
+
+	appName := remainingArgs[0]
+	remoteInfo, err := internal.GetRemoteInfo(remote)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
 	config, err := internal.LoadConfig()
 	if err != nil {
-		fmt.Printf("Error loading config: %v\n", err)
+		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	server := internal.GetDefaultServer(config)
-	if server == nil {
-		fmt.Println("No servers configured")
-		fmt.Println("Add a server: gokku server add production ubuntu@ec2.compute.amazonaws.com")
+	appConfig := config.GetAppConfig(appName)
+
+	if appConfig == nil {
+		fmt.Printf("Error: App '%s' not found in gokku.yml\n", appName)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Listing apps on %s...\n", server.Name)
+	// List apps from /opt/gokku/apps directory with detailed information
+	cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
+		if [ -d "%s/apps" ]; then
+			echo "App Name                    Status    Releases    Current Release"
+			echo "================================================================"
+			ls -1 %s/apps 2>/dev/null | while read app; do
+				if [ -d "%s/apps/$app" ]; then
+					# Get app status
+					if docker ps --format '{{.Names}}' | grep -q "^$app"; then
+						status="running"
+					elif docker ps -a --format '{{.Names}}' | grep -q "^$app"; then
+						status="stopped"
+					else
+						status="not deployed"
+					fi
 
-	cmd := exec.Command("ssh", server.Host, fmt.Sprintf("ls -1 %s/repos 2>/dev/null | sed 's/.git//'", server.BaseDir))
+					# Count releases
+					releases_count=0
+					if [ -d "%s/apps/$app/releases" ]; then
+						releases_count=$(ls -1 %s/apps/$app/releases 2>/dev/null | wc -l)
+					fi
+
+					# Get current release
+					current_release="none"
+					if [ -L "%s/apps/$app/current" ]; then
+						current_release=$(basename $(readlink %s/apps/$app/current) 2>/dev/null || echo "none")
+					fi
+
+					printf "%%-25s %%-10s %%-10s %%s\n" "$app" "$status" "$releases_count" "$current_release"
+				fi
+			done
+		else
+			echo "No apps directory found at %s/apps"
+		fi
+	`, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir))
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Run()
+
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Error listing apps: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 // handleAppsCreate creates an application and sets up deployment
@@ -66,25 +111,18 @@ func handleAppsCreate(args []string) {
 	remote, remainingArgs := internal.ExtractRemoteFlag(args)
 
 	if len(remainingArgs) < 1 {
-		fmt.Println("Usage: gokku apps create <app> [environment] [--remote <remote>]")
+		fmt.Println("Usage: gokku apps create <app> [--remote <remote>]")
 		fmt.Println("")
 		fmt.Println("Examples:")
-		fmt.Println("  gokku apps create myapp                    # uses default environment")
-		fmt.Println("  gokku apps create myapp production         # explicit environment")
-		fmt.Println("  gokku apps create myapp --remote myremote  # uses git remote")
+		fmt.Println("  gokku apps create myapp")
+		fmt.Println("  gokku apps create myapp --remote myremote")
 		os.Exit(1)
 	}
 
 	appName := remainingArgs[0]
-	envName := "production" // default
-
-	if len(remainingArgs) >= 2 {
-		envName = remainingArgs[1]
-	}
 
 	if remote == "" {
-		// Try to find a remote that matches the app name pattern
-		remote = fmt.Sprintf("%s-%s", appName, envName)
+		remote = appName
 		fmt.Printf("Using remote: %s\n", remote)
 	}
 
@@ -98,11 +136,26 @@ func handleAppsCreate(args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Creating app %s (%s) on %s...\n", appName, envName, remoteInfo.Host)
+	fmt.Printf("Creating app %s on %s...\n", appName, remoteInfo.Host)
 
-	// Setup repository automatically
-	if err := autoSetupRepository(remoteInfo); err != nil {
-		fmt.Printf("Failed to setup repository: %v\n", err)
+	// Load configuration to validate app exists
+	config, err := internal.LoadConfig()
+	if err != nil {
+		fmt.Printf("Warning: Could not load config: %v\n", err)
+		fmt.Println("Proceeding with basic setup...")
+	}
+
+	// Validate app exists in config if available
+	if config != nil {
+		if !appExistsInConfig(config, appName) {
+			fmt.Printf("Warning: App '%s' not found in gokku.yml\n", appName)
+			fmt.Println("Proceeding with basic setup...")
+		}
+	}
+
+	// Run complete setup directly in Go
+	if err := setupAppComplete(remoteInfo, appName, config); err != nil {
+		fmt.Printf("Failed to setup app: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -168,294 +221,192 @@ func handleAppsDestroy(args []string) {
 	fmt.Println("✓ App destroyed successfully!")
 }
 
-// autoSetupRepository attempts to create the repository on the server if it doesn't exist
-func autoSetupRepository(remoteInfo *internal.RemoteInfo) error {
-	fmt.Printf("Checking repository status on %s...\n", remoteInfo.Host)
+// appExistsInConfig checks if an app exists in the configuration
+func appExistsInConfig(config *internal.Config, appName string) bool {
+	return config.GetAppConfig(appName) != nil
+}
 
-	// Test SSH connection and check if repo exists
-	testCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf("test -d /opt/gokku/repos/%s.git", remoteInfo.App))
-	if err := testCmd.Run(); err == nil {
-		fmt.Println("✓ Repository exists")
-		return nil
-	}
+// setupAppComplete performs the complete app setup directly in Go
+func setupAppComplete(remoteInfo *internal.RemoteInfo, appName string, config *internal.Config) error {
+	fmt.Printf("Setting up app %s on %s...\n", appName, remoteInfo.Host)
 
-	fmt.Printf("Repository doesn't exist, creating /opt/gokku/repos/%s.git...\n", remoteInfo.App)
-
-	// Get the user from SSH connection (more reliable than os.Getenv)
-	userCmd := exec.Command("ssh", remoteInfo.Host, "whoami")
-	userOutput, err := userCmd.Output()
+	// Get deploy user from SSH connection
+	deployUser, err := getDeployUser(remoteInfo.Host)
 	if err != nil {
-		return fmt.Errorf("failed to get user from server: %v", err)
+		return fmt.Errorf("failed to get deploy user: %v", err)
 	}
-	serverUser := strings.TrimSpace(string(userOutput))
 
-	// Create repository on server
-	setupCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
+	// 1. Create directory structure
+	if err := createDirectoryStructure(remoteInfo, appName, deployUser); err != nil {
+		return fmt.Errorf("failed to create directory structure: %v", err)
+	}
+
+	// 2. Setup git repository
+	if err := setupGitRepository(remoteInfo, appName, deployUser); err != nil {
+		return fmt.Errorf("failed to setup git repository: %v", err)
+	}
+
+	// 3. Setup git namespace and shortcuts
+	if err := setupGitNamespace(remoteInfo, appName, deployUser); err != nil {
+		return fmt.Errorf("failed to setup git namespace: %v", err)
+	}
+
+	// 4. Setup simple hook
+	if err := setupSimpleHook(remoteInfo, appName); err != nil {
+		return fmt.Errorf("failed to setup hook: %v", err)
+	}
+
+	// 6. Create initial .env file
+	if err := createInitialEnvFile(remoteInfo, appName); err != nil {
+		return fmt.Errorf("failed to create initial .env file: %v", err)
+	}
+
+	fmt.Println("✓ Complete setup finished")
+	return nil
+}
+
+// getDeployUser gets the deploy user from SSH connection
+func getDeployUser(host string) (string, error) {
+	cmd := exec.Command("ssh", host, "whoami")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// createDirectoryStructure creates the necessary directory structure
+func createDirectoryStructure(remoteInfo *internal.RemoteInfo, appName, deployUser string) error {
+	fmt.Println("-----> Creating directory structure...")
+
+	cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
 		set -e
-		echo "Creating repository directory..."
-		sudo mkdir -p /opt/gokku/repos
-		sudo mkdir -p /opt/gokku/repos/%s.git
-		echo "Initializing git repository..."
-		sudo git init --bare /opt/gokku/repos/%s.git
+		echo "Creating base directories..."
+		sudo mkdir -p %s/repos
+		sudo mkdir -p %s/apps/%s/{releases,shared}
+		sudo mkdir -p %s/templates
 		echo "Setting permissions..."
-		sudo chown -R %s /opt/gokku/repos/%s.git
-		echo "Repository created successfully"
-	`, remoteInfo.App, remoteInfo.App, serverUser, remoteInfo.App))
+		sudo chown -R %s:%s %s
+		echo "Directory structure created"
+	`, remoteInfo.BaseDir, remoteInfo.BaseDir, appName, remoteInfo.BaseDir, deployUser, deployUser, remoteInfo.BaseDir))
 
-	setupCmd.Stdout = os.Stdout
-	setupCmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-	if err := setupCmd.Run(); err != nil {
-		return fmt.Errorf("failed to create repository: %v", err)
-	}
+	return cmd.Run()
+}
 
-	// Copy the smart hook from local Gokku installation
-	// First try to find the hook in the local Gokku installation
-	var hookPath string
+// setupGitRepository initializes the git repository
+func setupGitRepository(remoteInfo *internal.RemoteInfo, appName, deployUser string) error {
+	fmt.Println("-----> Setting up git repository...")
 
-	if hookPath == "" {
-		// Create a smart hook that calls gokku deploy on server
-		fmt.Println("Creating smart hook that delegates to server Gokku...")
-		configCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
-			cat > /opt/gokku/repos/%s.git/hooks/post-receive << 'EOF'
-#!/bin/bash
+	repoDir := fmt.Sprintf("%s/repos/%s.git", remoteInfo.BaseDir, appName)
+
+	cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
+		set -e
+		if [ ! -d "%s/refs" ]; then
+			echo "Initializing git repository..."
+			cd %s
+			sudo git init --bare %s
+			sudo chown -R %s %s
+			echo "Git repository initialized"
+		else
+			echo "Git repository already exists"
+		fi
+	`, repoDir, remoteInfo.BaseDir, repoDir, deployUser, repoDir))
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+// setupGitNamespace creates git namespace and shortcuts
+func setupGitNamespace(remoteInfo *internal.RemoteInfo, appName, deployUser string) error {
+	fmt.Println("-----> Setting up git namespace...")
+
+	cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
+		set -e
+		USER_HOME=$(eval echo ~%s)
+
+		# Create Git namespace directory if it doesn't exist
+		if [ ! -d "$USER_HOME/.git-namespace" ]; then
+			sudo -u %s mkdir -p $USER_HOME/.git-namespace
+		fi
+
+		# Create symlink for each app (allows short names)
+		if [ ! -L "$USER_HOME/%s.git" ]; then
+			sudo -u %s ln -sf %s/repos/%s.git $USER_HOME/%s.git
+			echo "Created Git shortcut: $USER_HOME/%s.git -> %s/repos/%s.git"
+		else
+			echo "Git shortcut already exists"
+		fi
+	`, deployUser, deployUser, appName, deployUser, remoteInfo.BaseDir, appName, appName, appName, remoteInfo.BaseDir, appName))
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+// setupSimpleHook creates a simple post-receive hook that delegates to gokku deploy
+func setupSimpleHook(remoteInfo *internal.RemoteInfo, appName string) error {
+	fmt.Println("-----> Setting up deployment hook...")
+
+	// Simple hook that just calls gokku deploy
+	hookContent := fmt.Sprintf(`#!/bin/bash
 set -e
 
 APP_NAME="%s"
-ENVIRONMENT="production"
-BASE_DIR="/opt/gokku"
-APP_DIR="$BASE_DIR/apps/$APP_NAME/$ENVIRONMENT"
-REPO_DIR="$BASE_DIR/repos/$APP_NAME.git"
-RELEASE_DIR="$APP_DIR/releases/$(date +%%Y%%m%%d-%%H%%M%%S)"
-SERVICE_NAME="$APP_NAME-$ENVIRONMENT"
-BINARY_NAME="$APP_NAME"
 
-# Default values (will be overridden by gokku.yml if available)
-BUILD_TYPE="docker"
-LANG="go"
-BUILD_PATH="./cmd/$APP_NAME"
-BUILD_WORKDIR="."
-KEEP_RELEASES="5"
-GOOS="linux"
-GOARCH="arm64"
-CGO_ENABLED="0"
+echo "-----> Deploying $APP_NAME..."
 
-# Setup environment
-export PATH="$PATH:/usr/local/go/bin:/usr/local/bin"
+# Execute deployment using the centralized deploy command
+gokku deploy "$APP_NAME"
 
-# Source mise helpers if available
-BASE_GOKKU_DIR="/opt/gokku"
-SCRIPT_DIR="/opt/gokku/scripts"
-if [ -f "$SCRIPT_DIR/mise-helpers.sh" ]; then
-    source "$SCRIPT_DIR/mise-helpers.sh"
-fi
+echo "-----> Done"
+`, appName)
 
-# Router for environment-specific hooks
-while read oldrev newrev refname; do
-    branch=$(git rev-parse --symbolic --abbrev-ref $refname)
-    echo "==> Received push to branch: $branch"
+	// Write hook to server
+	cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
+		cat > %s/repos/%s.git/hooks/post-receive << 'HOOK_EOF'
+%s
+HOOK_EOF
+		chmod +x %s/repos/%s.git/hooks/post-receive
+		echo "Hook configured"
+	`, remoteInfo.BaseDir, appName, hookContent, remoteInfo.BaseDir, appName))
 
-    if [[ "$branch" == "main" ]]; then
-        echo "==> Deploying to production environment..."
-        break
-    fi
-done
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-echo "-----> Deploying $APP_NAME to $ENVIRONMENT..."
+	return cmd.Run()
+}
 
-# Create release directory
-mkdir -p "$RELEASE_DIR"
+// createInitialEnvFile creates the initial .env file
+func createInitialEnvFile(remoteInfo *internal.RemoteInfo, appName string) error {
+	fmt.Println("-----> Creating initial .env file...")
 
-# Extract code - try main first, then HEAD
-echo "-----> Extracting code..."
-if GIT_WORK_TREE="$RELEASE_DIR" git checkout -f main 2>/dev/null; then
-    echo "-----> Checked out main branch"
-elif GIT_WORK_TREE="$RELEASE_DIR" git checkout -f HEAD 2>/dev/null; then
-    echo "-----> Checked out HEAD"
-else
-    echo "-----> No commits available for checkout, using defaults..."
-fi
+	envContent := fmt.Sprintf(`# App: %s
+# Generated: %s
+ZERO_DOWNTIME=0
+`, appName)
 
-# Update gokku.yml from repository if it exists
-if [ -f "$RELEASE_DIR/gokku.yml" ]; then
-    echo "-----> Updating gokku.yml from repository..."
-    cp -f "$RELEASE_DIR/gokku.yml" "$BASE_GOKKU_DIR/gokku.yml" 2>/dev/null || echo "No gokku.yml found"
-
-    # Try to read app-specific configuration from gokku.yml
-    if command -v yq >/dev/null 2>&1; then
-        echo "-----> Reading app configuration from gokku.yml..."
-
-        # Read build configuration for this app
-        if yq ".apps[] | select(.name == \"$APP_NAME\")" "$RELEASE_DIR/gokku.yml" >/dev/null 2>&1; then
-            # Only override if the field exists and is not null
-            new_BUILD_TYPE=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .build.type" "$RELEASE_DIR/gokku.yml" 2>/dev/null)
-            new_LANG=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .lang" "$RELEASE_DIR/gokku.yml" 2>/dev/null)
-            new_BUILD_PATH=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .build.path" "$RELEASE_DIR/gokku.yml" 2>/dev/null | tr -d '"')
-            new_BUILD_WORKDIR=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .build.work_dir" "$RELEASE_DIR/gokku.yml" 2>/dev/null | tr -d '"')
-            new_KEEP_RELEASES=$(yq ".apps[] | select(.name == \"$APP_NAME\") | .deployment.keep_releases" "$RELEASE_DIR/gokku.yml" 2>/dev/null)
-
-            [ "$new_BUILD_TYPE" != "null" ] && [ -n "$new_BUILD_TYPE" ] && BUILD_TYPE="$new_BUILD_TYPE"
-            [ "$new_LANG" != "null" ] && [ -n "$new_LANG" ] && LANG="$new_LANG"
-            [ "$new_BUILD_PATH" != "null" ] && [ -n "$new_BUILD_PATH" ] && BUILD_PATH="$new_BUILD_PATH"
-            [ "$new_BUILD_WORKDIR" != "null" ] && [ -n "$new_BUILD_WORKDIR" ] && BUILD_WORKDIR="$new_BUILD_WORKDIR"
-            [ "$new_KEEP_RELEASES" != "null" ] && [ -n "$new_KEEP_RELEASES" ] && KEEP_RELEASES="$new_KEEP_RELEASES"
-
-            echo "==> Config loaded: TYPE=$BUILD_TYPE, , WORKDIR=$BUILD_WORKDIR"
-        else
-            echo "==> App '$APP_NAME' not found in gokku.yml, using defaults"
-        fi
-    fi
-
-    GOKKU_CONFIG="$BASE_GOKKU_DIR/gokku.yml" source "$SCRIPT_DIR/config-loader.sh" 2>/dev/null || echo "Config loader not found"
-else
-    echo "-----> No gokku.yml found in repository, using defaults"
-fi
-
-# Ensure app structure exists
-echo "-----> Ensuring app structure..."
-mkdir -p "$APP_DIR"/{releases,shared}
-
-# Create .env file if it doesn't exist
-if [ ! -f "$APP_DIR/shared/.env" ]; then
-    echo "==> Creating .env file"
-    cat > "$APP_DIR/shared/.env" << ENV_EOF
-# Environment: $ENVIRONMENT
-# App: $APP_NAME
-# Generated: $(date)
-
-# Add your environment variables here
-PORT=8080
+	cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
+		cat > %s/apps/%s/shared/.env << 'ENV_EOF'
+%s
 ENV_EOF
-fi
+		echo "Initial .env file created"
+	`, remoteInfo.BaseDir, appName, envContent))
 
-# Setup mise if .tool-versions exists
-if [ -f "$RELEASE_DIR/$BUILD_WORKDIR/.tool-versions" ]; then
-    echo "-----> Detected .tool-versions, setting up mise..."
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-    # Install mise if not present
-    if ! ~/.local/bin/mise --version >/dev/null 2>&1; then
-        echo "-----> Installing mise..."
-        curl https://mise.run | sh
-    fi
+	return cmd.Run()
+}
 
-    # Install tools
-    cd "$RELEASE_DIR/$BUILD_WORKDIR"
-    ~/.local/bin/mise install || exit 1
-
-    # Activate mise
-    export PATH="$HOME/.local/bin:$PATH"
-    eval "$(~/.local/bin/mise activate bash)"
-fi
-
-# Build and deploy based on BUILD_TYPE
-# Determine build directory - use BUILD_WORKDIR if set and different from ".", otherwise use RELEASE_DIR
-if [ "$BUILD_WORKDIR" != "." ] && [ -n "$BUILD_WORKDIR" ]; then
-    BUILD_DIR="$RELEASE_DIR/$BUILD_WORKDIR"
-else
-    BUILD_DIR="$RELEASE_DIR"
-fi
-
-if [ -f "$BUILD_DIR/go.mod" ]; then
-    echo "-----> Building $APP_NAME..."
-
-    # Change to build directory
-    cd "$BUILD_DIR"
-
-    # Add Go to PATH if available
-    export PATH="$PATH:/usr/local/go/bin"
-
-    if [ "$BUILD_TYPE" = "docker" ]; then
-        echo "-----> Generating Dockerfile"
-
-        # Always copy from current directory when in BUILD_DIR
-        COPY_SOURCE="."
-
-        # Detect architecture
-        ARCH=$(uname -m)
-        case "$ARCH" in
-            x86_64) GOARCH="amd64" ;;
-            aarch64|arm64) GOARCH="arm64" ;;
-            *) GOARCH="amd64" ;;
-        esac
-
-        cat > Dockerfile << DOCKERFILE_GO_EOF
-FROM golang:1.25-alpine AS builder
-COPY $COPY_SOURCE /app
-WORKDIR /app
-RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go build -ldflags="-w -s" -o app $BUILD_PATH
-
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates tzdata
-WORKDIR /root/
-COPY --from=builder /app/app .
-CMD ["./app"]
-DOCKERFILE_GO_EOF
-
-        echo "-----> Building Docker image..."
-        if ! sudo docker build -t "$APP_NAME:latest" .; then
-            echo "ERROR: Docker build failed"
-            exit 1
-        fi
-
-        echo "-----> Deploying container..."
-        # Stop existing container if running
-        sudo docker stop "$SERVICE_NAME" 2>/dev/null || true
-        sudo docker rm "$SERVICE_NAME" 2>/dev/null || true
-
-        # Start new container
-        PORT=$(grep "^PORT=" "$APP_DIR/shared/.env" 2>/dev/null | cut -d= -f2 | tr -d ' ' || echo "8080")
-        echo "-----> Using port: $PORT"
-        sudo docker run -d --name "$SERVICE_NAME" \
-            --env-file "$APP_DIR/shared/.env" \
-            -p "$PORT:$PORT" \
-            --restart unless-stopped \
-            "$APP_NAME:latest"
-
-        # Verify container is running
-        sleep 2
-        if sudo docker ps --format '{{.Names}}' | grep -q "^${SERVICE_NAME}$"; then
-            CONTAINER_STATUS=$(sudo docker inspect "${SERVICE_NAME}" --format='{{.State.Status}}')
-            echo "-----> Container $SERVICE_NAME is running ($CONTAINER_STATUS)"
-            echo "-----> Docker deployment complete!"
-        else
-            echo "ERROR: Container failed to start"
-            sudo docker logs "$SERVICE_NAME" 2>&1 | tail -20
-            exit 1
-        fi
-    fi
-else
-    echo "-----> No source code found, skipping build and deploy"
-    echo "-----> This appears to be the initial repository setup"
-fi
-EOF
-			chmod +x /opt/gokku/repos/%s.git/hooks/post-receive
-			echo "Smart hook created successfully"
-		`, remoteInfo.App, remoteInfo.App, remoteInfo.App))
-
-		configCmd.Stdout = os.Stdout
-		configCmd.Stderr = os.Stderr
-
-		if err := configCmd.Run(); err != nil {
-			return fmt.Errorf("failed to create smart hook: %v", err)
-		}
-	} else {
-		// Copy the actual hook template
-		copyCmd := exec.Command("scp", hookPath, fmt.Sprintf("%s:/opt/gokku/repos/%s.git/hooks/post-receive", remoteInfo.Host, remoteInfo.App))
-		copyCmd.Stdout = os.Stdout
-		copyCmd.Stderr = os.Stderr
-
-		if err := copyCmd.Run(); err != nil {
-			return fmt.Errorf("failed to copy hook template: %v", err)
-		}
-
-		// Make it executable
-		execCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf("chmod +x /opt/gokku/repos/%s.git/hooks/post-receive", remoteInfo.App))
-		if err := execCmd.Run(); err != nil {
-			return fmt.Errorf("failed to make hook executable: %v", err)
-		}
-	}
-
-	fmt.Println("✓ Repository auto-setup complete")
-	return nil
+// autoSetupRepository attempts to create the repository on the server if it doesn't exist
+// This is kept for backward compatibility but now uses the complete setup
+func autoSetupRepository(remoteInfo *internal.RemoteInfo) error {
+	config, _ := internal.LoadConfig()
+	return setupAppComplete(remoteInfo, remoteInfo.App, config)
 }

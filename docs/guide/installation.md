@@ -254,8 +254,6 @@ sudo systemctl daemon-reload
 # Remove Gokku directory
 sudo rm -rf /opt/gokku
 
-# Optional: Remove mise
-rm -rf ~/.local/share/mise
 ```
 
 ### Remove CLI from Local Machine

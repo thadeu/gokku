@@ -84,7 +84,7 @@ graph TD
     A[git push] --> B[Git Hook Triggered]
     B --> C[Extract Code to New Release]
     C --> D{.tool-versions?}
-    D -->|Yes| E[Install mise + Tools]
+    D -->|Yes| E[Install Dependencies]
     D -->|No| F[Use System Tools]
     E --> G[Build Binary]
     F --> G
@@ -101,7 +101,7 @@ graph TD
     A[git push] --> B[Git Hook Triggered]
     B --> C[Extract Code]
     C --> D{.tool-versions?}
-    D -->|Yes| E[Generate Dockerfile with mise]
+    D -->|Yes| E[Generate Dockerfile]
     D -->|No| F{Custom Dockerfile?}
     E --> G[Build Image]
     F -->|Yes| G

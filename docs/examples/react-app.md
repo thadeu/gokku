@@ -1,16 +1,6 @@
-# React Application with Procfile
+# React Application
 
-Deploy a React application with Node.js backend and multiple processes using Procfile.
-
-## Procfile vs gokku.yml
-
-This example demonstrates **single-app with multiple processes** using Procfile (use case 1). When a `Procfile` is present in the project root:
-
-- ✅ **Procfile takes priority** - Defines the processes that will run
-- ✅ **Docker is required** - Procfile forces container usage
-- ✅ **gokku.yml is optional** - Used only for environment configuration
-
-For **multiple independent apps** (use case 2), use only `gokku.yml` without Procfile.
+Deploy a React application with Node.js backend using gokku.yml configuration.
 
 ## Basic Setup
 
@@ -27,22 +17,11 @@ my-react-app/
 │   ├── src/
 │   ├── package.json
 │   └── index.js
-├── Procfile
+├── Dockerfile
 └── gokku.yml
 ```
 
-### Procfile
-
-```bash
-# Procfile
-web: npm run start:prod
-api: node server/index.js
-worker: node server/worker.js
-```
-
 ### gokku.yml
-
-**Note**: When a `Procfile` is present, it takes priority over gokku.yml configurations. gokku.yml is used primarily for environment configuration.
 
 ```yaml
 project:
@@ -52,7 +31,7 @@ apps:
   - name: react-app
     lang: nodejs
     build:
-      type: docker  # Automatically set when Procfile is detected
+      type: docker
       path: .
     environments:
       - name: production
@@ -66,11 +45,9 @@ apps:
           JWT_SECRET: "your-jwt-secret-here"
     deployment:
       post_deploy:
-        - npm run db:migrate"
-        - npm run cache:warm"
+        - npm run db:migrate
+        - npm run cache:warm
 ```
-
-**Alternative without Procfile**: If not using Procfile, you can define individual processes in gokku.yml.
 
 ## Post-Deploy Commands
 
@@ -108,54 +85,82 @@ git push production main
 ```
 
 Gokku will automatically:
-- Detect the Procfile
-- Generate a Node.js Dockerfile
+- Use your Dockerfile or generate one for Node.js
 - Build the React app
-- Create containers for web, api, and worker processes
-- Start all processes
+- Deploy the application
 - **Run post-deploy commands** (database migrations, cache warming)
 
 ### 4. Check Status
 
 ```bash
-# List all processes
-gokku ps:list react-app production --remote react-app-production
+# Check application status
+gokku status react-app production --remote react-app-production
 
-# View web server logs
-gokku ps:logs react-app production web -f --remote react-app-production
+# View logs
+gokku logs react-app production -f --remote react-app-production
 ```
 
-## Process Management
+## Environment Variables
 
-### Scaling Processes
+### Database Configuration
 
 ```bash
-# Web server (React app)
-gokku ps:scale react-app production web=1 --remote react-app-production
+# Set database URL
+gokku config set DATABASE_URL="mongodb://localhost:27017/react_app_production" --remote react-app-production
 
-# API server
-gokku ps:scale react-app production api=1 --remote react-app-production
-
-# Worker processes (scale based on load)
-gokku ps:scale react-app production worker=2 --remote react-app-production
+# Set Redis URL
+gokku config set REDIS_URL="redis://localhost:6379" --remote react-app-production
 ```
 
-### Managing Individual Processes
+### Application Configuration
 
 ```bash
-# Restart API server
-gokku ps:restart react-app production api --remote react-app-production
+# Set JWT secret
+gokku config set JWT_SECRET="your-jwt-secret-here" --remote react-app-production
 
-# Stop worker temporarily
-gokku ps:stop react-app production worker --remote react-app-production
+# Set environment
+gokku config set NODE_ENV=production --remote react-app-production
 
-# Start worker again
-gokku ps:start react-app production worker --remote react-app-production
+# Set API port
+gokku config set API_PORT=3001 --remote react-app-production
+```
+
+### API Keys and External Services
+
+```bash
+# Set API keys
+gokku config set STRIPE_SECRET_KEY="sk_live_..." --remote react-app-production
+gokku config set AWS_ACCESS_KEY_ID="..." --remote react-app-production
+
+# Set external service URLs
+gokku config set EXTERNAL_API_URL="https://api.example.com" --remote react-app-production
+```
+
+## Monitoring
+
+### Application Status
+
+```bash
+# Check application status
+gokku status react-app production --remote react-app-production
+
+# Output:
+# === Application Status: react-app (production) ===
+#
+# Container: running
+# Health: healthy
+# Port: 3000
+```
+
+### Application Logs
+
+```bash
+# Application logs
+gokku logs react-app production -f --remote react-app-production
 ```
 
 ## Next Steps
 
-- [Procfile Guide](/guide/procfile) - Complete Procfile documentation
 - [Environment Variables](/guide/environments) - Environment management
 - [Docker Support](/guide/docker) - Container deployment
 - [Configuration](/reference/configuration) - Advanced configuration
