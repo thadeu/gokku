@@ -289,19 +289,19 @@ get_mise_plugins() {
 get_app_docker_network_mode() {
     local app_name=$1
     local config_file=${GOKKU_CONFIG:-/opt/gokku/gokku.yml}
-    
+
     if [ ! -f "$config_file" ]; then
         echo "bridge"  # default
         return
     fi
-    
+
     # Try to extract docker.network_mode from app config
     local network_mode=$(awk "/^  - name: $app_name/,/^  - name:/ {
         if (/docker:/) in_docker=1
         if (in_docker && /network_mode:/) { print \$2; exit }
         if (in_docker && /^    [a-z]/ && !/network_mode:/) in_docker=0
     }" "$config_file")
-    
+
     if [ -n "$network_mode" ]; then
         echo "$network_mode"
     else
@@ -313,11 +313,11 @@ get_app_docker_network_mode() {
 get_app_docker_ports() {
     local app_name=$1
     local config_file=${GOKKU_CONFIG:-/opt/gokku/gokku.yml}
-    
+
     if [ ! -f "$config_file" ]; then
         return
     fi
-    
+
     # Extract ports array from docker.ports
     awk "/^  - name: $app_name/,/^  - name:/ {
         if (/docker:/) in_docker=1

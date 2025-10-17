@@ -278,7 +278,7 @@ standard_deploy() {
     # Get Docker configuration from gokku.yml
     local network_mode=$(get_app_docker_network_mode "$app_name")
     local docker_ports=$(get_app_docker_ports "$app_name")
-    
+
     echo "-----> Network mode: $network_mode"
 
     # Build docker run command
@@ -569,7 +569,7 @@ recreate_active_container() {
     # Get Docker configuration from gokku.yml
     local network_mode=$(get_app_docker_network_mode "$app_name")
     local docker_ports=$(get_app_docker_ports "$app_name")
-    
+
     echo "       Network mode: $network_mode"
 
     # Stop and remove old container
@@ -579,7 +579,7 @@ recreate_active_container() {
 
     # Build docker run command
     local docker_cmd="sudo docker run -d --name $active_container --restart always --network $network_mode"
-    
+
     # Add port mappings
     if [ "$network_mode" != "host" ]; then
         if [ -n "$docker_ports" ]; then
@@ -597,7 +597,7 @@ recreate_active_container() {
     else
         echo "       Using host network (all ports exposed)"
     fi
-    
+
     # Add env file and image
     docker_cmd="$docker_cmd --env-file $env_file $image"
 
