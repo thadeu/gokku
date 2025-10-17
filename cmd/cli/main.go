@@ -94,7 +94,7 @@ Client Commands (always use --remote):
 
   gokku logs <app> <env> [-f] [--remote <git-remote>]
   gokku status [app] [env] [--remote <git-remote>]
-  gokku restart <app> <env> [--remote <git-remote>]
+  gokku restart --remote <git-remote>
 
   gokku deploy <app> <env> [--remote <git-remote>]
   gokku rollback <app> <env> [--remote <git-remote>]
@@ -110,7 +110,7 @@ Server Commands (run on server only):
   gokku run <command>                                (run locally)
   gokku logs <app> <env> [-f]                        (view logs locally)
   gokku status [app] [env]                           (check status locally)
-  gokku restart <app> <env>                          (restart locally)
+  gokku restart <app>                                (restart locally)
   gokku rollback <app> <env> [release-id]            (rollback locally)
 
 
@@ -133,7 +133,7 @@ Examples:
   gokku config list --app api --env production
   gokku logs api production -f
   gokku status
-  gokku restart api production
+  gokku restart api
 
 Remote Format:
   --remote <git-remote-name>

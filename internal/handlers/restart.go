@@ -23,7 +23,7 @@ func handleRestart(args []string) {
 		}
 		app = remoteInfo.App
 		host = remoteInfo.Host
-	} else if len(remainingArgs) >= 2 {
+	} else if len(remainingArgs) >= 1 {
 		// Check if running on server - allow local execution
 		if internal.IsRunningOnServer() {
 			localExecution = true
@@ -33,13 +33,13 @@ func handleRestart(args []string) {
 			fmt.Println("Error: Local restart commands can only be run on the server")
 			fmt.Println("")
 			fmt.Println("For client usage, use --remote flag:")
-			fmt.Println("  gokku restart <app> <env> --remote <git-remote>")
+			fmt.Println("  gokku restart <app> --remote <git-remote>")
 			fmt.Println("")
 			fmt.Println("Or run this command directly on your server.")
 			os.Exit(1)
 		}
 	} else {
-		fmt.Println("Usage: gokku restart <app> <env>")
+		fmt.Println("Usage: gokku restart <app>")
 		fmt.Println("   or: gokku restart --remote <git-remote>")
 		os.Exit(1)
 	}
