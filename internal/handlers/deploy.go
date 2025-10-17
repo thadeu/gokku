@@ -150,6 +150,16 @@ func executeDirectDeployment(appName string) error {
 		return fmt.Errorf("failed to extract code: %v", err)
 	}
 
+	// Copy gokku.yml to app directory if it doesn't exist
+	appConfigPath := filepath.Join(appDir, "gokku.yml")
+	releaseConfigPath := filepath.Join(releaseDir, "gokku.yml")
+
+	if _, err := os.Stat(releaseConfigPath); err == nil {
+		if err := copyFile(releaseConfigPath, appConfigPath); err != nil {
+			return fmt.Errorf("failed to copy gokku.yml to app directory: %v", err)
+		}
+	}
+
 	// Load app configuration
 	app, err := internal.LoadAppConfig(appName)
 	if err != nil {
