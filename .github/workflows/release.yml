@@ -43,6 +43,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Extract version from main.go
+        id: version
+        run: |
+          VERSION=$(grep -E '^\s*const\s+version\s*=\s*"[^"]+"' cmd/cli/main.go | awk -F'"' '{print $2}')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
       - name: Build binaries
         run: |
           chmod +x scripts/build-binaries.sh
@@ -64,7 +71,23 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          name: Release ${{ github.ref_name }}
+          name: Gokku ${{ steps.version.outputs.version }}
           tag_name: ${{ github.ref_name }}
+          body: |
+            ## Gokku ${{ steps.version.outputs.version }}
+            
+            ### Installation
+            ```bash
+            curl -fsSL https://gokku-vm.com/install | bash
+            ```
+            
+            ### Binaries
+            - **Linux AMD64**: gokku-linux-amd64
+            - **Linux ARM64**: gokku-linux-arm64  
+            - **macOS Intel**: gokku-darwin-amd64
+            - **macOS Apple Silicon**: gokku-darwin-arm64
+            
+            ### What's Changed
+            See the [commit history](https://github.com/thadeu/gokku/compare/${{ github.event.before }}...${{ github.sha }}) for details.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
