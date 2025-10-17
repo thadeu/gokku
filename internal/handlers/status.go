@@ -132,7 +132,7 @@ func handleStatus(args []string) {
 				echo "Service or container '%s' not found"
 				exit 1
 			fi
-		`, serviceName, serviceName, serviceName, serviceName, serviceName)
+		`, serviceName, serviceName, serviceName)
 
 		cmd := exec.Command("ssh", "-t", host, sshCmd)
 		cmd.Stdout = os.Stdout

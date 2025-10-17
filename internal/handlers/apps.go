@@ -795,10 +795,7 @@ HOOK_EOF
 func createInitialEnvFile(remoteInfo *internal.RemoteInfo, appName string) error {
 	fmt.Println("-----> Creating initial .env file...")
 
-	envContent := fmt.Sprintf(`# App: %s
-# Generated: %s
-ZERO_DOWNTIME=0
-`, appName)
+	envContent := fmt.Sprintf("# App: %s\n# Generated: %s\nZERO_DOWNTIME=0\n", appName, time.Now().Format("2006-01-02 15:04:05"))
 
 	cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
 		cat > %s/apps/%s/shared/.env << 'ENV_EOF'

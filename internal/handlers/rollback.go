@@ -90,29 +90,16 @@ func handleRollback(args []string) {
 
 	if localExecution {
 		// Local execution on server
-		var rollbackCmd string
 
-		// Check if docker service exists
-		dockerCmd := exec.Command("docker", "ps", "-a")
-		output, err := dockerCmd.Output()
-		if err == nil && strings.Contains(string(output), serviceName) {
-			rollbackCmd = fmt.Sprintf(`
-				cd %s && \
-				docker stop %s && \
-				docker rm -f %s && \
-				docker run -d --name %s --env-file .env -p 8080:8080 %s:release-%s && \
-				docker start %s && \
-				echo "✓ Rollback complete"
-			`, appDir, serviceName, serviceName, app, releaseID)
-		}
-
-		rollbackCmd = fmt.Sprintf(`
+		// Rollback command
+		rollbackCmd := fmt.Sprintf(`
 			cd %s && \
 			docker stop %s && \
 			docker rm -f %s && \
-			docker run -d --name %s --env-file .env -p 8080:8080 %s:release-%s && \
+			docker run -d --name %s --env-file .env %s:release-%s && \
+			docker start %s && \
 			echo "✓ Rollback complete"
-		`, appDir, serviceName, serviceName, app, releaseID)
+		`, appDir, serviceName, serviceName, serviceName, app, releaseID, serviceName)
 
 		cmd := exec.Command("bash", "-c", rollbackCmd)
 		cmd.Stdout = os.Stdout
@@ -128,13 +115,14 @@ func handleRollback(args []string) {
 			if docker ps -a | grep -q %s; then
 				docker stop %s && \
 				docker rm -f %s && \
-				docker run -d --name %s --env-file %s/.env -p 8080:8080 %s:release-%s && \
+				docker run -d --name %s --env-file %s/.env %s:release-%s && \
+				docker start %s && \
 				echo "✓ Rollback complete"
 			else
 				echo "Error: Service or container not found"
 				exit 1
 			fi
-		`, appDir, serviceName, serviceName, appDir, releaseID, serviceName, serviceName, serviceName, serviceName, serviceName, appDir, app, releaseID)
+		`, appDir, serviceName, serviceName, serviceName, serviceName, appDir, app, releaseID, serviceName)
 
 		cmd := exec.Command("ssh", host, rollbackCmd)
 		cmd.Stdout = os.Stdout

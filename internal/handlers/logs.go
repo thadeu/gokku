@@ -89,7 +89,7 @@ func handleLogs(args []string) {
 				echo "Container '%s' not found"
 				exit 1
 			fi
-		`, serviceName, serviceName, followFlag, serviceName, followFlag)
+		`, serviceName, serviceName, followFlag, serviceName)
 
 		cmd := exec.Command("ssh", "-t", host, sshCmd)
 		cmd.Stdout = os.Stdout
