@@ -380,7 +380,7 @@ func (dc *DockerClient) BlueGreenDeploy(config DeploymentConfig) error {
 	fmt.Println("=====> Starting Blue/Green Deployment")
 
 	// Get container port
-	containerPort := GetContainerPort(config.EnvFile, 8080)
+	containerPort := GetContainerPort(config.EnvFile, 0)
 
 	// Start green container
 	if err := dc.startGreenContainer(config, containerPort); err != nil {

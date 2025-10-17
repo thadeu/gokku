@@ -12,7 +12,7 @@ import (
 func handleRestart(args []string) {
 	remote, remainingArgs := internal.ExtractRemoteFlag(args)
 
-	var app, env, host string
+	var app, host string
 	var localExecution bool
 
 	if remote != "" {
@@ -28,7 +28,6 @@ func handleRestart(args []string) {
 		if internal.IsRunningOnServer() {
 			localExecution = true
 			app = remainingArgs[0]
-			env = remainingArgs[1]
 		} else {
 			// Client without --remote - show error
 			fmt.Println("Error: Local restart commands can only be run on the server")
@@ -45,18 +44,19 @@ func handleRestart(args []string) {
 		os.Exit(1)
 	}
 
-	serviceName := fmt.Sprintf("%s-%s", app, env)
+	serviceName := fmt.Sprintf("%s", app)
 	fmt.Printf("Restarting %s...\n", serviceName)
 
 	if localExecution {
 		// Local execution on server - recreate container with new env using Go
 		baseDir := "/opt/gokku"
+
 		if envVar := os.Getenv("GOKKU_BASE_DIR"); envVar != "" {
 			baseDir = envVar
 		}
 
-		envFile := fmt.Sprintf("%s/apps/%s/%s/shared/.env", baseDir, app, env)
-		appDir := fmt.Sprintf("%s/apps/%s/%s", baseDir, app, env)
+		envFile := fmt.Sprintf("%s/apps/%s/shared/.env", baseDir, app)
+		appDir := fmt.Sprintf("%s/apps/%s", baseDir, app)
 
 		// Use Go Docker client to recreate container
 		dc, err := internal.NewDockerClient()
@@ -71,11 +71,12 @@ func handleRestart(args []string) {
 		}
 	} else {
 		// Remote execution via SSH - use gokku restart directly
-		sshCmd := fmt.Sprintf("gokku restart %s %s", app, env)
+		sshCmd := fmt.Sprintf("gokku restart %s", app)
 
 		cmd := exec.Command("ssh", host, sshCmd)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+
 		if err := cmd.Run(); err != nil {
 			fmt.Printf("Error recreating container: %v\n", err)
 			os.Exit(1)

@@ -13,7 +13,7 @@ import (
 func handleRollback(args []string) {
 	remote, remainingArgs := internal.ExtractRemoteFlag(args)
 
-	var app, env, host, baseDir string
+	var app, host, baseDir string
 	var releaseID string
 	var localExecution bool
 
@@ -35,10 +35,6 @@ func handleRollback(args []string) {
 		if internal.IsRunningOnServer() {
 			localExecution = true
 			app = remainingArgs[0]
-			env = remainingArgs[1]
-			if len(remainingArgs) > 2 {
-				releaseID = remainingArgs[2]
-			}
 			baseDir = "/opt/gokku"
 		} else {
 			// Client without --remote - show error
@@ -56,8 +52,8 @@ func handleRollback(args []string) {
 		os.Exit(1)
 	}
 
-	appDir := fmt.Sprintf("%s/apps/%s/%s", baseDir, app, env)
-	serviceName := fmt.Sprintf("%s-%s", app, env)
+	appDir := fmt.Sprintf("%s/apps/%s", baseDir, app)
+	serviceName := fmt.Sprintf("%s", app)
 
 	if releaseID == "" {
 		// Get previous release
@@ -86,7 +82,7 @@ func handleRollback(args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Rolling back %s (%s) to release: %s\n", app, env, releaseID)
+	fmt.Printf("Rolling back %s to release: %s\n", app, releaseID)
 
 	if localExecution {
 		// Local execution on server
@@ -96,7 +92,7 @@ func handleRollback(args []string) {
 			cd %s && \
 			docker stop %s && \
 			docker rm -f %s && \
-			docker run -d --name %s --env-file .env %s:release-%s && \
+			docker run -d --name %s --env-file %s/shared/.env %s:release-%s && \
 			docker start %s && \
 			echo "✓ Rollback complete"
 		`, appDir, serviceName, serviceName, serviceName, app, releaseID, serviceName)
@@ -115,7 +111,7 @@ func handleRollback(args []string) {
 			if docker ps -a | grep -q %s; then
 				docker stop %s && \
 				docker rm -f %s && \
-				docker run -d --name %s --env-file %s/.env %s:release-%s && \
+				docker run -d --name %s --env-file %s/shared/.env %s:release-%s && \
 				docker start %s && \
 				echo "✓ Rollback complete"
 			else

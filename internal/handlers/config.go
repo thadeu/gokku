@@ -121,15 +121,12 @@ func handleConfig(args []string) {
 	}
 
 	// Local execution - parse --app and --env flags
-	var appName, envName string
+	var appName string
 	var finalArgs []string
 
 	for i := 0; i < len(remainingArgs); i++ {
 		if (remainingArgs[i] == "--app" || remainingArgs[i] == "-a") && i+1 < len(remainingArgs) {
 			appName = remainingArgs[i+1]
-			i++
-		} else if (remainingArgs[i] == "--env" || remainingArgs[i] == "-e") && i+1 < len(remainingArgs) {
-			envName = remainingArgs[i+1]
 			i++
 		} else {
 			finalArgs = append(finalArgs, remainingArgs[i])
@@ -151,11 +148,6 @@ func handleConfig(args []string) {
 		os.Exit(1)
 	}
 
-	// Default environment if not specified
-	if envName == "" {
-		envName = "default"
-	}
-
 	if len(finalArgs) < 1 {
 		fmt.Println("Error: command is required (set, get, list, unset)")
 		os.Exit(1)
@@ -169,7 +161,7 @@ func handleConfig(args []string) {
 		baseDir = envVar
 	}
 
-	envFile := filepath.Join(baseDir, "apps", appName, envName, "shared", ".env")
+	envFile := filepath.Join(baseDir, "apps", appName, "shared", ".env")
 
 	// Ensure directory exists
 	envDir := filepath.Dir(envFile)
