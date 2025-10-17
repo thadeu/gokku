@@ -49,13 +49,13 @@ project:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `build_type` | string | ❌ No | `systemd` | Default build type: `systemd` or `docker` |
+| `build_type` | string | ❌ No | `docker` | Default build type: `docker` only |
 | `lang` | string | ❌ No | `go` | Default language: `go`, `python`, `nodejs`, etc |
 
 **Example:**
 ```yaml
 defaults:
-  build_type: systemd
+  build_type: docker
   lang: go
 ```
 
@@ -84,7 +84,7 @@ apps:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `type` | string | ❌ No | From `defaults.build_type` | Build type: `systemd` or `docker` |
+| `type` | string | ❌ No | From `defaults.build_type` | Build type: `docker` only |
 | `path` | string | ✅ Yes | - | Path to app code (relative to project root) |
 | `binary_name` | string | ❌ No | Same as `app.name` | Output binary name (Go only) |
 | `work_dir` | string | ❌ No | `.` | Working directory for build |
@@ -101,10 +101,10 @@ apps:
 - Node.js: `index.js`
 - Ruby: `app.rb`
 
-**Example (Go + systemd):**
+**Example (Go + Docker):**
 ```yaml
 build:
-  type: systemd
+  type: docker
   path: ./cmd/api
   binary_name: api
   go_version: "1.25"
@@ -155,9 +155,9 @@ environments:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `keep_releases` | int | ❌ No | `5` | Number of releases to keep (systemd) |
+| `keep_releases` | int | ❌ No | `5` | Number of releases to keep |
 | `keep_images` | int | ❌ No | `5` | Number of Docker images to keep |
-| `restart_policy` | string | ❌ No | `always` | Systemd restart policy² |
+| `restart_policy` | string | ❌ No | `always` | Container restart policy² |
 | `restart_delay` | int | ❌ No | `5` | Delay between restarts (seconds) |
 | `post_deploy` | array | ❌ No | `[]` | Commands to run after successful deployment |
 
@@ -246,16 +246,16 @@ project:
 
 # Global defaults
 defaults:
-  build_type: systemd
+  build_type: docker
   lang: go
 
 # Applications
 apps:
-  # Go API with systemd
+  # Go API with Docker
   - name: api
     lang: go
     build:
-      type: systemd
+      type: docker
       path: ./cmd/api
       binary_name: api
       work_dir: .
@@ -323,7 +323,7 @@ Gokku validates your configuration:
 
 ### Invalid Values
 
-- ❌ Invalid `build.type`: Must be `systemd` or `docker`
+- ❌ Invalid `build.type`: Must be `docker`
 - ❌ Invalid `restart_policy`: Must be `always`, `on-failure`, or `no`
 - ❌ Duplicate app names: Each app must have unique name
 

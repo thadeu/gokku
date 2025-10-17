@@ -4,22 +4,22 @@
 
 # Gokku Deployment System
 
-A **100% generic** git-push deployment system for multi-language applications. No hard-coded app names, ports, or paths. Everything is configurable via `gokku.yml`.
+A **Docker-native** git-push deployment system for multi-language applications. No hard-coded app names, ports, or paths. Everything is configurable via `gokku.yml`.
 
-**Gokku** = Go + Dokku - A lightweight alternative to Dokku, focused on Go applications with multi-language support.
+**Gokku** = Go + Dokku - A lightweight alternative to Dokku, focused on containerized deployments with multi-language support.
 
 <h1 style="z-index: 999; text-align: center;"></h1>
 
 ## Key Features
 
-✅ **Auto-Setup** - Zero manual configuration, just push and deploy
+✅ **Docker-Native** - All applications run in containers with blue-green deployment
 ✅ **Zero Hard-coding** - Everything configured via `gokku.yml`
 ✅ **Multi-Language** - Go, Python, Node.js, Ruby (extensible)
-✅ **Multi-Runtime** - Systemd or Docker deployment
-✅ **Portable** - Can be extracted to separate repository
+✅ **Blue-Green Deployments** - Zero-downtime deployments with automatic rollback
+✅ **CLI Management** - Comprehensive command-line interface for all operations
 ✅ **Config-Driven** - Apps, environments, ports all in config
-✅ **K3s-Style Installer** - One-line installation
-✅ **Auto Dockerfile** - Generates Dockerfile if not exists  
+✅ **Auto Dockerfile** - Generates Dockerfile if not exists
+✅ **Health Checks** - Built-in health monitoring and restart policies  
 
 ---
 
@@ -44,7 +44,7 @@ apps:
 
 This minimal config will use defaults:
 - `lang: go` (default language)
-- `build.type: systemd` (default build type)
+- `build.type: docker` (default build type)
 - `environments: [production]` (default environment)
 - `branch: main` (default branch for production)
 - `deployment.keep_releases: 5` (default)
@@ -61,7 +61,7 @@ apps:
   - name: api-server
     lang: go
     build:
-      type: systemd
+      type: docker
       path: ./cmd/api
       binary_name: api-server
       work_dir: .
@@ -86,7 +86,7 @@ apps:
   - name: worker
     lang: go
     build:
-      type: systemd
+      type: docker
       path: ./cmd/worker
       binary_name: worker
       work_dir: .
@@ -142,7 +142,7 @@ All configuration fields are optional with sensible defaults:
 | Field | Default | Description |
 |-------|---------|-------------|
 | `lang` | `go` | Programming language |
-| `build.type` | `systemd` | Build type (systemd or docker) |
+| `build.type` | `docker` | Build type (docker only) |
 | `build.work_dir` | `.` | Working directory for build |
 | `build.go_version` | `1.25` | Go version (for Go apps) |
 | `build.goos` | `linux` | Target OS |
@@ -305,12 +305,29 @@ git push api-production main
 git push worker-staging develop
 ```
 
-### 4. Manage Environment Variables
+### 4. Manage Applications
 
 ```bash
-# Using gokku CLI
+# List all applications
+gokku apps
+
+# Deploy applications
+gokku deploy api-production
+gokku deploy worker-staging
+
+# Manage environment variables
 gokku config set API_KEY=xxx --remote api-production
 gokku config list --remote api-production
+
+# View logs and status
+gokku logs api production --remote api-production
+gokku status --remote api-production
+
+# Restart services
+gokku restart api production --remote api-production
+
+# Rollback if needed
+gokku rollback api production --remote api-production
 ```
 
 ---
@@ -345,16 +362,16 @@ Results in:
 
 ## Docker Support
 
-### Build Types
+### Docker-Native Architecture
 
-Each app has its own `build` configuration with type `systemd` (binary) or `docker` (container):
+All applications run in Docker containers with blue-green deployment for zero-downtime updates:
 
 ```yaml
 apps:
   - name: api
     lang: go
     build:
-      type: systemd  # Compiles Go binary, runs with systemd
+      type: docker  # All apps use Docker
       path: ./cmd/api
       binary_name: api
       go_version: "1.25"
@@ -365,7 +382,7 @@ apps:
   - name: ml-service
     lang: python
     build:
-      type: docker   # Builds Docker image, runs in container
+      type: docker   # Python in container
       path: ./services/ml
       entrypoint: main.py
       base_image: "python:3.11-slim"
@@ -428,14 +445,11 @@ apps:
    - If not: generates based on `lang`
 4. **Builds image**: `ml-service:20250115-150405`
 5. **Tags as latest**: `ml-service:latest`
-6. **Systemd manages container**:
-   ```ini
-   [Service]
-   ExecStart=/usr/bin/docker run --rm --name ml-service-production \
-     --env-file /opt/gokku/apps/ml-service/production/shared/.env \
-     -p ${PORT}:${PORT} \
-     ml-service:latest
-   ```
+6. **Blue-Green Deployment**:
+   - Starts new container (green)
+   - Health checks new container
+   - Switches traffic from blue to green
+   - Stops old container (blue)
 7. **Cleanup old images** (keeps last 5)
 
 ### Rollback with Docker
@@ -455,23 +469,23 @@ docker stop ml-service-production
 docker run --name ml-service-production ml-service:20250115-140305
 ```
 
-### Mixed Deployments
+### Multi-Language Deployments
 
-You can mix systemd and Docker apps in the same project:
+All applications use Docker containers, regardless of language:
 
 ```yaml
 apps:
   - name: api
     lang: go
     build:
-      type: systemd  # Fast Go binary
+      type: docker  # Go in container
       path: ./cmd/api
       binary_name: api
     
   - name: worker
     lang: go
     build:
-      type: systemd  # Another Go binary
+      type: docker  # Another Go container
       path: ./cmd/worker
       binary_name: worker
     

@@ -1,6 +1,6 @@
 # Go Application Example
 
-Deploy a Go REST API with Gokku using systemd.
+Deploy a Go REST API with Gokku using Docker containers.
 
 ## Basic Setup
 
@@ -27,9 +27,15 @@ project:
 
 apps:
   - name: api
+    lang: go
     build:
+      type: docker
       path: ./cmd/api
       binary_name: api
+      go_version: "1.25"
+      goos: linux
+      goarch: amd64
+      cgo_enabled: 0
 ```
 
 ### main.go
@@ -61,14 +67,14 @@ func main() {
 ### Deploy
 
 ```bash
-# Setup on server
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api production"
-
 # Add remote
 git remote add production ubuntu@server:api
 
-# Deploy
+# Deploy (auto-setup happens on first push)
 git push production main
+
+# Or use CLI
+gokku deploy --remote api-production
 ```
 
 ## With Gin Framework
@@ -114,8 +120,15 @@ func main() {
 ```yaml
 apps:
   - name: api
+    lang: go
     build:
+      type: docker
       path: ./cmd/api
+      binary_name: api
+      go_version: "1.25"
+      goos: linux
+      goarch: amd64
+      cgo_enabled: 0
     
     environments:
       - name: production
@@ -135,11 +148,9 @@ apps:
 
 ```bash
 # Production
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api production"
 git remote add production ubuntu@server:api
 
 # Staging
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api staging"
 git remote add staging ubuntu@server:api
 ```
 
@@ -217,8 +228,15 @@ func main() {
 ```yaml
 apps:
   - name: api
+    lang: go
     build:
+      type: docker
       path: ./cmd/api
+      binary_name: api
+      go_version: "1.25"
+      goos: linux
+      goarch: amd64
+      cgo_enabled: 0
     
     environments:
       - name: production
@@ -353,25 +371,41 @@ func main() {
 ### Check Logs
 
 ```bash
-ssh ubuntu@server "sudo journalctl -u api-production -f"
+# Using CLI
+gokku logs --remote api-production -f
+
+# Or directly
+ssh ubuntu@server "docker logs -f api-blue"
 ```
 
 ### Check Status
 
 ```bash
-ssh ubuntu@server "sudo systemctl status api-production"
+# Using CLI
+gokku status --remote api-production
+
+# Or directly
+ssh ubuntu@server "docker ps | grep api"
 ```
 
-### Restart Service
+### Restart Container
 
 ```bash
-ssh ubuntu@server "sudo systemctl restart api-production"
+# Using CLI
+gokku restart --remote api-production
+
+# Or directly
+ssh ubuntu@server "docker restart api-blue"
 ```
 
 ### Check Environment Variables
 
 ```bash
-ssh ubuntu@server "cat /opt/gokku/apps/api/production/.env"
+# Using CLI
+gokku config list --remote api-production
+
+# Or directly
+ssh ubuntu@server "cat /opt/gokku/apps/api/shared/.env"
 ```
 
 ## Complete Example

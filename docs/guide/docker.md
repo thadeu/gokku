@@ -4,15 +4,17 @@ Deploy applications using Docker containers with Gokku.
 
 ## Overview
 
-Gokku supports two deployment modes:
-- **systemd** - Native binary execution (best for Go apps)
-- **docker** - Container-based execution (best for Python/Node.js)
+Gokku uses Docker containers for all applications with blue-green deployment for zero-downtime updates.
 
-This guide covers Docker-specific features.
+All applications run in Docker containers regardless of language:
+- **Go** - Compiled in container
+- **Python** - Interpreted in container  
+- **Node.js** - Interpreted in container
+- **Ruby** - Interpreted in container
 
-## Enable Docker
+## Configuration
 
-Set `build.type: docker` in your app config:
+All applications use Docker by default. Configure your app:
 
 ```yaml
 apps:
@@ -354,37 +356,45 @@ ssh ubuntu@server "docker ps | grep my-app"
 ### View Logs
 
 ```bash
-ssh ubuntu@server "docker logs -f my-app-production"
+# Using CLI
+gokku logs --remote my-app-production -f
+
+# Or directly
+ssh ubuntu@server "docker logs -f my-app-blue"
 ```
 
 ### Restart Container
 
 ```bash
-ssh ubuntu@server "docker restart my-app-production"
+# Using CLI
+gokku restart --remote my-app-production
+
+# Or directly
+ssh ubuntu@server "docker restart my-app-blue"
 ```
 
 ### Stop Container
 
 ```bash
-ssh ubuntu@server "docker stop my-app-production"
+ssh ubuntu@server "docker stop my-app-blue"
 ```
 
 ### Start Container
 
 ```bash
-ssh ubuntu@server "docker start my-app-production"
+ssh ubuntu@server "docker start my-app-blue"
 ```
 
 ### Access Container Shell
 
 ```bash
-ssh ubuntu@server "docker exec -it my-app-production /bin/sh"
+ssh ubuntu@server "docker exec -it my-app-blue /bin/sh"
 ```
 
 ### Inspect Container
 
 ```bash
-ssh ubuntu@server "docker inspect my-app-production"
+ssh ubuntu@server "docker inspect my-app-blue"
 ```
 
 ## Environment Variables
@@ -393,10 +403,10 @@ All environment variables are passed to the container:
 
 ```bash
 # Set variable
-gokku config set DATABASE_URL=postgres://... --app api --env production --remote api-production
+gokku config set DATABASE_URL=postgres://... --remote api-production
 
 # Restart container to pick up changes
-ssh ubuntu@server "docker restart api-production"
+gokku restart --remote api-production
 ```
 
 ## Health Checks
@@ -421,7 +431,7 @@ CMD ["python", "app.py"]
 Check health status:
 
 ```bash
-ssh ubuntu@server "docker inspect --format='{{.State.Health.Status}}' api-production"
+ssh ubuntu@server "docker inspect --format='{{.State.Health.Status}}' api-blue"
 ```
 
 ## Volumes (Limited Support)
@@ -445,7 +455,7 @@ Modify the hook template (advanced users):
 
 ```bash
 docker run -d \
-  --name $APP_NAME-$ENV \
+  --name $APP_NAME-blue \
   -v /data/uploads:/app/uploads \
   -p $PORT:$PORT \
   $IMAGE_NAME
@@ -492,31 +502,29 @@ environments:
       DATABASE_URL: postgres://external-db.example.com:5432/db
 ```
 
-## Comparison: Docker vs Systemd
+## Blue-Green Deployment
 
-| Feature | Docker | Systemd |
-|---------|--------|---------|
-| **Deployment Speed** | Slower (build image) | Faster (compile binary) |
-| **Resource Usage** | Higher | Lower |
-| **Isolation** | Full container | Process only |
-| **Dependencies** | In container | System-wide |
-| **Best For** | Python/Node/Complex | Go apps |
-| **Rollback** | Image tags | Release directories |
+Gokku uses blue-green deployment for zero-downtime updates:
 
-## When to Use Docker
+### How It Works
 
-✅ **Use Docker if:**
-- Python/Node.js/Ruby app
-- Complex system dependencies
-- Need full isolation
-- Multiple conflicting dependencies
-- Different versions of same tool
+1. **New Deployment**: Code is deployed to the green environment
+2. **Health Check**: System verifies the green environment is healthy
+3. **Traffic Switch**: Traffic is switched from blue to green
+4. **Cleanup**: Old blue environment is stopped and cleaned up
 
-❌ **Avoid Docker if:**
-- Simple Go app
-- Want fastest deploys
-- Limited server resources
-- No complex dependencies
+### Enable Zero-Downtime
+
+```bash
+gokku config set ZERO_DOWNTIME=true --remote <app>-<env>
+```
+
+### Container Naming
+
+- **Active Container**: `<app-name>-blue`
+- **New Container**: `<app-name>-green`
+
+For more details, see [Blue-Green Deployment Guide](/guide/blue-green-deployment).
 
 ## Troubleshooting
 
@@ -533,7 +541,7 @@ ssh ubuntu@server "cat /opt/gokku/apps/my-app/production/deploy.log"
 Check Docker logs:
 
 ```bash
-ssh ubuntu@server "docker logs my-app-production"
+ssh ubuntu@server "docker logs my-app-blue"
 ```
 
 ### Out of Disk Space

@@ -48,24 +48,27 @@ project:
 
 apps:
   - name: api
+    lang: go
     build:
+      type: docker
       path: ./cmd/api
       binary_name: api
+      go_version: "1.25"
+      goos: linux
+      goarch: amd64
+      cgo_enabled: 0
 ```
 
 ### Step 4: Create Application
 
-First, create the application on the server:
-
-**Using gokku CLI:**
+Add a git remote for your application:
 
 ```bash
 # Add git remote
-git remote add production ubuntu@your-server:/opt/gokku/repos/api.git
-
-# Create the app (sets up repository and hooks)
-gokku apps create api --remote production
+git remote add production ubuntu@your-server:api
 ```
+
+The application will be automatically created on first deployment.
 
 ### Step 5: Deploy
 
@@ -92,13 +95,15 @@ Watch the magic happen:
 -----> First deploy detected, running auto-setup...
 -----> Found gokku.yml, configuring from repository...
 -----> Created .env file from gokku.yml configuration
------> Created systemd service from gokku.yml
 -----> Auto-setup complete!
 -----> Extracting code...
------> Building api...
------> Build complete (5.2M)
------> Deploying...
------> Restarting api-production...
+-----> Building Go application...
+-----> Building Docker image...
+-----> Build complete
+-----> Deploying with blue-green deployment...
+-----> Starting green container...
+-----> Health check passed
+-----> Switching traffic to green
 -----> Deploy successful!
 ```
 
@@ -127,28 +132,28 @@ gokku run "docker ps" --remote api-production
 **Or use SSH directly:**
 
 ```bash
-ssh ubuntu@your-server "sudo systemctl status api-production"
+ssh ubuntu@your-server "docker ps | grep api"
 ```
 
 Your app is live! 🎉
 
 ## What Happened?
 
-1. **`gokku apps create`** set up the git repository and hooks on server
-2. **Git push** triggered the post-receive hook
-3. **Auto-setup detected** first deploy and configured systemd service
-4. **Code extracted** to a new release directory
-5. **Build executed** (compiled Go binary or built Docker image)
-6. **Symlink updated** to new release (atomic deploy)
-7. **Service restarted** automatically
-8. **Old releases kept** for rollback
+1. **Git push** triggered the post-receive hook
+2. **Auto-setup detected** first deploy and configured from gokku.yml
+3. **Code extracted** to a new release directory
+4. **Docker image built** from your application code
+5. **Blue-green deployment** started new container
+6. **Health checks performed** on new container
+7. **Traffic switched** to new container (zero downtime)
+8. **Old container stopped** and cleaned up
 
 ## Next Steps
 
 - [Configuration](/guide/configuration) - Customize your deployment
 - [Environments](/guide/environments) - Add staging environment
 - [Environment Variables](/guide/env-vars) - Configure your app
-- [Docker Support](/guide/docker) - Use Docker instead of systemd
+- [Blue-Green Deployment](/guide/blue-green-deployment) - Zero-downtime deployments
 
 ## Common Issues
 
@@ -165,7 +170,11 @@ ssh-copy-id ubuntu@your-server
 Check the deployment logs:
 
 ```bash
-ssh ubuntu@your-server "sudo journalctl -u api-production -n 50"
+# Using CLI
+gokku logs --remote api-production
+
+# Or directly
+ssh ubuntu@your-server "docker logs api-blue"
 ```
 
 ### Port Already in Use

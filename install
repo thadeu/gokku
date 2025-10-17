@@ -295,8 +295,6 @@ setup_server() {
     cd $INSTALL_DIR/tmp
 
     local scripts=(
-        "scripts/config-loader.sh"
-        "scripts/deploy-server-setup.sh"
         "scripts/docker-helpers.sh"
     )
 
@@ -309,15 +307,6 @@ setup_server() {
         fi
         chmod +x "$BASE_DIR/$script"
     done
-
-    # Download sample config
-    if [ ! -f "$BASE_DIR/gokku.yml" ]; then
-        if ! curl -fsSL "$REPO_URL/gokku.yml" -o "$BASE_DIR/gokku.yml"; then
-            log_warn "Failed to download gokku.yml"
-        else
-            log_success "Sample config downloaded"
-        fi
-    fi
 
     log_success "Server setup complete"
 }

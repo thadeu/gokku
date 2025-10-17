@@ -179,7 +179,7 @@ gokku run "docker ps" --remote api-production
 
 #### logs - View Logs
 
-View application logs (systemd or Docker).
+View application logs from Docker containers.
 
 ```bash
 # View logs
@@ -205,11 +205,11 @@ gokku logs api production -f
 gokku logs --remote vad-staging -f
 ```
 
-Automatically detects systemd or Docker and shows appropriate logs.
+Shows logs from Docker containers with blue-green deployment support.
 
 #### status - Check Status
 
-Check service or container status.
+Check Docker container status.
 
 ```bash
 # Specific app
@@ -218,7 +218,7 @@ gokku status <app> <env>
 # With --remote
 gokku status --remote <app>-<env>
 
-# All services
+# All containers
 gokku status
 ```
 
@@ -226,12 +226,12 @@ gokku status
 ```bash
 gokku status api production
 gokku status --remote vad-production
-gokku status  # All services
+gokku status  # All containers
 ```
 
-#### restart - Restart Service
+#### restart - Restart Container
 
-Restart a service or container.
+Restart a Docker container.
 
 ```bash
 gokku restart <app> <env>
@@ -246,7 +246,7 @@ gokku restart api production
 gokku restart --remote vad-staging
 ```
 
-Works with both systemd services and Docker containers.
+Restarts the active Docker container (blue or green).
 
 #### deploy - Deploy Application
 
@@ -300,6 +300,20 @@ List all deployed applications on server.
 
 ```bash
 gokku apps
+```
+
+#### tool - Utility Commands
+
+Utility commands for scripts and automation.
+
+```bash
+gokku tool <command>
+```
+
+**Examples:**
+```bash
+gokku tool version
+gokku tool help
 ```
 
 #### ssh - SSH to Server
@@ -584,91 +598,68 @@ git remote -v
 git remote remove REMOTE_NAME
 ```
 
-## Systemd Commands
+## Docker Management
 
-Manage services on the server.
+All applications run in Docker containers with blue-green deployment.
 
-### Status
+### Container Status
 
-Check service status:
+Check container status:
 
 ```bash
-sudo systemctl status APP_NAME-ENVIRONMENT
+docker ps | grep APP_NAME
 ```
 
 **Example:**
 ```bash
-sudo systemctl status api-production
+docker ps | grep api
 ```
 
-### Start
+### Container Logs
 
-Start service:
-
-```bash
-sudo systemctl start APP_NAME-ENVIRONMENT
-```
-
-### Stop
-
-Stop service:
+View container logs:
 
 ```bash
-sudo systemctl stop APP_NAME-ENVIRONMENT
-```
-
-### Restart
-
-Restart service:
-
-```bash
-sudo systemctl restart APP_NAME-ENVIRONMENT
-```
-
-### Enable
-
-Enable service to start on boot:
-
-```bash
-sudo systemctl enable APP_NAME-ENVIRONMENT
-```
-
-### Disable
-
-Disable service:
-
-```bash
-sudo systemctl disable APP_NAME-ENVIRONMENT
-```
-
-### Logs
-
-View service logs:
-
-```bash
-sudo journalctl -u APP_NAME-ENVIRONMENT
+docker logs APP_NAME-blue
+docker logs APP_NAME-green
 ```
 
 **Options:**
 - `-f` - Follow (tail) logs
-- `-n 100` - Show last 100 lines
-- `--since "1 hour ago"` - Show logs from last hour
+- `--tail 100` - Show last 100 lines
+- `--since "1h"` - Show logs from last hour
 
 **Examples:**
 ```bash
-# Follow logs
-sudo journalctl -u api-production -f
+# Follow logs from active container
+docker logs -f api-blue
 
 # Last 50 lines
-sudo journalctl -u api-production -n 50
+docker logs --tail 50 api-blue
 
 # Logs from last hour
-sudo journalctl -u api-production --since "1 hour ago"
+docker logs --since "1h" api-blue
+```
+
+### Container Management
+
+```bash
+# Start container
+docker start APP_NAME-blue
+
+# Stop container
+docker stop APP_NAME-blue
+
+# Restart container
+docker restart APP_NAME-blue
+
+# Remove container
+docker rm APP_NAME-blue
 ```
 
 ## Docker Commands
 
-Manage Docker containers (when `build.type: docker`).
+Manage Docker containers (all applications use Docker).
 
 ### List Containers
 
@@ -681,7 +672,8 @@ docker ps | grep APP_NAME
 View container logs:
 
 ```bash
-docker logs APP_NAME-ENVIRONMENT
+docker logs APP_NAME-blue
+docker logs APP_NAME-green
 ```
 
 **Options:**
@@ -690,46 +682,51 @@ docker logs APP_NAME-ENVIRONMENT
 
 **Example:**
 ```bash
-docker logs -f --tail 50 api-production
+docker logs -f --tail 50 api-blue
 ```
 
 ### Stop Container
 
 ```bash
-docker stop APP_NAME-ENVIRONMENT
+docker stop APP_NAME-blue
+docker stop APP_NAME-green
 ```
 
 ### Start Container
 
 ```bash
-docker start APP_NAME-ENVIRONMENT
+docker start APP_NAME-blue
+docker start APP_NAME-green
 ```
 
 ### Restart Container
 
 ```bash
-docker restart APP_NAME-ENVIRONMENT
+docker restart APP_NAME-blue
+docker restart APP_NAME-green
 ```
 
 ### Inspect Container
 
 ```bash
-docker inspect APP_NAME-ENVIRONMENT
+docker inspect APP_NAME-blue
+docker inspect APP_NAME-green
 ```
 
 ### Execute Command in Container
 
 ```bash
-docker exec -it APP_NAME-ENVIRONMENT COMMAND
+docker exec -it APP_NAME-blue COMMAND
+docker exec -it APP_NAME-green COMMAND
 ```
 
 **Example:**
 ```bash
 # Shell access
-docker exec -it api-production /bin/sh
+docker exec -it api-blue /bin/sh
 
 # Run command
-docker exec api-production python manage.py migrate
+docker exec api-blue python manage.py migrate
 ```
 
 ### List Images

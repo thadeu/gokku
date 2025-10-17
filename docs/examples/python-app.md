@@ -57,14 +57,14 @@ gunicorn==21.2.0
 ### Deploy
 
 ```bash
-# Setup on server
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh flask-app production"
-
 # Add remote
 git remote add production ubuntu@server:flask-app
 
-# Deploy
+# Deploy (auto-setup happens on first push)
 git push production main
+
+# Or use CLI
+gokku deploy --remote flask-app-production
 ```
 
 ## With Gunicorn (Production)
@@ -425,25 +425,38 @@ apps:
 ### View Docker Logs
 
 ```bash
-ssh ubuntu@server "docker logs -f flask-app-production"
+# Using CLI
+gokku logs --remote flask-app-production -f
+
+# Or directly
+ssh ubuntu@server "docker logs -f flask-app-blue"
 ```
 
 ### Check Container Status
 
 ```bash
+# Using CLI
+gokku status --remote flask-app-production
+
+# Or directly
 ssh ubuntu@server "docker ps | grep flask-app"
 ```
 
 ### Restart Container
 
 ```bash
-ssh ubuntu@server "docker restart flask-app-production"
+# Using CLI
+gokku restart --remote flask-app-production
+
+# Or directly
+ssh ubuntu@server "docker restart flask-app-blue"
 ```
 
 ### Access Container Shell
 
 ```bash
-ssh ubuntu@server "docker exec -it flask-app-production /bin/bash"
+# Direct access
+ssh ubuntu@server "docker exec -it flask-app-blue /bin/bash"
 ```
 
 ## Complete Example
