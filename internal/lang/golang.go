@@ -206,7 +206,7 @@ func (l *Golang) generateDockerfile(build *Build, app *App) string {
 
 	// Get the workdir for COPY
 	workDir := "."
-	if app.Build.Workdir != "" {
+	if app.Build != nil && app.Build.Workdir != "" {
 		workDir = app.Build.Workdir
 	}
 
