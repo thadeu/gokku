@@ -191,9 +191,38 @@ func executeDirectDeployment(appName string) error {
 	}
 
 	// Build application using language handler
-	if err := lang.Build(app, releaseDir); err != nil {
-		return fmt.Errorf("build failed: %v", err)
+	fmt.Println("-----> Building application...")
+
+	// Force rebuild without cache if this is a Docker build
+	if app.Build != nil && app.Build.Type == "docker" {
+		dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
+		if _, err := os.Stat(dockerfilePath); err == nil {
+			fmt.Println("-----> Forcing fresh Docker build (no cache)...")
+			// Remove any existing image with the same name
+			imageTag := fmt.Sprintf("%s:latest", app.Name)
+			exec.Command("docker", "rmi", imageTag).Run() // Ignore errors if image doesn't exist
+
+			// Build with no cache
+			cmd := exec.Command("docker", "build", "--no-cache", "-t", imageTag, releaseDir)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("docker build failed: %v", err)
+			}
+		} else {
+			// Use language handler for non-Docker builds
+			if err := lang.Build(app, releaseDir); err != nil {
+				return fmt.Errorf("build failed: %v", err)
+			}
+		}
+	} else {
+		// Use language handler for non-Docker builds
+		if err := lang.Build(app, releaseDir); err != nil {
+			return fmt.Errorf("build failed: %v", err)
+		}
 	}
+
+	fmt.Println("-----> Build complete!")
 
 	// Deploy application using language handler
 	if err := lang.Deploy(app, releaseDir); err != nil {
