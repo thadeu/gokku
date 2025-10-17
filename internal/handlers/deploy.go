@@ -84,7 +84,7 @@ func handleDeploy(args []string) {
 	fmt.Printf("Branch: %s\n\n", branch)
 
 	// Push current branch
-	cmd := exec.Command("git", "push", branch, remoteName)
+	cmd := exec.Command("git", "push", remoteName, branch)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -193,15 +193,10 @@ func executeDirectDeployment(appName string) error {
 
 // extractCodeFromRepo extracts code from git repository to release directory
 func extractCodeFromRepo(repoDir, releaseDir string) error {
-	// Check if repository has any commits
-	checkCmd := exec.Command("git", "--git-dir", repoDir, "rev-list", "--count", "HEAD")
+	// Check if repository has any commits by checking if HEAD exists
+	checkCmd := exec.Command("git", "--git-dir", repoDir, "rev-parse", "--short", "HEAD")
 	output, err := checkCmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to check repository state: %v, output: %s", err, string(output))
-	}
-
-	commitCount := strings.TrimSpace(string(output))
-	if commitCount == "0" {
 		return fmt.Errorf("repository has no commits yet - cannot extract code")
 	}
 

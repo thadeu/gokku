@@ -179,8 +179,6 @@ download_binary() {
     # For backwards compatibility, try different naming schemes
     local binary_urls=(
         "$REPO_URL/bin/$binary_name"
-        "$REPO_URL/bin/$binary_name.tar.gz"
-        "$REPO_URL/bin/$binary_name.gz"
     )
 
     local downloaded=false
@@ -210,13 +208,6 @@ download_binary() {
 
     # Make binary executable
     chmod +x gokku
-
-    # If downloaded compressed file, extract it
-    if [[ "$url" == *.tar.gz ]]; then
-        tar -xzf gokku && rm gokku.tar.gz
-    elif [[ "$url" == *.gz ]]; then
-        gunzip gokku.gz
-    fi
 
     log_success "Binary ready for installation"
 }
