@@ -371,7 +371,6 @@ func (dc *DockerClient) StandardDeploy(config DeploymentConfig) error {
 	fmt.Println("=====> Standard Deployment Complete!")
 	fmt.Printf("-----> Active container: %s\n", blueName)
 	fmt.Printf("-----> Running image: %s\n", config.ImageTag)
-	fmt.Printf("-----> Port: %d\n", containerPort)
 
 	return nil
 }
@@ -421,7 +420,6 @@ func (dc *DockerClient) BlueGreenDeploy(config DeploymentConfig) error {
 	fmt.Println("=====> Blue/Green Deployment Complete!")
 	fmt.Printf("-----> Active container: %s\n", blueName)
 	fmt.Printf("-----> Running image: %s\n", config.ImageTag)
-	fmt.Printf("-----> Port: %d\n", containerPort)
 
 	return nil
 }
