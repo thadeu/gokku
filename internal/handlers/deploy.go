@@ -250,20 +250,95 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 		return fmt.Errorf("repository has no commits yet - you need to push code first. Run: git push <remote> <branch>")
 	}
 
-	// Extract code from HEAD
-	cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
-	output, err := cmd.CombinedOutput()
+	// Step 1: Extract only gokku.yml to read configuration
+	fmt.Println("-----> Reading app configuration...")
+	tmpCmd := exec.Command("git", "--git-dir", repoDir, "show", "HEAD:gokku.yml")
+	gokkuYmlContent, err := tmpCmd.Output()
 	if err != nil {
-		return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
+		// No gokku.yml in repo, do full checkout
+		fmt.Println("-----> No gokku.yml found, extracting full repository...")
+		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
+		}
+		return nil
 	}
 
-	// Check if this is the first deployment by looking for gokku.yml in the extracted code
+	// Save gokku.yml temporarily to parse it
+	tmpGokkuYml := filepath.Join(releaseDir, "gokku.yml")
+	if err := os.MkdirAll(releaseDir, 0755); err != nil {
+		return fmt.Errorf("failed to create release directory: %v", err)
+	}
+	if err := os.WriteFile(tmpGokkuYml, gokkuYmlContent, 0644); err != nil {
+		return fmt.Errorf("failed to write gokku.yml: %v", err)
+	}
+
+	// Parse config to get workdir
+	app, err := internal.LoadAppConfig(appName)
+	if err != nil || app.Build == nil || app.Build.Workdir == "" {
+		// No workdir specified, do full checkout
+		fmt.Println("-----> No workdir specified, extracting full repository...")
+		os.RemoveAll(releaseDir) // Clean temp files
+		os.MkdirAll(releaseDir, 0755)
+		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
+		}
+
+		// Check if this is the first deployment
+		gokkuYmlPath := filepath.Join(releaseDir, "gokku.yml")
+		if _, err := os.Stat(gokkuYmlPath); err == nil {
+			if err := handleInitialSetup(appName, gokkuYmlPath, releaseDir); err != nil {
+				fmt.Printf("Warning: Initial setup failed: %v\n", err)
+			}
+		}
+
+		return nil
+	}
+
+	workdir := strings.TrimPrefix(app.Build.Workdir, "./")
+	workdir = strings.TrimPrefix(workdir, "/")
+
+	// Step 2: Extract only what we need using git archive
+	// Clean and prepare directory
+	os.RemoveAll(releaseDir)
+	os.MkdirAll(releaseDir, 0755)
+
+	// Extract gokku.yml and workdir using git archive
+	archiveCmd := exec.Command("git", "--git-dir", repoDir, "archive", "HEAD", "gokku.yml", workdir)
+	untar := exec.Command("tar", "-x", "-C", releaseDir)
+
+	// Pipe git archive output to tar
+	pipe, err := archiveCmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create pipe: %v", err)
+	}
+	untar.Stdin = pipe
+
+	if err := archiveCmd.Start(); err != nil {
+		return fmt.Errorf("failed to start git archive: %v", err)
+	}
+
+	if err := untar.Start(); err != nil {
+		return fmt.Errorf("failed to start tar: %v", err)
+	}
+
+	if err := archiveCmd.Wait(); err != nil {
+		return fmt.Errorf("git archive failed: %v", err)
+	}
+
+	if err := untar.Wait(); err != nil {
+		return fmt.Errorf("tar extraction failed: %v", err)
+	}
+
+	// Check if this is the first deployment
 	gokkuYmlPath := filepath.Join(releaseDir, "gokku.yml")
+
 	if _, err := os.Stat(gokkuYmlPath); err == nil {
-		// Found gokku.yml in the project - this might be initial setup
 		if err := handleInitialSetup(appName, gokkuYmlPath, releaseDir); err != nil {
 			fmt.Printf("Warning: Initial setup failed: %v\n", err)
-			// Continue with deployment anyway
 		}
 	}
 
