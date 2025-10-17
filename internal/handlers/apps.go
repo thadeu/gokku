@@ -331,7 +331,7 @@ func createDirectoriesWithSudo(appName string) error {
 
 	// Initialize git repository with sudo
 	repoDir := filepath.Join(baseDir, "repos", appName+".git")
-	gitCmd := exec.Command("sudo", "git", "init", "--bare", repoDir)
+	gitCmd := exec.Command("sudo", "git", "init", "--bare", repoDir, "--initial-branch=main")
 	if output, err := gitCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("sudo git init failed: %v (output: %s)", err, string(output))
 	}
@@ -515,7 +515,7 @@ func setupAppCore(remoteInfo *internal.RemoteInfo, appName, deployUser string, i
 			}
 			fmt.Printf("-----> Repository directory created: %s\n", repoDir)
 
-			cmd := exec.Command("git", "init", "--bare", repoDir)
+			cmd := exec.Command("git", "init", "--bare", repoDir, "--initial-branch=main")
 			output, err := cmd.CombinedOutput()
 			if err != nil {
 				fmt.Printf("-----> Git command failed. Output: %s\n", string(output))
@@ -667,7 +667,7 @@ func setupGitRepository(remoteInfo *internal.RemoteInfo, appName, deployUser str
 		if [ ! -d "%s/refs" ]; then
 			echo "Initializing git repository..."
 			cd %s
-			sudo git init --bare %s
+			sudo git init --bare --initial-branch=main %s
 			sudo chown -R %s %s
 			echo "Git repository initialized"
 		else
