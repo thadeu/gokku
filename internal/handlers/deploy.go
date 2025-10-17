@@ -146,19 +146,14 @@ func executeDirectDeployment(appName string) error {
 
 	// Extract code from git repository
 	fmt.Println("-----> Extracting code...")
-	if err := extractCodeFromRepo(reposDir, releaseDir); err != nil {
+	if err := extractCodeFromRepo(appName, reposDir, releaseDir); err != nil {
 		return fmt.Errorf("failed to extract code: %v", err)
 	}
 
 	// Load app configuration
-	config, err := internal.LoadServerConfig()
+	app, err := internal.LoadAppConfig(appName)
 	if err != nil {
-		return fmt.Errorf("failed to load server config: %v", err)
-	}
-
-	app, err := config.GetApp(appName)
-	if err != nil {
-		return fmt.Errorf("app not found in config: %v", err)
+		return fmt.Errorf("failed to load app config: %v", err)
 	}
 
 	// Create language handler
@@ -249,7 +244,7 @@ func hasCommits(repoDir string) bool {
 }
 
 // extractCodeFromRepo extracts code from git repository to release directory
-func extractCodeFromRepo(repoDir, releaseDir string) error {
+func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 	// Check if repository has any commits
 	if !hasCommits(repoDir) {
 		return fmt.Errorf("repository has no commits yet - you need to push code first. Run: git push <remote> <branch>")
@@ -266,7 +261,7 @@ func extractCodeFromRepo(repoDir, releaseDir string) error {
 	gokkuYmlPath := filepath.Join(releaseDir, "gokku.yml")
 	if _, err := os.Stat(gokkuYmlPath); err == nil {
 		// Found gokku.yml in the project - this might be initial setup
-		if err := handleInitialSetup(gokkuYmlPath, releaseDir); err != nil {
+		if err := handleInitialSetup(appName, gokkuYmlPath, releaseDir); err != nil {
 			fmt.Printf("Warning: Initial setup failed: %v\n", err)
 			// Continue with deployment anyway
 		}
@@ -276,7 +271,7 @@ func extractCodeFromRepo(repoDir, releaseDir string) error {
 }
 
 // handleInitialSetup handles the initial setup when gokku.yml is found in the project
-func handleInitialSetup(gokkuYmlPath, releaseDir string) error {
+func handleInitialSetup(appName string, gokkuYmlPath, releaseDir string) error {
 	fmt.Println("-----> Initial setup detected - configuring applications...")
 
 	serverConfigPath := "/opt/gokku/gokku.yml"
@@ -286,31 +281,20 @@ func handleInitialSetup(gokkuYmlPath, releaseDir string) error {
 		return fmt.Errorf("failed to copy gokku.yml to server: %v", err)
 	}
 
-	fmt.Printf("-----> Copied gokku.yml to %s\n", serverConfigPath)
+	// Create app directories
+	appDir := filepath.Join("/opt/gokku", "apps", appName)
+	releasesDir := filepath.Join(appDir, "releases")
+	sharedDir := filepath.Join(appDir, "shared")
 
-	// Load the new configuration
-	config, err := internal.LoadServerConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load server config: %v", err)
+	// Create directories
+	if err := os.MkdirAll(releasesDir, 0755); err != nil {
+		return fmt.Errorf("failed to create releases directory for %s: %v", appName, err)
+	}
+	if err := os.MkdirAll(sharedDir, 0755); err != nil {
+		return fmt.Errorf("failed to create shared directory for %s: %v", appName, err)
 	}
 
-	// Create app directories for each app in the config
-	baseDir := "/opt/gokku"
-	for _, app := range config.Apps {
-		appDir := filepath.Join(baseDir, "apps", app.Name)
-		releasesDir := filepath.Join(appDir, "releases")
-		sharedDir := filepath.Join(appDir, "shared")
-
-		// Create directories
-		if err := os.MkdirAll(releasesDir, 0755); err != nil {
-			return fmt.Errorf("failed to create releases directory for %s: %v", app.Name, err)
-		}
-		if err := os.MkdirAll(sharedDir, 0755); err != nil {
-			return fmt.Errorf("failed to create shared directory for %s: %v", app.Name, err)
-		}
-
-		fmt.Printf("-----> Created directories for app '%s'\n", app.Name)
-	}
+	fmt.Printf("-----> Created directories for app '%s'\n", appName)
 
 	fmt.Println("-----> Initial setup complete!")
 	return nil
@@ -351,14 +335,10 @@ func copyFile(src, dst string) error {
 // updateEnvironmentFile updates environment file from gokku.yml if needed
 func updateEnvironmentFile(envFile, appName string) error {
 	// Load server config to get default env vars
-	config, err := internal.LoadServerConfig()
+	app, err := internal.LoadAppConfig(appName)
+
 	if err != nil {
 		return fmt.Errorf("failed to load server config: %v", err)
-	}
-
-	app, err := config.GetApp(appName)
-	if err != nil {
-		return fmt.Errorf("app not found in config: %v", err)
 	}
 
 	// Load existing env vars

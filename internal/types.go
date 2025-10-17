@@ -93,8 +93,8 @@ type Docker struct {
 }
 
 // LoadServerConfig loads the server configuration from gokku.yml
-func LoadServerConfig() (*ServerConfig, error) {
-	configPath := "/opt/gokku/gokku.yml"
+func LoadServerConfigByApp(appName string) (*ServerConfig, error) {
+	configPath := fmt.Sprintf("/opt/gokku/apps/%s/gokku.yml", appName)
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return &ServerConfig{
@@ -108,6 +108,24 @@ func LoadServerConfig() (*ServerConfig, error) {
 	}
 
 	var config ServerConfig
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse config: %w", err)
+	}
+
+	return &config, nil
+}
+
+func LoadAppConfig(appName string) (*App, error) {
+	filePath := fmt.Sprintf("/opt/gokku/apps/%s/gokku.yml", appName)
+
+	data, err := os.ReadFile(filePath)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	var config App
+
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
