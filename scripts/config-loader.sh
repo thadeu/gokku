@@ -285,3 +285,51 @@ get_mise_plugins() {
     } END { if (result) print result }" "$CONFIG_FILE"
 }
 
+# Function to get Docker network mode for an app
+get_app_docker_network_mode() {
+    local app_name=$1
+    local config_file=${GOKKU_CONFIG:-/opt/gokku/gokku.yml}
+    
+    if [ ! -f "$config_file" ]; then
+        echo "bridge"  # default
+        return
+    fi
+    
+    # Try to extract docker.network_mode from app config
+    local network_mode=$(awk "/^  - name: $app_name/,/^  - name:/ {
+        if (/docker:/) in_docker=1
+        if (in_docker && /network_mode:/) { print \$2; exit }
+        if (in_docker && /^    [a-z]/ && !/network_mode:/) in_docker=0
+    }" "$config_file")
+    
+    if [ -n "$network_mode" ]; then
+        echo "$network_mode"
+    else
+        echo "bridge"  # default
+    fi
+}
+
+# Function to get Docker ports for an app
+get_app_docker_ports() {
+    local app_name=$1
+    local config_file=${GOKKU_CONFIG:-/opt/gokku/gokku.yml}
+    
+    if [ ! -f "$config_file" ]; then
+        return
+    fi
+    
+    # Extract ports array from docker.ports
+    awk "/^  - name: $app_name/,/^  - name:/ {
+        if (/docker:/) in_docker=1
+        if (in_docker && /ports:/) in_ports=1
+        if (in_ports && /^        - /) {
+            # Remove leading spaces and dash, keep the port mapping
+            gsub(/^        - /, \"\")
+            gsub(/\"/, \"\")  # Remove quotes if any
+            print \$0
+        }
+        if (in_ports && /^      [a-z]/ && !/ports:/ && !/^        - /) in_ports=0
+        if (in_docker && /^    [a-z]/ && !/network_mode:/ && !/ports:/) in_docker=0
+    }" "$config_file"
+}
+

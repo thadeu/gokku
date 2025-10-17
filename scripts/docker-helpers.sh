@@ -275,18 +275,38 @@ standard_deploy() {
         sleep 2
     fi
 
-    # Get port from env file
-    local container_port=$(get_container_port "$env_file" 8080)
-    echo "-----> Using port: $container_port"
+    # Get Docker configuration from gokku.yml
+    local network_mode=$(get_app_docker_network_mode "$app_name")
+    local docker_ports=$(get_app_docker_ports "$app_name")
+    
+    echo "-----> Network mode: $network_mode"
 
     # Build docker run command
-    local docker_cmd="docker run -d --name $blue_name"
+    local docker_cmd="sudo docker run -d --name $blue_name"
 
     # Add restart policy
     docker_cmd="$docker_cmd --restart no"
 
-    # Add port mapping
-    docker_cmd="$docker_cmd -p $container_port:${container_port}"
+    # Add network mode
+    docker_cmd="$docker_cmd --network $network_mode"
+
+    # Add port mappings
+    if [ "$network_mode" != "host" ]; then
+        if [ -n "$docker_ports" ]; then
+            # Use ports from gokku.yml
+            while IFS= read -r port_mapping; do
+                [ -n "$port_mapping" ] && docker_cmd="$docker_cmd -p $port_mapping"
+            done <<< "$docker_ports"
+            echo "-----> Using ports from gokku.yml"
+        else
+            # Fallback to PORT from env
+            local container_port=$(get_container_port "$env_file" 8080)
+            docker_cmd="$docker_cmd -p $container_port:${container_port}"
+            echo "-----> Using port: $container_port"
+        fi
+    else
+        echo "-----> Using host network (all ports exposed)"
+    fi
 
     # Add environment file if exists
     if [ -f "$env_file" ]; then
@@ -366,14 +386,31 @@ start_green_container() {
         docker rm "$green_name" 2>/dev/null || true
     fi
 
+    # Get Docker configuration from gokku.yml
+    local network_mode=$(get_app_docker_network_mode "$app_name")
+    local docker_ports=$(get_app_docker_ports "$app_name")
+
     # Build docker run command
-    local docker_cmd="docker run -d --name $green_name"
+    local docker_cmd="sudo docker run -d --name $green_name"
 
     # Add restart policy
     docker_cmd="$docker_cmd --restart no"
 
-    # Add port mapping
-    docker_cmd="$docker_cmd -p $container_port:${container_port}"
+    # Add network mode
+    docker_cmd="$docker_cmd --network $network_mode"
+
+    # Add port mappings
+    if [ "$network_mode" != "host" ]; then
+        if [ -n "$docker_ports" ]; then
+            # Use ports from gokku.yml
+            while IFS= read -r port_mapping; do
+                [ -n "$port_mapping" ] && docker_cmd="$docker_cmd -p $port_mapping"
+            done <<< "$docker_ports"
+        else
+            # Fallback to container_port parameter
+            docker_cmd="$docker_cmd -p $container_port:${container_port}"
+        fi
+    fi
 
     # Add environment file if exists
     if [ -f "$env_file" ]; then
@@ -529,23 +566,47 @@ recreate_active_container() {
 
     echo "       Using image: $image"
 
-    # Get port from env file
-    local port=$(get_container_port "$env_file" "8080")
-    echo "       Using port: $port"
+    # Get Docker configuration from gokku.yml
+    local network_mode=$(get_app_docker_network_mode "$app_name")
+    local docker_ports=$(get_app_docker_ports "$app_name")
+    
+    echo "       Network mode: $network_mode"
 
     # Stop and remove old container
     echo "       Stopping old container..."
     sudo docker stop "$active_container" >/dev/null 2>&1 || true
     sudo docker rm "$active_container" >/dev/null 2>&1 || true
 
+    # Build docker run command
+    local docker_cmd="sudo docker run -d --name $active_container --restart always --network $network_mode"
+    
+    # Add port mappings
+    if [ "$network_mode" != "host" ]; then
+        if [ -n "$docker_ports" ]; then
+            # Use ports from gokku.yml
+            while IFS= read -r port_mapping; do
+                [ -n "$port_mapping" ] && docker_cmd="$docker_cmd -p $port_mapping"
+            done <<< "$docker_ports"
+            echo "       Using ports from gokku.yml"
+        else
+            # Fallback to PORT from env
+            local port=$(get_container_port "$env_file" "8080")
+            docker_cmd="$docker_cmd -p ${port}:${port}"
+            echo "       Using port: $port"
+        fi
+    else
+        echo "       Using host network (all ports exposed)"
+    fi
+    
+    # Add env file and image
+    docker_cmd="$docker_cmd --env-file $env_file $image"
+
     # Start new container with same name and updated env
     echo "       Starting new container with updated configuration..."
-    sudo docker run -d \
-        --name "$active_container" \
-        --restart always \
-        -p "${port}:${port}" \
-        --env-file "$env_file" \
-        "$image" >/dev/null
+    if ! eval "$docker_cmd >/dev/null"; then
+        echo "ERROR: Failed to recreate container"
+        return 1
+    fi
 
     if [ $? -eq 0 ]; then
         echo "✓ Container recreated successfully with new environment"
