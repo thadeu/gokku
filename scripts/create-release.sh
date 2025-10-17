@@ -30,20 +30,20 @@ log_warn() {
 # Extract version from main.go
 extract_version() {
     local version_line=$(grep -E '^\s*const\s+version\s*=\s*"[^"]+"' cmd/cli/main.go)
-    
+
     if [ -z "$version_line" ]; then
         log_error "Could not find version constant in cmd/cli/main.go"
         exit 1
     fi
-    
+
     # Extract version string using awk (works on macOS and Linux)
     local version=$(echo "$version_line" | awk -F'"' '{print $2}')
-    
+
     if [ -z "$version" ]; then
         log_error "Could not extract version from: $version_line"
         exit 1
     fi
-    
+
     echo "$version"
 }
 
@@ -56,49 +56,49 @@ tag_exists() {
 # Validate version format (semantic versioning)
 validate_version() {
     local version="$1"
-    
+
     # Check if version matches semantic versioning pattern
     if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
         log_error "Version '$version' does not follow semantic versioning (e.g., 1.0.0, 1.0.0-beta.1)"
         exit 1
     fi
-    
+
     log_success "Version format is valid: $version"
 }
 
 # Main function
 main() {
     log "Creating release for Gokku..."
-    
+
     # Check if we're in a git repository
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         log_error "Not in a git repository"
         exit 1
     fi
-    
+
     # Check if working directory is clean
     if ! git diff-index --quiet HEAD --; then
         log_error "Working directory is not clean. Please commit or stash changes first."
         git status --porcelain
         exit 1
     fi
-    
+
     # Extract version from main.go
     local version=$(extract_version)
     log "Extracted version from main.go: $version"
-    
+
     # Validate version format
     validate_version "$version"
-    
+
     # Create tag name
     local tag="v$version"
-    
+
     # Check if tag already exists
     if tag_exists "$tag"; then
         log_error "Tag '$tag' already exists"
         log "Existing tag points to: $(git rev-parse "$tag")"
         log "Current HEAD: $(git rev-parse HEAD)"
-        
+
         if [ "$(git rev-parse "$tag")" = "$(git rev-parse HEAD)" ]; then
             log_warn "Tag '$tag' already points to current HEAD"
             read -p "Do you want to push the existing tag? (y/N): " -n 1 -r
@@ -117,7 +117,7 @@ main() {
             exit 1
         fi
     fi
-    
+
     # Create and push tag
     log "Creating tag '$tag'..."
     git tag -a "$tag" -m "Release $tag
@@ -133,15 +133,15 @@ This release includes:
 
 Installation:
 curl -fsSL https://gokku-vm.com/install | bash"
-    
+
     log_success "Tag '$tag' created locally"
-    
+
     # Ask for confirmation before pushing
     echo ""
     log "Tag '$tag' will be pushed to origin and trigger GitHub Release creation."
     read -p "Do you want to push the tag? (y/N): " -n 1 -r
     echo
-    
+
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         log "Pushing tag to origin..."
         git push origin "$tag"

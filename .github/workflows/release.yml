@@ -75,18 +75,18 @@ jobs:
           tag_name: ${{ github.ref_name }}
           body: |
             ## Gokku ${{ steps.version.outputs.version }}
-            
+
             ### Installation
             ```bash
             curl -fsSL https://gokku-vm.com/install | bash
             ```
-            
+
             ### Binaries
             - **Linux AMD64**: gokku-linux-amd64
-            - **Linux ARM64**: gokku-linux-arm64  
+            - **Linux ARM64**: gokku-linux-arm64
             - **macOS Intel**: gokku-darwin-amd64
             - **macOS Apple Silicon**: gokku-darwin-arm64
-            
+
             ### What's Changed
             See the [commit history](https://github.com/thadeu/gokku/compare/${{ github.event.before }}...${{ github.sha }}) for details.
         env:
