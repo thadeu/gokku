@@ -124,13 +124,22 @@ func LoadAppConfig(appName string) (*App, error) {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	var config App
+	var serverConfig ServerConfig
 
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	if err := yaml.Unmarshal(data, &serverConfig); err != nil {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	return &config, nil
+	// Find the app by name
+	for _, app := range serverConfig.Apps {
+		if app.Name == appName {
+			// Ensure the app name is set
+			app.Name = appName
+			return &app, nil
+		}
+	}
+
+	return nil, fmt.Errorf("app '%s' not found in configuration", appName)
 }
 
 // GetApp finds an app by name
