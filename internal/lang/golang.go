@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	. "infra/internal"
 )
@@ -126,6 +127,10 @@ func (l *Golang) DetectLanguage(releaseDir string) (string, error) {
 func (l *Golang) EnsureDockerfile(releaseDir string, app *App) error {
 	dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
 
+	fmt.Printf("-----> EnsureDockerfile called for app: %s\n", app.Name)
+	fmt.Printf("-----> Release dir: %s\n", releaseDir)
+	fmt.Printf("-----> Dockerfile path: %s\n", dockerfilePath)
+
 	// Check if Dockerfile already exists
 	if _, err := os.Stat(dockerfilePath); err == nil {
 		fmt.Println("-----> Using existing Dockerfile")
@@ -141,9 +146,24 @@ func (l *Golang) EnsureDockerfile(releaseDir string, app *App) error {
 		if app.Build.BaseImage != "" {
 			build.BaseImage = app.Build.BaseImage
 		}
-		if app.Build.Path != "" {
-			build.Path = app.Build.Path
+		// Determine working directory
+		workDir := "."
+		if app.Build.Workdir != "" {
+			workDir = app.Build.Workdir
 		}
+		fmt.Printf("-----> Working directory from config: '%s'\n", app.Build.Workdir)
+		fmt.Printf("-----> Using workDir: '%s'\n", workDir)
+
+		// Build path is relative to work_dir
+		if app.Build.Path != "" {
+			// Since we COPY workdir ., the build path should be relative to workdir
+			build.Path = "./" + strings.TrimPrefix(app.Build.Path, "./")
+			fmt.Printf("-----> Configured path: '%s'\n", app.Build.Path)
+		} else {
+			// Default to working directory root
+			build.Path = "."
+		}
+		fmt.Printf("-----> Final build path: '%s'\n", build.Path)
 	}
 
 	// Generate Dockerfile content
@@ -169,10 +189,22 @@ func (l *Golang) generateDockerfile(build *Build, app *App) string {
 		buildPath = "."
 	}
 
+	fmt.Printf("-----> Dockerfile build path: %s\n", buildPath)
+
 	// Determine base image
 	baseImage := build.BaseImage
 	if baseImage == "" {
 		baseImage = "golang:1.25-alpine"
+	}
+
+	// For now, copy everything and build - optimize later
+	goModCopy := "go.mod go.sum*"
+	fmt.Printf("-----> Using simple copy: %s\n", goModCopy)
+
+	// Get the workdir for COPY
+	workDir := "."
+	if app.Build.Workdir != "" {
+		workDir = app.Build.Workdir
 	}
 
 	return fmt.Sprintf(`# Generated Dockerfile for Go application
@@ -183,15 +215,11 @@ FROM %s AS builder
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum* ./
-RUN go mod download
-
-# Copy source code
-COPY . .
+# Copy workdir
+COPY %s .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
     go build -ldflags="-w -s" -o app %s
 
 # Final stage
@@ -208,6 +236,6 @@ COPY --from=builder /app/app .
 EXPOSE ${PORT:-8080}
 
 # Run the application
-CMD ["./app"]
-`, app.Name, buildPath, baseImage, buildPath)
+CMD ["/root/app"]
+`, app.Name, buildPath, baseImage, workDir, buildPath)
 }

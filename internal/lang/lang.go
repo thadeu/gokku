@@ -20,36 +20,79 @@ type Lang interface {
 
 // DetectLanguage automatically detects the programming language based on project files
 func DetectLanguage(releaseDir string) (string, error) {
-	// Check for Go
-	if _, err := os.Stat(filepath.Join(releaseDir, "go.mod")); err == nil {
-		return "go", nil
-	}
-
-	// Check for Node.js
-	if _, err := os.Stat(filepath.Join(releaseDir, "package.json")); err == nil {
-		return "nodejs", nil
-	}
-
-	// Check for Python
-	if _, err := os.Stat(filepath.Join(releaseDir, "requirements.txt")); err == nil {
-		return "python", nil
-	}
-	if _, err := os.Stat(filepath.Join(releaseDir, "pyproject.toml")); err == nil {
-		return "python", nil
-	}
-
-	// Check for Ruby
-	if _, err := os.Stat(filepath.Join(releaseDir, "Gemfile")); err == nil {
-		return "ruby", nil
-	}
-
-	// Check for existing Dockerfile
+	// Check for existing Dockerfile first (highest priority)
 	if _, err := os.Stat(filepath.Join(releaseDir, "Dockerfile")); err == nil {
 		return "docker", nil
 	}
 
+	// Check for language files in root directory
+	if lang := detectLanguageInDir(releaseDir); lang != "" {
+		return lang, nil
+	}
+
+	// Check for language files in subdirectories (recursive, max depth 2)
+	if lang := detectLanguageRecursive(releaseDir, 2); lang != "" {
+		return lang, nil
+	}
+
 	// Default to generic
 	return "generic", nil
+}
+
+// detectLanguageInDir checks for language files in a specific directory
+func detectLanguageInDir(dir string) string {
+	// Check for Go
+	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+		return "go"
+	}
+
+	// Check for Node.js
+	if _, err := os.Stat(filepath.Join(dir, "package.json")); err == nil {
+		return "nodejs"
+	}
+
+	// Check for Python
+	if _, err := os.Stat(filepath.Join(dir, "requirements.txt")); err == nil {
+		return "python"
+	}
+	if _, err := os.Stat(filepath.Join(dir, "pyproject.toml")); err == nil {
+		return "python"
+	}
+
+	// Check for Ruby
+	if _, err := os.Stat(filepath.Join(dir, "Gemfile")); err == nil {
+		return "ruby"
+	}
+
+	return ""
+}
+
+// detectLanguageRecursive checks for language files in subdirectories
+func detectLanguageRecursive(dir string, maxDepth int) string {
+	if maxDepth <= 0 {
+		return ""
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			subdir := filepath.Join(dir, entry.Name())
+			if lang := detectLanguageInDir(subdir); lang != "" {
+				return lang
+			}
+
+			// Continue searching in subdirectories
+			if lang := detectLanguageRecursive(subdir, maxDepth-1); lang != "" {
+				return lang
+			}
+		}
+	}
+
+	return ""
 }
 
 // NewLang creates a language handler based on detected or configured language
