@@ -36,8 +36,6 @@ curl -fsSL https://gokku-vm.com/install | bash -s -- --server
 This installs:
 - `gokku` binary in `/usr/local/bin`
 - Core scripts in `/opt/gokku/scripts/`
-- Hook templates in `/opt/gokku/hooks/`
-- Dockerfile templates in `/opt/gokku/templates/`
 - Sample `gokku.yml` config
 
 ### Client/Local Installation
@@ -79,9 +77,6 @@ You should see:
 ├── apps/           # Deployed applications
 ├── repos/          # Git repositories
 ├── scripts/        # Core scripts
-├── hooks/          # Git hook templates
-├── templates/      # Dockerfile templates
-└── gokku.yml       # Sample configuration
 ```
 
 ## Manual Installation

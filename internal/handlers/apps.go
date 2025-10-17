@@ -284,7 +284,6 @@ func createDirectoryStructure(remoteInfo *internal.RemoteInfo, appName, deployUs
 		echo "Creating base directories..."
 		sudo mkdir -p %s/repos
 		sudo mkdir -p %s/apps/%s/{releases,shared}
-		sudo mkdir -p %s/templates
 		echo "Setting permissions..."
 		sudo chown -R %s:%s %s
 		echo "Directory structure created"
