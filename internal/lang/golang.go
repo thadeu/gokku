@@ -131,7 +131,6 @@ func (l *Golang) EnsureDockerfile(releaseDir string, app *App) error {
 	dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
 
 	fmt.Printf("-----> EnsureDockerfile called for app: %s\n", app.Name)
-	fmt.Printf("-----> Release dir: %s\n", releaseDir)
 	fmt.Printf("-----> Dockerfile path: %s\n", dockerfilePath)
 
 	// Check if Dockerfile already exists

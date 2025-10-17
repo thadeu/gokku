@@ -11,6 +11,8 @@ import (
 
 	"infra/internal"
 	"infra/internal/lang"
+
+	"gopkg.in/yaml.v3"
 )
 
 // handleDeploy deploys applications directly or via git push
@@ -276,21 +278,29 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 		return nil
 	}
 
-	// Save gokku.yml temporarily to parse it
-	tmpGokkuYml := filepath.Join(releaseDir, "gokku.yml")
-	if err := os.MkdirAll(releaseDir, 0755); err != nil {
-		return fmt.Errorf("failed to create release directory: %v", err)
-	}
-	if err := os.WriteFile(tmpGokkuYml, gokkuYmlContent, 0644); err != nil {
-		return fmt.Errorf("failed to write gokku.yml: %v", err)
+	// Parse config directly from the extracted content
+	var serverConfig internal.ServerConfig
+	if err := yaml.Unmarshal(gokkuYmlContent, &serverConfig); err != nil {
+		fmt.Printf("-----> Error parsing app config: %v, extracting full repository...\n", err)
+		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
+		}
+		return nil
 	}
 
-	// Parse config to get workdir
-	app, err := internal.LoadAppConfig(appName)
-	if err != nil {
-		fmt.Printf("-----> Error loading app config: %v, extracting full repository...\n", err)
-		os.RemoveAll(releaseDir) // Clean temp files
-		os.MkdirAll(releaseDir, 0755)
+	// Find the app in the config
+	var app *internal.App
+	for _, a := range serverConfig.Apps {
+		if a.Name == appName {
+			app = &a
+			break
+		}
+	}
+
+	if app == nil {
+		fmt.Printf("-----> App '%s' not found in config, extracting full repository...\n", appName)
 		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
