@@ -272,14 +272,7 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 
 // handleInitialSetup handles the initial setup when gokku.yml is found in the project
 func handleInitialSetup(appName string, gokkuYmlPath, releaseDir string) error {
-	fmt.Println("-----> Initial setup detected - configuring applications...")
-
-	serverConfigPath := "/opt/gokku/gokku.yml"
-
-	// Copy gokku.yml to server config location
-	if err := copyFile(gokkuYmlPath, serverConfigPath); err != nil {
-		return fmt.Errorf("failed to copy gokku.yml to server: %v", err)
-	}
+	fmt.Println("-----> Initial setup detected - configuring application...")
 
 	// Create app directories
 	appDir := filepath.Join("/opt/gokku", "apps", appName)
@@ -290,12 +283,24 @@ func handleInitialSetup(appName string, gokkuYmlPath, releaseDir string) error {
 	if err := os.MkdirAll(releasesDir, 0755); err != nil {
 		return fmt.Errorf("failed to create releases directory for %s: %v", appName, err)
 	}
+
 	if err := os.MkdirAll(sharedDir, 0755); err != nil {
 		return fmt.Errorf("failed to create shared directory for %s: %v", appName, err)
 	}
 
-	fmt.Printf("-----> Created directories for app '%s'\n", appName)
+	// Copy gokku.yml to app-specific config location
+	appConfigPath := filepath.Join("/opt/gokku", "apps", appName, "gokku.yml")
+	if err := copyFile(gokkuYmlPath, appConfigPath); err != nil {
+		return fmt.Errorf("failed to copy gokku.yml to app config: %v", err)
+	}
 
+	// Also copy gokku.yml to current release directory
+	currentConfigPath := filepath.Join(releaseDir, "gokku.yml")
+	if err := copyFile(gokkuYmlPath, currentConfigPath); err != nil {
+		return fmt.Errorf("failed to copy gokku.yml to current release: %v", err)
+	}
+
+	fmt.Printf("-----> Created directories for app '%s'\n", appName)
 	fmt.Println("-----> Initial setup complete!")
 	return nil
 }
@@ -363,32 +368,27 @@ func updateEnvironmentFile(envFile, appName string) error {
 
 // executePostDeployCommands runs post-deploy commands if configured
 func executePostDeployCommands(appName, releaseDir string) error {
-	// Get post-deploy commands using tool command
-	cmd := exec.Command("gokku", "tool", "get-post-deploy", appName)
-	output, err := cmd.Output()
+	app, err := internal.LoadAppConfig(appName)
+
 	if err != nil {
-		// No post-deploy commands configured
-		return nil
+		return fmt.Errorf("failed to load app config: %v", err)
 	}
 
-	commands := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(commands) == 0 || (len(commands) == 1 && commands[0] == "") {
+	if app.Deployment == nil || len(app.Deployment.PostDeploy) == 0 {
 		return nil
 	}
 
 	fmt.Println("-----> Running post-deploy commands...")
 
-	for _, cmdStr := range commands {
-		if strings.TrimSpace(cmdStr) == "" {
-			continue
-		}
-
+	for _, cmdStr := range app.Deployment.PostDeploy {
 		fmt.Printf("       Running: %s\n", cmdStr)
 
 		// Execute command in release directory
 		cmd := exec.Command("bash", "-c", cmdStr)
 		cmd.Dir = releaseDir
+
 		output, err := cmd.CombinedOutput()
+
 		if err != nil {
 			return fmt.Errorf("post-deploy command failed '%s': %v, output: %s", cmdStr, err, string(output))
 		}

@@ -13,10 +13,6 @@ func handleTool(args []string) {
 		fmt.Println("Usage: gokku tool <command> [args...]")
 		fmt.Println("Commands:")
 		fmt.Println("  parse-app-config <app-name>              Parse app configuration")
-		fmt.Println("  get-post-deploy <app-name>               Get post-deploy commands")
-		fmt.Println("  get-app-docker-network-mode <app-name>   Get Docker network mode")
-		fmt.Println("  get-app-docker-ports <app-name>          Get Docker ports")
-		fmt.Println("  get-global-config                         Get global configuration")
 		fmt.Println("  validate-config                           Validate gokku.yml")
 		os.Exit(1)
 	}
@@ -29,24 +25,6 @@ func handleTool(args []string) {
 			os.Exit(1)
 		}
 		handleParseAppConfig(args[1])
-	case "get-post-deploy":
-		if len(args) < 2 {
-			fmt.Println("Usage: gokku internal get-post-deploy <app-name>")
-			os.Exit(1)
-		}
-		handleGetPostDeploy(args[1])
-	case "get-app-docker-network-mode":
-		if len(args) < 2 {
-			fmt.Println("Usage: gokku tool get-app-docker-network-mode <app-name>")
-			os.Exit(1)
-		}
-		handleGetAppDockerNetworkMode(args[1])
-	case "get-app-docker-ports":
-		if len(args) < 2 {
-			fmt.Println("Usage: gokku tool get-app-docker-ports <app-name>")
-			os.Exit(1)
-		}
-		handleGetAppDockerPorts(args[1])
 	default:
 		fmt.Printf("Unknown internal command: %s\n", command)
 		os.Exit(1)
@@ -70,58 +48,4 @@ func handleParseAppConfig(appName string) {
 	}
 
 	fmt.Println(string(jsonData))
-}
-
-func handleGetPostDeploy(appName string) {
-	app, err := internal.LoadAppConfig(appName)
-
-	if err != nil {
-		fmt.Printf("ERROR: App not found: %v\n", err)
-		os.Exit(1)
-	}
-
-	if app.Deployment == nil || len(app.Deployment.PostDeploy) == 0 {
-		// No post-deploy commands, exit silently
-		return
-	}
-
-	// Output each command on a separate line
-	for _, cmd := range app.Deployment.PostDeploy {
-		fmt.Println(cmd)
-	}
-}
-
-func handleGetAppDockerNetworkMode(appName string) {
-	config, err := internal.LoadConfig()
-
-	if err != nil {
-		fmt.Printf("ERROR: App not found: %v\n", err)
-		os.Exit(1)
-	}
-
-	appConfig := config.GetAppConfig(appName)
-
-	networkMode := "bridge"
-
-	if appConfig != nil && appConfig.Network != nil && appConfig.Network.Mode != "" {
-		networkMode = appConfig.Network.Mode
-	}
-
-	fmt.Println(networkMode)
-}
-
-func handleGetAppDockerPorts(appName string) {
-	app, err := internal.LoadAppConfig(appName)
-
-	if err != nil {
-		fmt.Printf("ERROR: App not found: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Output each port mapping on a separate line
-	if app.Build != nil && app.Build.Ports != nil && len(app.Build.Ports) > 0 {
-		for _, port := range app.Build.Ports {
-			fmt.Println(port)
-		}
-	}
 }

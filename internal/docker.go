@@ -568,8 +568,15 @@ func (dc *DockerClient) RecreateActiveContainer(appName, envFile, appDir string)
 
 	fmt.Printf("-----> Recreating container: %s\n", activeContainer)
 
-	config, _ := LoadConfig()
-	appConfig := config.GetAppConfig(appName)
+	// Load server config for the app
+	serverConfig, err := LoadServerConfigByApp(appName)
+	if err != nil {
+		return fmt.Errorf("failed to load server config: %v", err)
+	}
+	appConfig, err := serverConfig.GetApp(appName)
+	if err != nil {
+		return fmt.Errorf("failed to get app config: %v", err)
+	}
 
 	// Get current image
 	cmd := exec.Command("docker", "inspect", activeContainer, "--format", "{{.Config.Image}}")
