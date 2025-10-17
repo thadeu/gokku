@@ -126,12 +126,20 @@ generate_dockerfile_with_mise() {
 # Generated Dockerfile with mise support
 FROM ubuntu:22.04
 
-# Install dependencies
+# Install dependencies (including build tools for mise)
 RUN apt-get update && apt-get install -y \
     curl \
     git \
     build-essential \
     ca-certificates \
+    pkg-config \
+    autoconf \
+    automake \
+    libtool \
+    yasm \
+    nasm \
+    libssl-dev \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install mise
