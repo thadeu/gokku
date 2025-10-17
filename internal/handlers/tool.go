@@ -121,22 +121,19 @@ func handleValidateConfig() {
 }
 
 func handleGetAppDockerNetworkMode(appName string) {
-	cfg, err := internal.LoadServerConfig()
-	if err != nil {
-		fmt.Printf("ERROR: Failed to load config: %v\n", err)
-		os.Exit(1)
-	}
+	config, err := internal.LoadConfig()
 
-	app, err := cfg.GetApp(appName)
 	if err != nil {
 		fmt.Printf("ERROR: App not found: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Get network mode from app config or default to bridge
+	appConfig := config.GetAppConfig(appName)
+
 	networkMode := "bridge"
-	if app.Build != nil && app.Build.Networks != nil && len(app.Build.Networks) > 0 {
-		networkMode = app.Build.Networks[0]
+
+	if appConfig != nil && appConfig.Network != nil && appConfig.Network.Mode != "" {
+		networkMode = appConfig.Network.Mode
 	}
 
 	fmt.Println(networkMode)

@@ -17,7 +17,7 @@ func LoadConfig() (*Config, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &Config{Apps: []AppConfig{}}, nil
+			return &Config{Apps: []App{}}, nil
 		}
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func LoadConfig() (*Config, error) {
 	return &config, nil
 }
 
-func (c *Config) GetAppConfig(appName string) *AppConfig {
+func (c *Config) GetAppConfig(appName string) *App {
 	for _, app := range c.Apps {
 		if app.Name == appName {
 			return &app

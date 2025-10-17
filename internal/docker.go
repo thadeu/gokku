@@ -322,7 +322,6 @@ func (dc *DockerClient) StandardDeploy(config DeploymentConfig) error {
 
 	// Get container port
 	containerPort := GetContainerPort(config.EnvFile, 8080)
-	fmt.Printf("-----> Using port: %d\n", containerPort)
 
 	// Build container configuration
 	containerConfig := ContainerConfig{
@@ -341,7 +340,6 @@ func (dc *DockerClient) StandardDeploy(config DeploymentConfig) error {
 			fmt.Println("-----> Using ports from gokku.yml")
 		} else {
 			containerConfig.Ports = []string{fmt.Sprintf("%d:%d", containerPort, containerPort)}
-			fmt.Printf("-----> Using port: %d\n", containerPort)
 		}
 	} else {
 		fmt.Println("-----> Using host network (all ports exposed)")
@@ -384,7 +382,6 @@ func (dc *DockerClient) BlueGreenDeploy(config DeploymentConfig) error {
 
 	// Get container port
 	containerPort := GetContainerPort(config.EnvFile, 8080)
-	fmt.Printf("-----> Using port: %d\n", containerPort)
 
 	// Start green container
 	if err := dc.startGreenContainer(config, containerPort); err != nil {
@@ -571,6 +568,9 @@ func (dc *DockerClient) RecreateActiveContainer(appName, envFile, appDir string)
 
 	fmt.Printf("-----> Recreating container: %s\n", activeContainer)
 
+	config, _ := LoadConfig()
+	appConfig := config.GetAppConfig(appName)
+
 	// Get current image
 	cmd := exec.Command("docker", "inspect", activeContainer, "--format", "{{.Config.Image}}")
 	output, err := cmd.Output()
@@ -583,6 +583,11 @@ func (dc *DockerClient) RecreateActiveContainer(appName, envFile, appDir string)
 
 	// Get Docker configuration from gokku.yml (simplified for now)
 	networkMode := "bridge" // TODO: Get from gokku.yml
+
+	if appConfig.Network != nil && appConfig.Network.Mode != "" {
+		networkMode = appConfig.Network.Mode
+	}
+
 	containerPort := GetContainerPort(envFile, 8080)
 
 	fmt.Printf("       Network mode: %s\n", networkMode)
@@ -605,7 +610,6 @@ func (dc *DockerClient) RecreateActiveContainer(appName, envFile, appDir string)
 	// Add port mappings
 	if networkMode != "host" {
 		containerConfig.Ports = []string{fmt.Sprintf("%d:%d", containerPort, containerPort)}
-		fmt.Printf("       Using port: %d\n", containerPort)
 	} else {
 		fmt.Println("       Using host network (all ports exposed)")
 	}

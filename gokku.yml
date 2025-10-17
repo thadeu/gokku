@@ -36,11 +36,10 @@ apps:
       goos: linux
       goarch: amd64
       cgo_enabled: 0
-    docker:
-      network_mode: host  # Options: bridge (default), host, none
-      # ports:  # Only used if network_mode != host
-      #   - "5064:5064"
-      #   - "10000-20000:10000-20000/udp"
+    ports:
+      - "5064:5064"
+    network:
+      mode: host
     env_vars:
       AWS_REGION: us-east-1
       LOG_LEVEL: info

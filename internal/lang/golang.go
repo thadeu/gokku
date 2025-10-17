@@ -48,17 +48,20 @@ func (l *Golang) Deploy(app *App, releaseDir string) error {
 	// Get environment file
 	envFile := filepath.Join("/opt/gokku/apps", app.Name, "shared", ".env")
 
+	networkMode := "bridge"
+
+	if app.Network != nil && app.Network.Mode != "" {
+		networkMode = app.Network.Mode
+	}
+
 	// Create deployment config
-	config := DeploymentConfig{
+	return dc.DeployContainer(DeploymentConfig{
 		AppName:     app.Name,
 		ImageTag:    "latest",
 		EnvFile:     envFile,
 		ReleaseDir:  releaseDir,
-		NetworkMode: "bridge",
-	}
-
-	// Deploy using Docker client
-	return dc.DeployContainer(config)
+		NetworkMode: networkMode,
+	})
 }
 
 func (l *Golang) Restart(app *App) error {

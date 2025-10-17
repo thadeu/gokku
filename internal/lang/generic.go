@@ -50,17 +50,20 @@ func (l *Generic) Deploy(app *App, releaseDir string) error {
 	// Get environment file
 	envFile := filepath.Join("/opt/gokku/apps", app.Name, "shared", ".env")
 
-	// Create deployment config
-	config := DeploymentConfig{
+	networkMode := "bridge"
+
+	if app.Network != nil && app.Network.Mode != "" {
+		networkMode = app.Network.Mode
+	}
+
+	// Deploy using Docker client
+	return dc.DeployContainer(DeploymentConfig{
 		AppName:     app.Name,
 		ImageTag:    "latest",
 		EnvFile:     envFile,
 		ReleaseDir:  releaseDir,
-		NetworkMode: "bridge",
-	}
-
-	// Deploy using Docker client
-	return dc.DeployContainer(config)
+		NetworkMode: networkMode,
+	})
 }
 
 func (l *Generic) Restart(app *App) error {
