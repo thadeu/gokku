@@ -7,7 +7,7 @@ import (
 	"infra/internal/handlers"
 )
 
-const version = "1.0.28"
+const version = "1.0.29"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -36,6 +36,10 @@ func main() {
 		handlers.HandleRollback(os.Args[2:])
 	case "ssh":
 		handlers.HandleSSH(os.Args[2:])
+	case "connect":
+		handlers.HandleConnect(os.Args[2:])
+	case "server":
+		handlers.HandleServer(os.Args[2:])
 	case "tool":
 		handlers.HandleTool(os.Args[2:])
 	case "version", "--version", "-v":
@@ -66,6 +70,7 @@ CLIENT COMMANDS (run from local machine):
   deploy         Deploy applications
   rollback       Rollback to previous release
   ssh            SSH to server
+  connect        Connect to server via SSH (alias for ssh)
   tool           Utility commands for scripts
   version        Show version
   help           Show this help

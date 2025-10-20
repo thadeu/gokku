@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 	"os"
-	"os/exec"
+	"strings"
 
 	"infra/internal"
 )
@@ -16,17 +16,22 @@ func handleSSH(args []string) {
 
 	if remote != "" {
 		remoteInfo, err := internal.GetRemoteInfo(remote)
+
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
+
 		host = remoteInfo.Host
 		fmt.Printf("Connecting to %s (%s)...\n", host, remoteInfo.App)
 	}
 
-	cmd := exec.Command("ssh", append([]string{"-t", host}, remainingArgs...)...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	cmd.Run()
+	output := internal.Bash(fmt.Sprintf("ssh %s %s", host, strings.Join(remainingArgs, " ")))
+
+	if output == "" {
+		fmt.Printf("Error running command: %s\n", strings.Join(remainingArgs, " "))
+		os.Exit(1)
+	}
+
+	fmt.Println(output)
 }
