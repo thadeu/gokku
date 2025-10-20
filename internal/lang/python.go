@@ -200,7 +200,7 @@ func (l *Python) GetDefaultConfig() *Build {
 		Type:       "docker",
 		BaseImage:  "python:3.11-slim",
 		Entrypoint: "main.py",
-		Workdir:    "/app",
+		Workdir:    ".",
 	}
 }
 

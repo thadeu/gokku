@@ -197,7 +197,7 @@ func (l *Ruby) GetDefaultConfig() *Build {
 		Type:       "docker",
 		BaseImage:  "ruby:3.2-alpine",
 		Entrypoint: "app.rb",
-		Workdir:    "/app",
+		Workdir:    ".",
 	}
 }
 

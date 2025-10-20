@@ -197,7 +197,7 @@ func (l *Nodejs) GetDefaultConfig() *Build {
 		Type:       "docker",
 		BaseImage:  "node:20-alpine",
 		Entrypoint: "index.js",
-		Workdir:    "/app",
+		Workdir:    ".",
 	}
 }
 
