@@ -291,9 +291,6 @@ WORKDIR /app
 # Copy project (entire project if workdir is subdirectory)
 COPY %s .
 
-# Set working directory to workdir if specified
-WORKDIR /app/%s
-
 # Download dependencies
 RUN go mod download
 
@@ -316,7 +313,7 @@ EXPOSE ${PORT:-8080}
 
 # Run the application
 CMD ["/root/app"]
-`, baseImage, workDir, workDir, cgoEnabled, goos, goarch, buildPath)
+`, baseImage, workDir, cgoEnabled, goos, goarch, buildPath)
 }
 
 // detectSystemArchitecture detects the current system architecture
