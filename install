@@ -290,7 +290,7 @@ EOF
     fi
 
     # Download server scripts
-    mkdir -p $INSTALL_DIR/tmp
+    mkdir -p $INSTALL_DIR/.gokku/tmp
     cd $INSTALL_DIR/tmp
 
     local scripts=(
