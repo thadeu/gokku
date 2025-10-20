@@ -68,6 +68,23 @@ validate_version() {
 
 # Main function
 main() {
+    local auto_yes=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -y|--yes)
+                auto_yes=true
+                shift
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+
     log "Creating release for Gokku..."
 
     # Check if we're in a git repository
@@ -101,16 +118,23 @@ main() {
 
         if [ "$(git rev-parse "$tag")" = "$(git rev-parse HEAD)" ]; then
             log_warn "Tag '$tag' already points to current HEAD"
-            read -p "Do you want to push the existing tag? (y/N): " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                log "Pushing existing tag..."
+            if [ "$auto_yes" = true ]; then
+                log "Auto-pushing existing tag..."
                 git push origin "$tag"
                 log_success "Tag '$tag' pushed successfully!"
                 exit 0
             else
-                log "Aborted"
-                exit 1
+                read -p "Do you want to push the existing tag? (y/N): " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    log "Pushing existing tag..."
+                    git push origin "$tag"
+                    log_success "Tag '$tag' pushed successfully!"
+                    exit 0
+                else
+                    log "Aborted"
+                    exit 1
+                fi
             fi
         else
             log_error "Tag '$tag' points to a different commit. Please update version in main.go or use a different version."
@@ -136,14 +160,9 @@ curl -fsSL https://gokku-vm.com/install | bash"
 
     log_success "Tag '$tag' created locally"
 
-    # Ask for confirmation before pushing
-    echo ""
-    log "Tag '$tag' will be pushed to origin and trigger GitHub Release creation."
-    read -p "Do you want to push the tag? (y/N): " -n 1 -r
-    echo
-
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        log "Pushing tag to origin..."
+    # Ask for confirmation before pushing (unless auto_yes is set)
+    if [ "$auto_yes" = true ]; then
+        log "Auto-pushing tag to origin..."
         git push origin "$tag"
         log_success "Tag '$tag' pushed successfully!"
         log ""
@@ -155,8 +174,28 @@ curl -fsSL https://gokku-vm.com/install | bash"
         log "Monitor progress at: https://github.com/thadeu/gokku/actions"
         log "Release will be available at: https://github.com/thadeu/gokku/releases/tag/$tag"
     else
-        log_warn "Tag created locally but not pushed. You can push it later with:"
-        log "  git push origin $tag"
+        echo ""
+        log "Tag '$tag' will be pushed to origin and trigger GitHub Release creation."
+
+        read -p "Do you want to push the tag? (y/N): " -n 1 -r
+        echo
+
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            log "Pushing tag to origin..."
+            git push origin "$tag"
+            log_success "Tag '$tag' pushed successfully!"
+            log ""
+            log "GitHub Actions will now:"
+            log "  1. Build binaries for all platforms"
+            log "  2. Create GitHub Release with binaries"
+            log "  3. Make them available for download"
+            log ""
+            log "Monitor progress at: https://github.com/thadeu/gokku/actions"
+            log "Release will be available at: https://github.com/thadeu/gokku/releases/tag/$tag"
+        else
+            log_warn "Tag created locally but not pushed. You can push it later with:"
+            log "  git push origin $tag"
+        fi
     fi
 }
 
@@ -174,10 +213,12 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  -h, --help    Show this help"
+    echo "  -y, --yes     Create and push release immediately without confirmation"
     echo "  --dry-run     Show what would be done without creating tag"
     echo ""
     echo "Examples:"
     echo "  $0                    # Create release from current version in main.go"
+    echo "  $0 -y                 # Create and push release immediately"
     echo "  $0 --dry-run          # Show what would be done"
     echo ""
     echo "Version in main.go: $(extract_version 2>/dev/null || echo 'Not found')"
@@ -197,13 +238,7 @@ case "${1:-}" in
         log "Would push to: origin"
         exit 0
         ;;
-    "")
-        main
-        ;;
     *)
-        log_error "Unknown option: $1"
-        echo ""
-        show_help
-        exit 1
+        main "$@"
         ;;
 esac
