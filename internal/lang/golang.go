@@ -258,15 +258,6 @@ func (l *Golang) generateDockerfile(build *Build, app *App) string {
 
 	fmt.Printf("-----> Using workdir: %s\n", workDir)
 
-	// Check if we need to copy the entire project for go.mod
-	copySource := workDir
-	if workDir != "." {
-		// If workdir is a subdirectory, we need to copy the entire project
-		// to ensure go.mod is available
-		copySource = "."
-		fmt.Printf("-----> Workdir is subdirectory, copying entire project for go.mod access\n")
-	}
-
 	// Detect system architecture
 	detectedGoos, detectedGoarch := l.detectSystemArchitecture()
 	fmt.Printf("-----> Detected system: %s/%s\n", detectedGoos, detectedGoarch)
@@ -311,7 +302,7 @@ RUN go mod download
 
 # Build the application
 RUN CGO_ENABLED=%s GOOS=%s GOARCH=%s \
-    go build -ldflags="-w -s" -o app %s
+  go build -ldflags="-w -s" -o app %s
 
 # Final stage
 FROM alpine:latest
@@ -328,7 +319,7 @@ EXPOSE ${PORT:-8080}
 
 # Run the application
 CMD ["/root/app"]
-`, app.Name, buildPath, baseImage, copySource, l.getWorkdirCommand(workDir), cgoEnabled, goos, goarch, buildPath)
+`, app.Name, buildPath, baseImage, workDir, l.getWorkdirCommand(workDir), cgoEnabled, goos, goarch, buildPath)
 }
 
 // detectSystemArchitecture detects the current system architecture
