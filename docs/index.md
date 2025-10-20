@@ -44,6 +44,12 @@ Install Gokku on your server:
 curl -fsSL https://gokku-vm.com/install | bash -s -- --server
 ```
 
+Install Gokku on your client:
+
+```bash
+curl -fsSL https://gokku-vm.com/install | bash -s -- --client
+```
+
 Check version
 
 ```bash
