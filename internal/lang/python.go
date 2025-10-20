@@ -29,6 +29,13 @@ func (l *Python) Build(app *App, releaseDir string) error {
 	if app.Build != nil && app.Build.Dockerfile != "" {
 		// Use custom Dockerfile path
 		dockerfilePath := filepath.Join(releaseDir, app.Build.Dockerfile)
+		// Check if Dockerfile exists in workdir
+		if app.Build.Workdir != "" {
+			workdirDockerfilePath := filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile)
+			if _, err := os.Stat(workdirDockerfilePath); err == nil {
+				dockerfilePath = workdirDockerfilePath
+			}
+		}
 		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
 		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
 	} else {
@@ -149,7 +156,15 @@ func (l *Python) EnsureDockerfile(releaseDir string, app *App) error {
 			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Build.Dockerfile)
 			return nil
 		}
-		return fmt.Errorf("custom Dockerfile not found: %s", customDockerfilePath)
+		// If custom Dockerfile not found, try relative to workdir
+		if app.Build.Workdir != "" {
+			workdirDockerfilePath := filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile)
+			if _, err := os.Stat(workdirDockerfilePath); err == nil {
+				fmt.Printf("-----> Using custom Dockerfile in workdir: %s/%s\n", app.Build.Workdir, app.Build.Dockerfile)
+				return nil
+			}
+		}
+		return fmt.Errorf("custom Dockerfile not found: %s or %s", customDockerfilePath, filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile))
 	}
 
 	// Check if default Dockerfile exists

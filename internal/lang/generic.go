@@ -20,7 +20,18 @@ func (l *Generic) Build(app *App, releaseDir string) error {
 	var dockerfilePath string
 	if app.Build != nil && app.Build.Dockerfile != "" {
 		dockerfilePath = filepath.Join(releaseDir, app.Build.Dockerfile)
-		fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Build.Dockerfile)
+		// Check if Dockerfile exists in workdir
+		if app.Build.Workdir != "" {
+			workdirDockerfilePath := filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile)
+			if _, err := os.Stat(workdirDockerfilePath); err == nil {
+				dockerfilePath = workdirDockerfilePath
+				fmt.Printf("-----> Using custom Dockerfile in workdir: %s/%s\n", app.Build.Workdir, app.Build.Dockerfile)
+			} else {
+				fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Build.Dockerfile)
+			}
+		} else {
+			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Build.Dockerfile)
+		}
 	} else {
 		dockerfilePath = filepath.Join(releaseDir, "Dockerfile")
 		fmt.Println("-----> Using default Dockerfile")
@@ -33,7 +44,7 @@ func (l *Generic) Build(app *App, releaseDir string) error {
 	// Build Docker image
 	imageTag := fmt.Sprintf("%s:latest", app.Name)
 
-	// Check if custom Dockerfile path is specified
+	// Build Docker image with the determined Dockerfile path
 	var cmd *exec.Cmd
 	if app.Build != nil && app.Build.Dockerfile != "" {
 		// Use custom Dockerfile path
