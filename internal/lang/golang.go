@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"text/template"
 
 	. "infra/internal"
 )
@@ -40,14 +39,16 @@ func (l *Golang) Build(app *App, releaseDir string) error {
 			}
 		}
 
-		// Process custom Dockerfile template if needed
-		processedDockerfilePath, err := l.processDockerfileTemplate(dockerfilePath, app)
-		if err != nil {
-			return fmt.Errorf("failed to process Dockerfile template: %v", err)
+		// Build Docker command with build args
+		buildArgs := l.getDockerBuildArgs(app)
+		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
+
+		// Add build args to command
+		for key, value := range buildArgs {
+			cmd.Args = append(cmd.Args, "--build-arg", fmt.Sprintf("%s=%s", key, value))
 		}
 
 		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
-		cmd = exec.Command("docker", "build", "-f", processedDockerfilePath, "-t", imageTag, releaseDir)
 	} else {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
@@ -351,23 +352,8 @@ func (l *Golang) detectSystemArchitecture() (goos, goarch string) {
 	return goos, goarch
 }
 
-// processDockerfileTemplate processes a custom Dockerfile template with build variables
-func (l *Golang) processDockerfileTemplate(dockerfilePath string, app *App) (string, error) {
-	// Read the original Dockerfile
-	content, err := os.ReadFile(dockerfilePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read Dockerfile: %v", err)
-	}
-
-	// Check if the Dockerfile contains template placeholders
-	contentStr := string(content)
-	if !strings.Contains(contentStr, "{{") {
-		// No templates, return original path
-		return dockerfilePath, nil
-	}
-
-	fmt.Println("-----> Processing Dockerfile template...")
-
+// getDockerBuildArgs returns build arguments for Docker build command
+func (l *Golang) getDockerBuildArgs(app *App) map[string]string {
 	// Detect system architecture
 	detectedGoos, detectedGoarch := l.detectSystemArchitecture()
 	fmt.Printf("-----> Detected system: %s/%s\n", detectedGoos, detectedGoarch)
@@ -376,6 +362,7 @@ func (l *Golang) processDockerfileTemplate(dockerfilePath string, app *App) (str
 	goos := detectedGoos
 	goarch := detectedGoarch
 	cgoEnabled := "0"
+	goVersion := "1.25"
 
 	if app.Build != nil {
 		if app.Build.Goos != "" {
@@ -391,35 +378,18 @@ func (l *Golang) processDockerfileTemplate(dockerfilePath string, app *App) (str
 				cgoEnabled = "1"
 			}
 		}
+		if app.Build.GoVersion != "" {
+			goVersion = app.Build.GoVersion
+		}
 	}
 
-	fmt.Printf("-----> Final template variables: GOOS=%s GOARCH=%s CGO_ENABLED=%s\n", goos, goarch, cgoEnabled)
+	fmt.Printf("-----> Build args: GOOS=%s GOARCH=%s CGO_ENABLED=%s GO_VERSION=%s\n", goos, goarch, cgoEnabled, goVersion)
 
-	// Create template data
-	templateData := map[string]string{
+	// Return build args for Docker
+	return map[string]string{
 		"GOOS":        goos,
 		"GOARCH":      goarch,
 		"CGO_ENABLED": cgoEnabled,
-		"GO_VERSION":  "1.25",
+		"GO_VERSION":  goVersion,
 	}
-
-	// Process template
-	tmpl, err := template.New("dockerfile").Parse(contentStr)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse Dockerfile template: %v", err)
-	}
-
-	var processedContent strings.Builder
-	if err := tmpl.Execute(&processedContent, templateData); err != nil {
-		return "", fmt.Errorf("failed to execute Dockerfile template: %v", err)
-	}
-
-	// Create temporary processed Dockerfile
-	tempDockerfilePath := dockerfilePath + ".processed"
-	if err := os.WriteFile(tempDockerfilePath, []byte(processedContent.String()), 0644); err != nil {
-		return "", fmt.Errorf("failed to write processed Dockerfile: %v", err)
-	}
-
-	fmt.Printf("-----> Processed Dockerfile saved to: %s\n", tempDockerfilePath)
-	return tempDockerfilePath, nil
 }
