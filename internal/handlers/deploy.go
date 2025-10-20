@@ -127,14 +127,20 @@ func executeDirectDeployment(appName string) error {
 	appDir := filepath.Join(baseDir, "apps", appName)
 	reposDir := filepath.Join(baseDir, "repos", appName+".git")
 
-	// Check if app exists
+	// Check if app exists - if not, we'll create it during initial setup
+	appExists := true
 	if _, err := os.Stat(appDir); os.IsNotExist(err) {
-		return fmt.Errorf("app '%s' not found. Create it first with: gokku apps create %s", appName, appName)
+		appExists = false
 	}
 
 	// Check if repository exists
 	if _, err := os.Stat(reposDir); os.IsNotExist(err) {
 		return fmt.Errorf("repository for app '%s' not found", appName)
+	}
+
+	// Create app directory if it doesn't exist
+	if !appExists {
+		fmt.Printf("-----> App '%s' not found, will be created during initial setup\n", appName)
 	}
 
 	// Create release directory
@@ -156,9 +162,22 @@ func executeDirectDeployment(appName string) error {
 	appConfigPath := filepath.Join(appDir, "gokku.yml")
 	releaseConfigPath := filepath.Join(releaseDir, "gokku.yml")
 
-	if _, err := os.Stat(releaseConfigPath); err == nil {
-		if err := copyFile(releaseConfigPath, appConfigPath); err != nil {
-			return fmt.Errorf("failed to copy gokku.yml to app directory: %v", err)
+	// Check if this is the first deployment and handle initial setup
+	if !appExists {
+		if _, err := os.Stat(releaseConfigPath); err == nil {
+			fmt.Println("-----> Initial setup detected - configuring application...")
+			if err := handleInitialSetup(appName, releaseConfigPath, releaseDir); err != nil {
+				return fmt.Errorf("failed to setup initial configuration: %v", err)
+			}
+		} else {
+			return fmt.Errorf("gokku.yml not found in release directory - cannot setup app without configuration")
+		}
+	} else {
+		// App exists, just copy config if needed
+		if _, err := os.Stat(releaseConfigPath); err == nil {
+			if err := copyFile(releaseConfigPath, appConfigPath); err != nil {
+				return fmt.Errorf("failed to copy gokku.yml to app directory: %v", err)
+			}
 		}
 	}
 
@@ -320,13 +339,7 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
 		}
 
-		// Check if this is the first deployment
-		gokkuYmlPath := filepath.Join(releaseDir, "gokku.yml")
-		if _, err := os.Stat(gokkuYmlPath); err == nil {
-			if err := handleInitialSetup(appName, gokkuYmlPath, releaseDir); err != nil {
-				fmt.Printf("Warning: Initial setup failed: %v\n", err)
-			}
-		}
+		// Initial setup is now handled in executeDirectDeployment
 
 		return nil
 	}
@@ -369,14 +382,7 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 		return fmt.Errorf("tar extraction failed: %v", err)
 	}
 
-	// Check if this is the first deployment
-	gokkuYmlPath := filepath.Join(releaseDir, "gokku.yml")
-
-	if _, err := os.Stat(gokkuYmlPath); err == nil {
-		if err := handleInitialSetup(appName, gokkuYmlPath, releaseDir); err != nil {
-			fmt.Printf("Warning: Initial setup failed: %v\n", err)
-		}
-	}
+	// Initial setup is now handled in executeDirectDeployment
 
 	return nil
 }
