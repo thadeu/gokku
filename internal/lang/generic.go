@@ -90,6 +90,7 @@ func (l *Generic) Deploy(app *App, releaseDir string) error {
 		EnvFile:     envFile,
 		ReleaseDir:  releaseDir,
 		NetworkMode: networkMode,
+		DockerPorts: app.Ports,
 	})
 }
 
