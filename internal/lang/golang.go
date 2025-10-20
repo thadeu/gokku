@@ -284,9 +284,6 @@ func (l *Golang) generateDockerfile(build *Build, app *App) string {
 	fmt.Printf("-----> Final build config: GOOS=%s GOARCH=%s CGO_ENABLED=%s\n", goos, goarch, cgoEnabled)
 
 	return fmt.Sprintf(`# Generated Dockerfile for Go application
-# App: %s
-# Build path: %s
-
 FROM %s AS builder
 
 WORKDIR /app
@@ -295,7 +292,7 @@ WORKDIR /app
 COPY %s .
 
 # Set working directory to workdir if specified
-%s
+WORKDIR /app/%s
 
 # Download dependencies
 RUN go mod download
@@ -319,7 +316,7 @@ EXPOSE ${PORT:-8080}
 
 # Run the application
 CMD ["/root/app"]
-`, app.Name, buildPath, baseImage, workDir, l.getWorkdirCommand(workDir), cgoEnabled, goos, goarch, buildPath)
+`, baseImage, workDir, workDir, cgoEnabled, goos, goarch, buildPath)
 }
 
 // detectSystemArchitecture detects the current system architecture
