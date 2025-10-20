@@ -16,17 +16,33 @@ type Generic struct {
 func (l *Generic) Build(app *App, releaseDir string) error {
 	fmt.Println("-----> Building generic application...")
 
-	// Check if Dockerfile exists
-	dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
+	// Check if custom Dockerfile is specified
+	var dockerfilePath string
+	if app.Build != nil && app.Build.Dockerfile != "" {
+		dockerfilePath = filepath.Join(releaseDir, app.Build.Dockerfile)
+		fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Build.Dockerfile)
+	} else {
+		dockerfilePath = filepath.Join(releaseDir, "Dockerfile")
+		fmt.Println("-----> Using default Dockerfile")
+	}
+
 	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
 		return fmt.Errorf("no Dockerfile found and no language-specific strategy available")
 	}
 
-	fmt.Println("-----> Using existing Dockerfile")
-
 	// Build Docker image
 	imageTag := fmt.Sprintf("%s:latest", app.Name)
-	cmd := exec.Command("docker", "build", "-t", imageTag, releaseDir)
+
+	// Check if custom Dockerfile path is specified
+	var cmd *exec.Cmd
+	if app.Build != nil && app.Build.Dockerfile != "" {
+		// Use custom Dockerfile path
+		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
+	} else {
+		// Use default Dockerfile in release directory
+		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
+	}
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

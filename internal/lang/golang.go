@@ -24,7 +24,19 @@ func (l *Golang) Build(app *App, releaseDir string) error {
 
 	// Build Docker image
 	imageTag := fmt.Sprintf("%s:latest", app.Name)
-	cmd := exec.Command("docker", "build", "-t", imageTag, releaseDir)
+
+	// Check if custom Dockerfile path is specified
+	var cmd *exec.Cmd
+	if app.Build != nil && app.Build.Dockerfile != "" {
+		// Use custom Dockerfile path
+		dockerfilePath := filepath.Join(releaseDir, app.Build.Dockerfile)
+		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
+		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
+	} else {
+		// Use default Dockerfile in release directory
+		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
+	}
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -128,12 +140,22 @@ func (l *Golang) DetectLanguage(releaseDir string) (string, error) {
 }
 
 func (l *Golang) EnsureDockerfile(releaseDir string, app *App) error {
-	dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
-
 	fmt.Printf("-----> EnsureDockerfile called for app: %s\n", app.Name)
-	fmt.Printf("-----> Dockerfile path: %s\n", dockerfilePath)
 
-	// Check if Dockerfile already exists
+	// Check if custom Dockerfile is specified
+	if app.Build != nil && app.Build.Dockerfile != "" {
+		customDockerfilePath := filepath.Join(releaseDir, app.Build.Dockerfile)
+		fmt.Printf("-----> Custom Dockerfile path: %s\n", customDockerfilePath)
+		if _, err := os.Stat(customDockerfilePath); err == nil {
+			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Build.Dockerfile)
+			return nil
+		}
+		return fmt.Errorf("custom Dockerfile not found: %s", customDockerfilePath)
+	}
+
+	// Check if default Dockerfile exists
+	dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
+	fmt.Printf("-----> Default Dockerfile path: %s\n", dockerfilePath)
 	if _, err := os.Stat(dockerfilePath); err == nil {
 		fmt.Println("-----> Using existing Dockerfile")
 		return nil
