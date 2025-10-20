@@ -50,6 +50,9 @@ type Build struct {
 	Path       string            `yaml:"path"`
 	BinaryName string            `yaml:"binary_name,omitempty"`
 	GoVersion  string            `yaml:"go_version,omitempty"`
+	Goos       string            `yaml:"goos,omitempty"`
+	Goarch     string            `yaml:"goarch,omitempty"`
+	CgoEnabled *bool             `yaml:"cgo_enabled,omitempty"`
 	Dockerfile string            `yaml:"dockerfile,omitempty"`
 	BaseImage  string            `yaml:"base_image,omitempty"`
 	Workdir    string            `yaml:"workdir,omitempty"`

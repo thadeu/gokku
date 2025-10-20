@@ -5,7 +5,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"text/template"
 
 	. "infra/internal"
 )
@@ -37,8 +39,15 @@ func (l *Golang) Build(app *App, releaseDir string) error {
 				dockerfilePath = workdirDockerfilePath
 			}
 		}
+
+		// Process custom Dockerfile template if needed
+		processedDockerfilePath, err := l.processDockerfileTemplate(dockerfilePath, app)
+		if err != nil {
+			return fmt.Errorf("failed to process Dockerfile template: %v", err)
+		}
+
 		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
-		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
+		cmd = exec.Command("docker", "build", "-f", processedDockerfilePath, "-t", imageTag, releaseDir)
 	} else {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
@@ -248,6 +257,31 @@ func (l *Golang) generateDockerfile(build *Build, app *App) string {
 
 	fmt.Printf("-----> Using workdir: %s\n", workDir)
 
+	// Detect system architecture
+	detectedGoos, detectedGoarch := l.detectSystemArchitecture()
+	fmt.Printf("-----> Detected system: %s/%s\n", detectedGoos, detectedGoarch)
+
+	// Get build configuration with dynamic defaults
+	goos := detectedGoos
+	goarch := detectedGoarch
+	cgoEnabled := "0"
+
+	if build.Goos != "" {
+		goos = build.Goos
+		fmt.Printf("-----> Using configured GOOS: %s (overriding detected: %s)\n", goos, detectedGoos)
+	}
+	if build.Goarch != "" {
+		goarch = build.Goarch
+		fmt.Printf("-----> Using configured GOARCH: %s (overriding detected: %s)\n", goarch, detectedGoarch)
+	}
+	if build.CgoEnabled != nil {
+		if *build.CgoEnabled {
+			cgoEnabled = "1"
+		}
+	}
+
+	fmt.Printf("-----> Final build config: GOOS=%s GOARCH=%s CGO_ENABLED=%s\n", goos, goarch, cgoEnabled)
+
 	return fmt.Sprintf(`# Generated Dockerfile for Go application
 # App: %s
 # Build path: %s
@@ -260,7 +294,7 @@ WORKDIR /app
 COPY %s .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
+RUN CGO_ENABLED=%s GOOS=%s GOARCH=%s \
     go build -ldflags="-w -s" -o app %s
 
 # Final stage
@@ -278,5 +312,114 @@ EXPOSE ${PORT:-8080}
 
 # Run the application
 CMD ["/root/app"]
-`, app.Name, buildPath, baseImage, workDir, buildPath)
+`, app.Name, buildPath, baseImage, workDir, cgoEnabled, goos, goarch, buildPath)
+}
+
+// detectSystemArchitecture detects the current system architecture
+func (l *Golang) detectSystemArchitecture() (goos, goarch string) {
+	// Use runtime package to detect current system
+	goos = runtime.GOOS
+	goarch = runtime.GOARCH
+
+	// Map some common architectures to Docker-compatible names
+	switch goarch {
+	case "amd64":
+		goarch = "amd64"
+	case "arm64":
+		goarch = "arm64"
+	case "386":
+		goarch = "386"
+	case "arm":
+		goarch = "arm"
+	default:
+		// Default to amd64 for unknown architectures
+		goarch = "amd64"
+	}
+
+	// Map OS names to Docker-compatible names
+	switch goos {
+	case "linux":
+		goos = "linux"
+	case "darwin":
+		goos = "linux" // Docker containers run on Linux
+	case "windows":
+		goos = "linux" // Docker containers run on Linux
+	default:
+		goos = "linux" // Default to Linux for containers
+	}
+
+	return goos, goarch
+}
+
+// processDockerfileTemplate processes a custom Dockerfile template with build variables
+func (l *Golang) processDockerfileTemplate(dockerfilePath string, app *App) (string, error) {
+	// Read the original Dockerfile
+	content, err := os.ReadFile(dockerfilePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read Dockerfile: %v", err)
+	}
+
+	// Check if the Dockerfile contains template placeholders
+	contentStr := string(content)
+	if !strings.Contains(contentStr, "{{") {
+		// No templates, return original path
+		return dockerfilePath, nil
+	}
+
+	fmt.Println("-----> Processing Dockerfile template...")
+
+	// Detect system architecture
+	detectedGoos, detectedGoarch := l.detectSystemArchitecture()
+	fmt.Printf("-----> Detected system: %s/%s\n", detectedGoos, detectedGoarch)
+
+	// Get build configuration with dynamic defaults
+	goos := detectedGoos
+	goarch := detectedGoarch
+	cgoEnabled := "0"
+
+	if app.Build != nil {
+		if app.Build.Goos != "" {
+			goos = app.Build.Goos
+			fmt.Printf("-----> Using configured GOOS: %s (overriding detected: %s)\n", goos, detectedGoos)
+		}
+		if app.Build.Goarch != "" {
+			goarch = app.Build.Goarch
+			fmt.Printf("-----> Using configured GOARCH: %s (overriding detected: %s)\n", goarch, detectedGoarch)
+		}
+		if app.Build.CgoEnabled != nil {
+			if *app.Build.CgoEnabled {
+				cgoEnabled = "1"
+			}
+		}
+	}
+
+	fmt.Printf("-----> Final template variables: GOOS=%s GOARCH=%s CGO_ENABLED=%s\n", goos, goarch, cgoEnabled)
+
+	// Create template data
+	templateData := map[string]string{
+		"GOOS":        goos,
+		"GOARCH":      goarch,
+		"CGO_ENABLED": cgoEnabled,
+		"GO_VERSION":  "1.25",
+	}
+
+	// Process template
+	tmpl, err := template.New("dockerfile").Parse(contentStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse Dockerfile template: %v", err)
+	}
+
+	var processedContent strings.Builder
+	if err := tmpl.Execute(&processedContent, templateData); err != nil {
+		return "", fmt.Errorf("failed to execute Dockerfile template: %v", err)
+	}
+
+	// Create temporary processed Dockerfile
+	tempDockerfilePath := dockerfilePath + ".processed"
+	if err := os.WriteFile(tempDockerfilePath, []byte(processedContent.String()), 0644); err != nil {
+		return "", fmt.Errorf("failed to write processed Dockerfile: %v", err)
+	}
+
+	fmt.Printf("-----> Processed Dockerfile saved to: %s\n", tempDockerfilePath)
+	return tempDockerfilePath, nil
 }
