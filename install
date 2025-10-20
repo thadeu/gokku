@@ -1,13 +1,11 @@
 #!/bin/bash
 # Gokku Universal Installer
-# Automatically detects if installing on server or client
+# Defaults to server mode, use --client for client installation
 #
 # Usage:
-#   curl -fsSL https://gokku-vm.com/install | bash
-#
-#   Or with options:
-#   curl -fsSL https://...install | bash -s -- --server
-#   curl -fsSL https://...install | bash -s -- --client
+#   curl -fsSL https://gokku-vm.com/install | bash              # Server mode (default)
+#   curl -fsSL https://gokku-vm.com/install | bash -s -- --server   # Server mode (explicit)
+#   curl -fsSL https://gokku-vm.com/install | bash -s -- --client   # Client mode
 
 set -e
 
@@ -42,15 +40,15 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --server    Install on Linux server (requires Docker)"
+            echo "  --server    Install on Linux server (default mode)"
             echo "  --client    Install CLI only (local machine or macOS)"
             echo "  --help      Show this help"
             echo ""
-            echo "Auto-detection:"
-            echo "  - Server: Linux with /opt directory"
-            echo "  - Client: macOS or other environments"
+            echo "Default behavior:"
+            echo "  - Server mode: Full server installation with Docker support"
+            echo "  - Client mode: CLI-only installation for remote deployments"
             echo ""
-            echo "If no option is provided, installer will auto-detect."
+            echo "If no option is provided, installer defaults to server mode."
             exit 0
             ;;
         *)
@@ -92,16 +90,9 @@ detect_mode() {
         return
     fi
 
-    # Auto-detect based on environment
-    # Server: Linux with /opt directory
-    # Client: macOS or other environments
-    if [ "$OS" = "linux" ] && [ -d "/opt" ]; then
-        MODE="server"
-        log "Auto-detected: server environment (Linux + /opt)"
-    else
-        MODE="client"
-        log "Auto-detected: client environment"
-    fi
+    # Default to server mode
+    MODE="server"
+    log "Default mode: server"
 }
 
 detect_os() {
@@ -241,6 +232,12 @@ setup_client() {
 
     mkdir -p $INSTALL_DIR
 
+    # Create ~/.gokkurc file to mark this as a client installation
+    cat > ~/.gokkurc << 'EOF'
+mode=client
+EOF
+    log_success "Client mode configuration created at ~/.gokkurc"
+
     # Create initial config if doesn't exist
     if [ ! -f "$INSTALL_DIR/config.yml" ]; then
         cat > $INSTALL_DIR/config.yml << 'EOF'
@@ -262,6 +259,12 @@ EOF
 
 setup_server() {
     log "Setting up server deployment..."
+
+    # Create ~/.gokkurc file to mark this as a server installation
+    cat > ~/.gokkurc << 'EOF'
+mode=server
+EOF
+    log_success "Server mode configuration created at ~/.gokkurc"
 
     sudo usermod -aG docker $(whoami)
 

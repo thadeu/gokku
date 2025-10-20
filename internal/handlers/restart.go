@@ -8,7 +8,7 @@ import (
 	"infra/internal"
 )
 
-// handleRestart restarts services/containers
+// handleRestart restarts services/containers by doing a full rebuild and redeploy
 func handleRestart(args []string) {
 	remote, remainingArgs := internal.ExtractRemoteFlag(args)
 
@@ -44,31 +44,18 @@ func handleRestart(args []string) {
 		os.Exit(1)
 	}
 
-	serviceName := fmt.Sprintf("%s", app)
-	fmt.Printf("Restarting %s...\n", serviceName)
+	fmt.Printf("Restarting %s...\n", app)
 
 	if localExecution {
-		// Local execution on server - recreate container with new env using Go
-		baseDir := "/opt/gokku"
+		// Local execution on server - do a full rebuild and redeploy
+		fmt.Printf("-----> Restarting %s (full rebuild and redeploy)...\n", app)
 
-		if envVar := os.Getenv("GOKKU_BASE_DIR"); envVar != "" {
-			baseDir = envVar
-		}
-
-		envFile := fmt.Sprintf("%s/apps/%s/shared/.env", baseDir, app)
-		appDir := fmt.Sprintf("%s/apps/%s", baseDir, app)
-
-		// Use Go Docker client to recreate container
-		dc, err := internal.NewDockerClient()
-		if err != nil {
-			fmt.Printf("Error creating Docker client: %v\n", err)
+		if err := executeDirectDeployment(app); err != nil {
+			fmt.Printf("Error restarting app: %v\n", err)
 			os.Exit(1)
 		}
 
-		if err := dc.RecreateActiveContainer(app, envFile, appDir); err != nil {
-			fmt.Printf("Error recreating container: %v\n", err)
-			os.Exit(1)
-		}
+		fmt.Println("\n✓ Restart complete!")
 	} else {
 		// Remote execution via SSH - use gokku restart directly
 		sshCmd := fmt.Sprintf("gokku restart %s", app)
@@ -78,7 +65,7 @@ func handleRestart(args []string) {
 		cmd.Stderr = os.Stderr
 
 		if err := cmd.Run(); err != nil {
-			fmt.Printf("Error recreating container: %v\n", err)
+			fmt.Printf("Error restarting app: %v\n", err)
 			os.Exit(1)
 		}
 	}

@@ -557,6 +557,7 @@ func (dc *DockerClient) updateContainerRestartPolicy(containerName, policy strin
 }
 
 // RecreateActiveContainer recreates the active container with new environment variables
+// This is kept for backward compatibility but is deprecated in favor of full redeploy
 func (dc *DockerClient) RecreateActiveContainer(appName, envFile, appDir string) error {
 	// Determine which container is active
 	var activeContainer string

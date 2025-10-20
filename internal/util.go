@@ -1,9 +1,10 @@
 package internal
 
 import (
+	"bufio"
 	"os"
 	"path/filepath"
-	"runtime"
+	"strings"
 )
 
 // GetConfigPath returns the path to the configuration file
@@ -30,29 +31,60 @@ func ExtractRemoteFlag(args []string) (string, []string) {
 }
 
 // IsRunningOnServer returns true if running on the server environment
-// Server environment: Linux + /opt/gokku directory exists and is writable
+// Uses ~/.gokkurc file to determine mode, with fallback to client mode if file doesn't exist
 func IsRunningOnServer() bool {
-	// Check if running on Linux
-	if runtime.GOOS != "linux" {
-		return false
-	}
+	return IsServerMode()
+}
 
-	// Check if /opt/gokku exists and is writable
-	info, err := os.Stat("/opt/gokku")
-	if os.IsNotExist(err) {
-		return false
-	}
-	if !info.IsDir() {
-		return false
-	}
+// GetGokkuRcPath returns the path to the ~/.gokkurc file
+func GetGokkuRcPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".gokkurc")
+}
 
-	// Try to create a test file to check write permissions
-	testFile := "/opt/gokku/.gokku-test-write"
-	err = os.WriteFile(testFile, []byte("test"), 0644)
+// ReadGokkuRcMode reads the mode from ~/.gokkurc file
+// Returns "client", "server", or empty string if file doesn't exist or is invalid
+func ReadGokkuRcMode() string {
+	rcPath := GetGokkuRcPath()
+
+	file, err := os.Open(rcPath)
 	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "mode=") {
+			mode := strings.TrimPrefix(line, "mode=")
+			if mode == "client" || mode == "server" {
+				return mode
+			}
+		}
+	}
+
+	return ""
+}
+
+// IsClientMode returns true if running in client mode
+// Falls back to client mode if ~/.gokkurc doesn't exist
+func IsClientMode() bool {
+	mode := ReadGokkuRcMode()
+	if mode == "" {
+		// If file doesn't exist, assume client mode (fallback)
+		return true
+	}
+	return mode == "client"
+}
+
+// IsServerMode returns true if running in server mode
+// Falls back to client mode if ~/.gokkurc doesn't exist
+func IsServerMode() bool {
+	mode := ReadGokkuRcMode()
+	if mode == "" {
+		// If file doesn't exist, assume client mode (fallback)
 		return false
 	}
-	os.Remove(testFile) // Clean up
-
-	return true
+	return mode == "server"
 }
