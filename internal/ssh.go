@@ -6,15 +6,15 @@ import (
 	"strings"
 )
 
-func Bash(command string) string {
+func Bash(command string) (string, error) {
 	cmd := exec.Command("/bin/bash", "-c", command)
 
 	output, err := cmd.Output()
 
 	if err != nil {
 		fmt.Println("Error running command: ", err)
-		return ""
+		return "", err
 	}
 
-	return strings.TrimSpace(string(output))
+	return strings.TrimSpace(string(output)), nil
 }

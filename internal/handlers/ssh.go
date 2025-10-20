@@ -26,12 +26,14 @@ func handleSSH(args []string) {
 		fmt.Printf("Connecting to %s (%s)...\n", host, remoteInfo.App)
 	}
 
-	output := internal.Bash(fmt.Sprintf("ssh %s %s", host, strings.Join(remainingArgs, " ")))
+	output, err := internal.Bash(fmt.Sprintf("ssh %s %s", host, strings.Join(remainingArgs, " ")))
 
-	if output == "" {
+	if err != nil {
 		fmt.Printf("Error running command: %s\n", strings.Join(remainingArgs, " "))
 		os.Exit(1)
 	}
 
-	fmt.Println(output)
+	if output != "" {
+		fmt.Println(output)
+	}
 }

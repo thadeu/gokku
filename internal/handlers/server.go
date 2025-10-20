@@ -61,9 +61,9 @@ func handleServerAdd(args []string) {
 	remoteURL := fmt.Sprintf("%s:/opt/gokku/repos/%s.git", serverHost, appName)
 
 	// Add git remote
-	output := Bash(fmt.Sprintf("git remote add %s %s", appName, remoteURL))
+	_, err := Bash(fmt.Sprintf("git remote add %s %s", appName, remoteURL))
 
-	if output == "" {
+	if err != nil {
 		fmt.Printf("Error adding remote '%s' -> %s\n", appName, remoteURL)
 		os.Exit(1)
 	}
@@ -74,11 +74,10 @@ func handleServerAdd(args []string) {
 
 // handleServerList lists all configured remotes
 func handleServerList() {
-	output := Bash("git remote -v")
+	output, err := Bash("git remote -v")
 
-	if output == "" {
-		fmt.Println("No remotes configured")
-		fmt.Println("Add a remote with: gokku server add <app_name> <user@server_ip>")
+	if err != nil {
+		fmt.Println("Error listing remotes")
 		os.Exit(1)
 	}
 
@@ -96,9 +95,9 @@ func handleServerRemove(args []string) {
 
 	remoteName := args[0]
 
-	output := Bash(fmt.Sprintf("git remote remove %s", remoteName))
+	_, err := Bash(fmt.Sprintf("git remote remove %s", remoteName))
 
-	if output == "" {
+	if err != nil {
 		fmt.Printf("Error removing remote '%s'\n", remoteName)
 		os.Exit(1)
 	}
