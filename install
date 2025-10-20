@@ -290,6 +290,7 @@ EOF
     fi
 
     # Download server scripts
+    mkdir -p $INSTALL_DIR/tmp
     cd $INSTALL_DIR/tmp
 
     local scripts=(
