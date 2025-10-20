@@ -258,6 +258,15 @@ func (l *Golang) generateDockerfile(build *Build, app *App) string {
 
 	fmt.Printf("-----> Using workdir: %s\n", workDir)
 
+	// Check if we need to copy the entire project for go.mod
+	copySource := workDir
+	if workDir != "." {
+		// If workdir is a subdirectory, we need to copy the entire project
+		// to ensure go.mod is available
+		copySource = "."
+		fmt.Printf("-----> Workdir is subdirectory, copying entire project for go.mod access\n")
+	}
+
 	// Detect system architecture
 	detectedGoos, detectedGoarch := l.detectSystemArchitecture()
 	fmt.Printf("-----> Detected system: %s/%s\n", detectedGoos, detectedGoarch)
@@ -291,8 +300,14 @@ FROM %s AS builder
 
 WORKDIR /app
 
-# Copy workdir
+# Copy project (entire project if workdir is subdirectory)
 COPY %s .
+
+# Set working directory to workdir if specified
+%s
+
+# Download dependencies
+RUN go mod download
 
 # Build the application
 RUN CGO_ENABLED=%s GOOS=%s GOARCH=%s \
@@ -313,7 +328,7 @@ EXPOSE ${PORT:-8080}
 
 # Run the application
 CMD ["/root/app"]
-`, app.Name, buildPath, baseImage, workDir, cgoEnabled, goos, goarch, buildPath)
+`, app.Name, buildPath, baseImage, copySource, l.getWorkdirCommand(workDir), cgoEnabled, goos, goarch, buildPath)
 }
 
 // detectSystemArchitecture detects the current system architecture
@@ -350,6 +365,14 @@ func (l *Golang) detectSystemArchitecture() (goos, goarch string) {
 	}
 
 	return goos, goarch
+}
+
+// getWorkdirCommand returns the WORKDIR command for Dockerfile if workdir is specified
+func (l *Golang) getWorkdirCommand(workDir string) string {
+	if workDir != "." {
+		return fmt.Sprintf("WORKDIR /app/%s", workDir)
+	}
+	return ""
 }
 
 // getDockerBuildArgs returns build arguments for Docker build command
