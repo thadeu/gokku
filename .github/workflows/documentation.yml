@@ -2,10 +2,17 @@ name: documentation
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
     paths:
       - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Branch'
+        type: choice
+        options:
+          - main
 
 permissions:
   contents: read

@@ -16,6 +16,7 @@ func handleRun(args []string) {
 	if remote != "" {
 		// Remote execution
 		remoteInfo, err := internal.GetRemoteInfo(remote)
+
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
