@@ -40,6 +40,10 @@ func main() {
 		handlers.HandleServer(os.Args[2:])
 	case "tool":
 		handlers.HandleTool(os.Args[2:])
+	case "plugins":
+		handlers.HandlePlugins(os.Args[2:])
+	case "services":
+		handlers.HandleServices(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Printf("gokku version %s\n", version)
 	case "help", "--help", "-h":
@@ -69,6 +73,8 @@ CLIENT COMMANDS (run from local machine):
   rollback       Rollback to previous release
   ssh            SSH to server
   tool           Utility commands for scripts
+  plugins        Manage plugins
+  services       Manage services
   version        Show version
   help           Show this help
 
@@ -129,6 +135,11 @@ Examples:
   gokku logs -a api-production -f
   gokku status -a api-production
   gokku deploy -a api-production
+
+  # Plugin and service management
+  gokku plugins:add thadeu/gokku-postgres
+  gokku services:create postgres --name postgres-api
+  gokku services:link postgres-api -a api-production
 
   # Server usage - run directly on server (no --remote needed)
   gokku config set PORT=8080 --app api

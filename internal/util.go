@@ -105,3 +105,19 @@ func IsServerMode() bool {
 	}
 	return mode == "server"
 }
+
+// ExtractFlagValue extracts a flag value from arguments
+func ExtractFlagValue(args []string, flag string) string {
+	for i := 0; i < len(args); i++ {
+		if args[i] == flag && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return ""
+}
+
+// ExtractAppName extracts app name from arguments (no environment concept)
+func ExtractAppName(args []string) string {
+	app, _ := ExtractAppFlag(args)
+	return app
+}

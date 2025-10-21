@@ -54,3 +54,13 @@ func HandleTool(args []string) {
 func HandleServer(args []string) {
 	handleServer(args)
 }
+
+// HandlePlugins manages plugin-related commands
+func HandlePlugins(args []string) {
+	handlePlugins(args)
+}
+
+// HandleServices manages service-related commands
+func HandleServices(args []string) {
+	handleServices(args)
+}
