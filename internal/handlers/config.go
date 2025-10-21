@@ -86,9 +86,12 @@ func executeAsServerMode(ctx *internal.ExecutionContext, subcommand string, args
 	// Auto-restart container after set/unset to apply changes
 	if subcommand == "set" || subcommand == "unset" {
 		fmt.Printf("\n-----> Restarting container to apply changes...\n")
-		restartCmd := fmt.Sprintf("gokku restart -a %s", appName)
-		if err := ctx.ExecuteCommand(restartCmd); err != nil {
-			fmt.Printf("Warning: Failed to restart container. Run 'gokku restart -a %s' manually.\n", appName)
+		appDir := fmt.Sprintf("%s/apps/%s/current", ctx.BaseDir, appName)
+
+		// Recreate container with updated environment variables
+		if err := internal.RecreateActiveContainer(appName, envFile, appDir); err != nil {
+			fmt.Printf("Warning: Failed to restart container: %v\n", err)
+			fmt.Printf("         Run 'gokku restart -a %s' manually.\n", appName)
 		} else {
 			fmt.Printf("✓ Container restarted with new configuration\n")
 		}
@@ -131,20 +134,8 @@ func executeAsClientMode(ctx *internal.ExecutionContext, subcommand string, args
 	// Print connection info for remote execution
 	ctx.PrintConnectionInfo()
 
-	// Execute command
+	// Execute command (server will handle restart automatically for set/unset)
 	if err := ctx.ExecuteCommand(cmd); err != nil {
 		os.Exit(1)
-	}
-
-	// Auto-restart container after set/unset to apply changes
-	if subcommand == "set" || subcommand == "unset" {
-		fmt.Printf("\n-----> Restarting container to apply changes...\n")
-		restartCmd := fmt.Sprintf("gokku restart -a %s", ctx.GetAppName())
-
-		if err := ctx.ExecuteCommand(restartCmd); err != nil {
-			fmt.Printf("Warning: Failed to restart container. Run 'gokku restart -a %s' manually.\n", ctx.AppName)
-		} else {
-			fmt.Printf("✓ Container restarted with new configuration\n")
-		}
 	}
 }

@@ -171,16 +171,37 @@ func handleRestartWithContext(ctx *internal.ExecutionContext, args []string) {
 	// Print connection info for remote execution
 	ctx.PrintConnectionInfo()
 
-	// Build docker restart command
-	restartCmd := fmt.Sprintf("docker restart %s", appName)
+	// Check if we're running locally on server or remotely
+	if ctx.ServerExecution {
+		// Server mode - recreate container with updated env file
+		executeRestartServerMode(ctx, appName)
+	} else {
+		// Client mode - execute via SSH
+		executeRestartClientMode(ctx, appName)
+	}
+}
 
-	// Execute command
+// executeRestartServerMode recreates container on server with updated environment
+func executeRestartServerMode(ctx *internal.ExecutionContext, appName string) {
+	envFile := fmt.Sprintf("%s/apps/%s/shared/.env", ctx.BaseDir, appName)
+	appDir := fmt.Sprintf("%s/apps/%s/current", ctx.BaseDir, appName)
+
+	// Use RecreateActiveContainer to properly reload env vars
+	if err := internal.RecreateActiveContainer(appName, envFile, appDir); err != nil {
+		fmt.Printf("Error restarting app: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+// executeRestartClientMode executes restart via SSH
+func executeRestartClientMode(ctx *internal.ExecutionContext, appName string) {
+	// Call gokku restart on the server (which will use RecreateActiveContainer)
+	restartCmd := fmt.Sprintf("gokku restart -a %s", appName)
+
 	if err := ctx.ExecuteCommand(restartCmd); err != nil {
 		fmt.Printf("Error restarting app: %v\n", err)
 		os.Exit(1)
 	}
-
-	fmt.Printf("✓ %s restarted successfully\n", appName)
 }
 
 // handleRollbackWithContext rolls back to a previous release using context
