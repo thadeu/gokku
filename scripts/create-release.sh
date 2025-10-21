@@ -214,8 +214,8 @@ curl -fsSL https://gokku-vm.com/install | bash"
     # Ask for confirmation before pushing (unless auto_yes is set)
     if [ "$auto_yes" = true ]; then
         log "Auto-pushing tag to origin..."
-        git push origin HEAD
-        git push origin "$tag"
+        git push origin HEAD > /dev/null 2>&1
+        git push origin "$tag" > /dev/null 2>&1
         log_success "Tag '$tag' pushed successfully!"
         log ""
         log "GitHub Actions will now:"
@@ -234,8 +234,8 @@ curl -fsSL https://gokku-vm.com/install | bash"
 
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             log "Pushing tag to origin..."
-            git push origin HEAD
-            git push origin "$tag"
+            git push origin HEAD > /dev/null 2>&1
+            git push origin "$tag" > /dev/null 2>&1
             log_success "Tag '$tag' pushed successfully!"
             log ""
             log "GitHub Actions will now:"
