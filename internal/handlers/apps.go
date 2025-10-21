@@ -13,6 +13,19 @@ import (
 
 // handleApps manages applications on the server
 func handleApps(args []string) {
+	if len(args) < 1 {
+		fmt.Println("Usage: gokku apps <command> [options]")
+		fmt.Println("")
+		fmt.Println("Commands:")
+		fmt.Println("  list, ls              List all applications")
+		fmt.Println("  create <app>          Create application and setup deployment")
+		fmt.Println("  destroy, rm <app>     Destroy application")
+		fmt.Println("")
+		fmt.Println("Options:")
+		fmt.Println("  -a, --app <app>       Use specific app")
+		os.Exit(1)
+	}
+
 	subcommand := args[0]
 	switch subcommand {
 	case "list", "ls":
