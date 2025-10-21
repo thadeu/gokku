@@ -2,8 +2,8 @@ name: documentation
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
     paths:
       - 'docs/**'
   workflow_dispatch:
