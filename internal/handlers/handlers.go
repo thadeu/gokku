@@ -9,13 +9,6 @@ func HandleApps(args []string) {
 	})
 }
 
-// HandleConfig manages environment variable configuration (legacy)
-func HandleConfig(args []string) {
-	internal.TryCatch(func() {
-		handleConfig(args)
-	})
-}
-
 // HandleConfigWithContext manages environment variable configuration using context
 func HandleConfigWithContext(ctx *internal.ExecutionContext, args []string) {
 	internal.TryCatch(func() {

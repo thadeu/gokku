@@ -8,12 +8,12 @@ import (
 
 // ExecutionContext represents the execution context for a command
 type ExecutionContext struct {
-	Mode           string // "client" or "server"
-	AppName        string
-	RemoteInfo     *RemoteInfo
-	LocalExecution bool
-	Host           string
-	BaseDir        string
+	Mode            string // "client" or "server"
+	AppName         string
+	RemoteInfo      *RemoteInfo
+	ServerExecution bool
+	Host            string
+	BaseDir         string
 }
 
 // NewExecutionContext creates a new execution context based on mode and app flag
@@ -24,14 +24,14 @@ func NewExecutionContext(appName string) (*ExecutionContext, error) {
 
 	if IsClientMode() {
 		ctx.Mode = "client"
-		ctx.LocalExecution = false
+		ctx.ServerExecution = false
 	} else {
 		ctx.Mode = "server"
-		ctx.LocalExecution = true
+		ctx.ServerExecution = true
 	}
 
 	// Determine mode
-	if !ctx.LocalExecution {
+	if !ctx.ServerExecution {
 		if appName != "" {
 			// Client mode with app - use git remote
 			remoteInfo, err := GetRemoteInfo(appName)
@@ -77,7 +77,7 @@ func (ctx *ExecutionContext) GetAppName() string {
 
 // ExecuteCommand executes a command based on the context
 func (ctx *ExecutionContext) ExecuteCommand(command string) error {
-	if ctx.LocalExecution {
+	if ctx.ServerExecution {
 		// Local execution on server
 		cmd := exec.Command("bash", "-c", command)
 		cmd.Stdout = os.Stdout
@@ -96,7 +96,7 @@ func (ctx *ExecutionContext) ExecuteCommand(command string) error {
 
 // ExecuteCommandWithOutput executes a command and returns output
 func (ctx *ExecutionContext) ExecuteCommandWithOutput(command string) (string, error) {
-	if ctx.LocalExecution {
+	if ctx.ServerExecution {
 		// Local execution on server
 		cmd := exec.Command("bash", "-c", command)
 		output, err := cmd.Output()
@@ -111,7 +111,7 @@ func (ctx *ExecutionContext) ExecuteCommandWithOutput(command string) (string, e
 
 // PrintConnectionInfo prints connection information for remote execution
 func (ctx *ExecutionContext) PrintConnectionInfo() {
-	if !ctx.LocalExecution && ctx.RemoteInfo != nil {
+	if !ctx.ServerExecution && ctx.RemoteInfo != nil {
 		fmt.Printf("→ %s (%s)\n", ctx.RemoteInfo.App, ctx.RemoteInfo.Host)
 	}
 }

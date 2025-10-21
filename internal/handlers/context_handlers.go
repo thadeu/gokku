@@ -29,6 +29,7 @@ func handleLogsWithContext(ctx *internal.ExecutionContext, args []string) {
 
 	serviceName := ctx.GetAppName()
 	followFlag := ""
+
 	if follow {
 		followFlag = "-f"
 	}
@@ -48,7 +49,9 @@ func handleLogsWithContext(ctx *internal.ExecutionContext, args []string) {
 
 	// Execute command
 	if err := ctx.ExecuteCommand(dockerCmd); err != nil {
-		os.Exit(1)
+		if !follow {
+			os.Exit(1)
+		}
 	}
 }
 
@@ -60,7 +63,7 @@ func handleStatusWithContext(ctx *internal.ExecutionContext, args []string) {
 		// Show all services
 		dockerCmd := `docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"`
 
-		if ctx.LocalExecution {
+		if ctx.ServerExecution {
 			fmt.Println("==> Docker Containers")
 		} else {
 			ctx.PrintConnectionInfo()
