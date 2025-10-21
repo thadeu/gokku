@@ -66,6 +66,35 @@ validate_version() {
     log_success "Version format is valid: $version"
 }
 
+# Update version in docs config
+update_docs_version() {
+    local version="$1"
+    local docs_config="docs/.vitepress/config.ts"
+
+    if [ ! -f "$docs_config" ]; then
+        log_error "Docs config file not found: $docs_config"
+        exit 1
+    fi
+
+    # Replace {{VERSION}} with actual version
+    if sed -i.bak "s/{{VERSION}}/$version/g" "$docs_config"; then
+        log_success "Updated version in docs config: $version"
+        rm -f "$docs_config.bak"  # Remove backup file
+    else
+        log_error "Failed to update version in docs config"
+        exit 1
+    fi
+
+    # Commit the docs version update
+    git add "$docs_config"
+    if git commit -m "docs: update version to $version"; then
+        log_success "Committed docs version update"
+    else
+        log_error "Failed to commit docs version update"
+        exit 1
+    fi
+}
+
 # Main function
 main() {
     local auto_yes=false
@@ -106,6 +135,9 @@ main() {
 
     # Validate version format
     validate_version "$version"
+
+    # Update version in docs config
+    update_docs_version "$version"
 
     # Create tag name
     local tag="v$version"
@@ -208,8 +240,9 @@ show_help() {
     echo "This script:"
     echo "  1. Extracts version from cmd/cli/main.go"
     echo "  2. Validates version format (semantic versioning)"
-    echo "  3. Creates git tag (v<version>)"
-    echo "  4. Pushes tag to trigger GitHub Release"
+    echo "  3. Updates version in docs config and commits change"
+    echo "  4. Creates git tag (v<version>)"
+    echo "  5. Pushes tag to trigger GitHub Release"
     echo ""
     echo "Options:"
     echo "  -h, --help    Show this help"
@@ -234,6 +267,8 @@ case "${1:-}" in
         log "DRY RUN MODE - No changes will be made"
         echo ""
         log "Would extract version: $(extract_version)"
+        log "Would update docs config with version: $(extract_version)"
+        log "Would commit docs version update"
         log "Would create tag: v$(extract_version)"
         log "Would push to: origin"
         exit 0
