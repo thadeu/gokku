@@ -51,38 +51,10 @@ func HandleRollbackWithContext(ctx *internal.ExecutionContext, args []string) {
 	})
 }
 
-// HandleRun executes arbitrary commands on remote servers
-func HandleRun(args []string) {
-	internal.TryCatch(func() {
-		handleRun(args)
-	})
-}
-
-// HandleStatus shows service/container status
-func HandleStatus(args []string) {
-	internal.TryCatch(func() {
-		handleStatus(args)
-	})
-}
-
-// HandleRestart restarts services/containers
-func HandleRestart(args []string) {
-	internal.TryCatch(func() {
-		handleRestart(args)
-	})
-}
-
 // HandleDeploy deploys applications via git push
 func HandleDeploy(args []string) {
 	internal.TryCatch(func() {
 		handleDeploy(args)
-	})
-}
-
-// HandleRollback rolls back to a previous release
-func HandleRollback(args []string) {
-	internal.TryCatch(func() {
-		handleRollback(args)
 	})
 }
 

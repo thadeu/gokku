@@ -22,16 +22,25 @@ func handleDeploy(args []string) {
 	var appName, remoteName string
 	var isDirectDeploy bool
 
+	// Check if running on server
+	isServerMode := internal.IsServerMode()
+
 	if app != "" {
-		// Remote deployment via git push (legacy mode)
-		remoteInfo, err := internal.GetRemoteInfo(app)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
+		if isServerMode {
+			// Server mode: -a flag means direct deployment with app name
+			appName = app
+			isDirectDeploy = true
+		} else {
+			// Client mode: -a flag means git remote
+			remoteInfo, err := internal.GetRemoteInfo(app)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			appName = remoteInfo.App
+			remoteName = app
+			isDirectDeploy = false
 		}
-		appName = remoteInfo.App
-		remoteName = app
-		isDirectDeploy = false
 	} else if len(remainingArgs) >= 1 {
 		// Direct deployment (new mode)
 		appName = remainingArgs[0]
@@ -61,12 +70,12 @@ func handleDeploy(args []string) {
 		if !hasCommits(reposDir) {
 			fmt.Printf("Error: Repository has no commits yet. You need to push code first.\n")
 			fmt.Printf("From your local repository, run:\n")
-			fmt.Printf("  git remote add %s user@host:/opt/gokku/repos/%s.git\n", app, app)
-			fmt.Printf("  git push -u %s main\n", app)
+			fmt.Printf("  git remote add %s user@host:/opt/gokku/repos/%s.git\n", appName, appName)
+			fmt.Printf("  git push -u %s main\n", appName)
 			os.Exit(1)
 		}
 
-		if err := executeDirectDeployment(app); err != nil {
+		if err := executeDirectDeployment(appName); err != nil {
 			fmt.Printf("Deploy failed: %v\n", err)
 			os.Exit(1)
 		}
@@ -75,7 +84,7 @@ func handleDeploy(args []string) {
 	}
 
 	// Legacy mode - git push deployment
-	fmt.Printf("----->Deploying %s via git push...\n", app)
+	fmt.Printf("----->Deploying %s via git push...\n", appName)
 	fmt.Printf("Remote: %s\n", remoteName)
 
 	// Check if remote exists
@@ -83,7 +92,7 @@ func handleDeploy(args []string) {
 	if err := checkCmd.Run(); err != nil {
 		fmt.Printf("Error: git remote '%s' not found\n", remoteName)
 		fmt.Println("\nAdd it with:")
-		fmt.Printf("  git remote add %s user@host:/opt/gokku/repos/%s.git\n", remoteName, app)
+		fmt.Printf("  git remote add %s user@host:/opt/gokku/repos/%s.git\n", remoteName, appName)
 		os.Exit(1)
 	}
 

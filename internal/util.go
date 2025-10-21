@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,7 +68,6 @@ func ReadGokkuRcMode() string {
 	file, err := os.Open(rcPath)
 
 	if err != nil {
-		fmt.Printf("DEBUG: Could not open ~/.gokkurc: %v\n", err)
 		return ""
 	}
 

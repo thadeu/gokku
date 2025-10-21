@@ -8,7 +8,7 @@ import (
 	"infra/internal/handlers"
 )
 
-const version = "1.0.49"
+const version = "1.0.51"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -40,40 +40,38 @@ func main() {
 	}
 
 	// Execute command with panic recovery
-	internal.TryCatch(func() {
-		switch command {
-		case "apps":
-			handlers.HandleApps(args)
-		case "config":
-			handlers.HandleConfigWithContext(ctx, args)
-		case "run":
-			handlers.HandleRunWithContext(ctx, args)
-		case "logs":
-			handlers.HandleLogsWithContext(ctx, args)
-		case "status":
-			handlers.HandleStatusWithContext(ctx, args)
-		case "restart":
-			handlers.HandleRestartWithContext(ctx, args)
-		case "deploy":
-			handlers.HandleDeploy(args)
-		case "rollback":
-			handlers.HandleRollbackWithContext(ctx, args)
-		case "ssh":
-			handlers.HandleSSH(args)
-		case "server":
-			handlers.HandleServer(args)
-		case "tool":
-			handlers.HandleTool(args)
-		case "version", "--version", "-v":
-			fmt.Printf("gokku version %s\n", version)
-		case "help", "--help", "-h":
-			printHelp()
-		default:
-			fmt.Printf("Unknown command: %s\n", command)
-			fmt.Println("Run 'gokku --help' for usage")
-			os.Exit(1)
-		}
-	})
+	switch command {
+	case "apps":
+		handlers.HandleApps(args)
+	case "config":
+		handlers.HandleConfigWithContext(ctx, args)
+	case "run":
+		handlers.HandleRunWithContext(ctx, args)
+	case "logs":
+		handlers.HandleLogsWithContext(ctx, args)
+	case "status":
+		handlers.HandleStatusWithContext(ctx, args)
+	case "restart":
+		handlers.HandleRestartWithContext(ctx, args)
+	case "deploy":
+		handlers.HandleDeploy(args)
+	case "rollback":
+		handlers.HandleRollbackWithContext(ctx, args)
+	case "ssh":
+		handlers.HandleSSH(args)
+	case "server":
+		handlers.HandleServer(args)
+	case "tool":
+		handlers.HandleTool(args)
+	case "version", "--version", "-v":
+		fmt.Printf("gokku version %s\n", version)
+	case "help", "--help", "-h":
+		printHelp()
+	default:
+		fmt.Printf("Unknown command: %s\n", command)
+		fmt.Println("Run 'gokku --help' for usage")
+		os.Exit(1)
+	}
 }
 
 func printHelp() {

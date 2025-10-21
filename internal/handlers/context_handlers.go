@@ -100,33 +100,17 @@ func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFla
 
 // handleLogsClientMode handles logs when running from client
 func handleLogsClientMode(ctx *internal.ExecutionContext, serviceName, followFlag string, follow bool) {
-	// Build docker logs command
-	var dockerCmd string
-	if follow {
-		// For follow mode, use explicit -f flag
-		dockerCmd = fmt.Sprintf(`
-			if docker ps -a --format '{{.Names}}' | grep -q "^%s$"; then
-				docker logs -f %s
-			else
-				echo "Container '%s' not found"
-				exit 1
-			fi
-		`, serviceName, serviceName, serviceName)
-	} else {
-		dockerCmd = fmt.Sprintf(`
-			if docker ps -a --format '{{.Names}}' | grep -q "^%s$"; then
-				docker logs %s
-			else
-				echo "Container '%s' not found"
-				exit 1
-			fi
-		`, serviceName, serviceName, serviceName)
-	}
+	// Execute via SSH
+	sshCmd := fmt.Sprintf(`
+  if docker ps | grep -q %s; then
+    docker logs %s %s
+  else
+    echo "Container '%s' not found"
+    exit 1
+  fi
+`, serviceName, serviceName, followFlag, serviceName)
 
-	// Execute via SSH with proper TTY allocation
-	// Use -tt to force TTY allocation even when stdin is not a terminal
-	// This is crucial for follow mode to work correctly
-	cmd := exec.Command("ssh", "-tt", ctx.Host, dockerCmd)
+	cmd := exec.Command("ssh", "-t", ctx.Host, sshCmd)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -135,11 +119,10 @@ func handleLogsClientMode(ctx *internal.ExecutionContext, serviceName, followFla
 
 // handleStatusWithContext shows service/container status using context
 func handleStatusWithContext(ctx *internal.ExecutionContext, args []string) {
-
 	// Handle all services status (no specific app)
 	if ctx.AppName == "" {
 		// Show all services
-		dockerCmd := `docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"`
+		dockerCmd := `docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"`
 
 		if ctx.ServerExecution {
 			fmt.Println("==> Docker Containers")
@@ -161,8 +144,8 @@ func handleStatusWithContext(ctx *internal.ExecutionContext, args []string) {
 
 	// Build docker status command
 	dockerCmd := fmt.Sprintf(`
-		if docker ps -a | grep -q %s; then
-			docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" --filter "name=%s"
+		if docker ps | grep -q %s; then
+			docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" --filter "name=%s"
 		else
 			echo "Service or container '%s' not found"
 			exit 1
@@ -239,7 +222,7 @@ func handleRollbackWithContext(ctx *internal.ExecutionContext, args []string) {
 	// Build rollback command
 	rollbackCmd := fmt.Sprintf(`
 		cd %s && \
-		if docker ps -a | grep -q %s; then
+		if docker ps | grep -q %s; then
 			docker stop %s && \
 			docker rm -f %s && \
 			docker run -d --name %s --env-file %s/shared/.env %s:release-%s && \
@@ -254,6 +237,34 @@ func handleRollbackWithContext(ctx *internal.ExecutionContext, args []string) {
 	// Execute command
 	if err := ctx.ExecuteCommand(rollbackCmd); err != nil {
 		fmt.Printf("Rollback failed: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+// handleRunWithContext executes arbitrary commands using context
+func handleRunWithContext(ctx *internal.ExecutionContext, args []string) {
+	if err := ctx.ValidateAppRequired(); err != nil {
+		ctx.PrintUsageError("run", err.Error())
+	}
+
+	_, remainingArgs := internal.ExtractAppFlag(args)
+
+	if len(remainingArgs) < 1 {
+		fmt.Println("Error: command is required")
+		fmt.Println("Usage: gokku run <command> -a <app>")
+		os.Exit(1)
+	}
+
+	command := strings.Join(remainingArgs, " ")
+
+	containerName := ctx.GetAppName()
+	dockerCommand := fmt.Sprintf("docker exec -it %s %s", containerName, command)
+
+	ctx.PrintConnectionInfo()
+	fmt.Printf("$ %s\n\n", command)
+
+	// Execute command
+	if err := ctx.ExecuteCommand(dockerCommand); err != nil {
 		os.Exit(1)
 	}
 }
