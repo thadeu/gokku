@@ -42,5 +42,5 @@ clean: ## Clean build artifacts
 # Release
 release: ## Create release
 	chmod +x scripts/create-release.sh
-	./scripts/create-release.sh
+	./scripts/create-release.sh -y
 
