@@ -15,33 +15,46 @@ func handleRestart(args []string) {
 	var app, host string
 	var localExecution bool
 
-	if appName != "" {
-		remoteInfo, err := internal.GetRemoteInfo(appName)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		app = remoteInfo.App
-		host = remoteInfo.Host
-	} else if len(remainingArgs) >= 1 {
-		// Check if running on server - allow local execution
-		if internal.IsRunningOnServer() {
-			localExecution = true
-			app = remainingArgs[0]
+	// Check if we're in client mode or server mode
+	if internal.IsClientMode() {
+		// Client mode: -a flag requires git remote for SSH execution
+		if appName != "" {
+			remoteInfo, err := internal.GetRemoteInfo(appName)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			app = remoteInfo.App
+			host = remoteInfo.Host
 		} else {
-			// Client without --remote - show error
-			fmt.Println("Error: Local restart commands can only be run on the server")
+			// Client mode without -a flag
+			fmt.Println("Error: Client mode requires -a flag to specify app")
 			fmt.Println("")
-			fmt.Println("For client usage, use -a flag:")
-			fmt.Println("  gokku restart -a <app>")
+			fmt.Println("Usage: gokku restart -a <app>")
 			fmt.Println("")
-			fmt.Println("Or run this command directly on your server.")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku restart -a api-production")
 			os.Exit(1)
 		}
 	} else {
-		fmt.Println("Usage: gokku restart <app>")
-		fmt.Println("   or: gokku restart -a <app>")
-		os.Exit(1)
+		// Server mode: -a flag uses app name directly, no git remote needed
+		if appName != "" {
+			localExecution = true
+			app = appName
+		} else if len(remainingArgs) >= 1 {
+			// Server mode with positional args
+			localExecution = true
+			app = remainingArgs[0]
+		} else {
+			// Server mode without args
+			fmt.Println("Error: Server mode requires -a flag to specify app")
+			fmt.Println("")
+			fmt.Println("Usage: gokku restart -a <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku restart -a api")
+			os.Exit(1)
+		}
 	}
 
 	fmt.Printf("Restarting %s...\n", app)

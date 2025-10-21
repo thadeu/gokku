@@ -16,14 +16,51 @@ func handleLogs(args []string) {
 	var follow bool
 	var localExecution bool
 
-	if appName != "" {
-		remoteInfo, err := internal.GetRemoteInfo(appName)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
+	// Check if we're in client mode or server mode
+	if internal.IsClientMode() {
+		// Client mode: -a flag requires git remote for SSH execution
+		if appName != "" {
+			remoteInfo, err := internal.GetRemoteInfo(appName)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			app = remoteInfo.App
+			host = remoteInfo.Host
+
+			// Check for -f flag
+			for _, arg := range remainingArgs {
+				if arg == "-f" {
+					follow = true
+					break
+				}
+			}
+		} else {
+			// Client mode without -a flag
+			fmt.Println("Error: Client mode requires -a flag to specify app")
+			fmt.Println("")
+			fmt.Println("Usage: gokku logs -a <app> [-f]")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku logs -a api-production")
+			fmt.Println("  gokku logs -a api-production -f")
 			os.Exit(1)
 		}
-		app = remoteInfo.App
-		host = remoteInfo.Host
+	} else {
+		// Server mode: -a flag uses app name directly, no git remote needed
+		if appName == "" {
+			fmt.Println("Error: Server mode requires -a flag to specify app")
+			fmt.Println("")
+			fmt.Println("Usage: gokku logs -a <app> [-f]")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku logs -a api")
+			fmt.Println("  gokku logs -a api -f")
+			os.Exit(1)
+		}
+
+		localExecution = true
+		app = appName
 
 		// Check for -f flag
 		for _, arg := range remainingArgs {
@@ -31,27 +68,6 @@ func handleLogs(args []string) {
 				follow = true
 				break
 			}
-		}
-	} else {
-		// Check if running on server - allow local execution
-		if internal.IsRunningOnServer() {
-			localExecution = true
-			if len(remainingArgs) < 2 {
-				fmt.Println("Usage: gokku logs <app> [-f]")
-				fmt.Println("   or: gokku logs -a <app> [-f]")
-				os.Exit(1)
-			}
-			app = remainingArgs[0]
-			follow = len(remainingArgs) > 1 && remainingArgs[1] == "-f"
-		} else {
-			// Client without --remote - show error
-			fmt.Println("Error: Local logs commands can only be run on the server")
-			fmt.Println("")
-			fmt.Println("For client usage, use -a flag:")
-			fmt.Println("  gokku logs -a <app> [-f]")
-			fmt.Println("")
-			fmt.Println("Or run this command directly on your server.")
-			os.Exit(1)
 		}
 	}
 

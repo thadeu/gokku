@@ -16,40 +16,56 @@ func handleStatus(args []string) {
 	var app, env, host, baseDir string
 	var localExecution bool
 
-	if appName != "" {
-		remoteInfo, err := internal.GetRemoteInfo(appName)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		app = remoteInfo.App
-		host = remoteInfo.Host
-		baseDir = remoteInfo.BaseDir
-	} else if len(remainingArgs) >= 2 {
-		// Check if running on server - allow local execution
-		if internal.IsRunningOnServer() {
-			localExecution = true
-			app = remainingArgs[0]
-			env = remainingArgs[1]
-			baseDir = "/opt/gokku"
+	// Check if we're in client mode or server mode
+	if internal.IsClientMode() {
+		// Client mode: -a flag requires git remote for SSH execution
+		if appName != "" {
+			remoteInfo, err := internal.GetRemoteInfo(appName)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			app = remoteInfo.App
+			host = remoteInfo.Host
+			baseDir = remoteInfo.BaseDir
 		} else {
-			// Client without --remote - show error
-			fmt.Println("Error: Local status commands can only be run on the server")
-			fmt.Println("")
-			fmt.Println("For client usage, use -a flag:")
-			fmt.Println("  gokku status -a <app>")
-			fmt.Println("")
-			fmt.Println("Or run this command directly on your server.")
-			os.Exit(1)
+			// Client mode without -a flag - show all services
+			if internal.IsRunningOnServer() {
+				localExecution = true
+				baseDir = "/opt/gokku"
+				fmt.Printf("Checking status on local server...\n\n")
+			} else {
+				// Client without -a flag - show error
+				fmt.Println("Error: Client mode requires -a flag to specify app")
+				fmt.Println("")
+				fmt.Println("Usage: gokku status -a <app>")
+				fmt.Println("")
+				fmt.Println("Examples:")
+				fmt.Println("  gokku status -a api-production")
+				os.Exit(1)
+			}
 		}
 	} else {
-		// All services - works from both client and server
-		if internal.IsRunningOnServer() {
+		// Server mode: -a flag uses app name directly, no git remote needed
+		if appName != "" {
+			localExecution = true
+			app = appName
+			baseDir = "/opt/gokku"
+		} else if len(remainingArgs) >= 1 {
+			// Server mode with positional args
+			localExecution = true
+			app = remainingArgs[0]
+			baseDir = "/opt/gokku"
+		} else {
+			// Server mode without args - show all services
 			localExecution = true
 			baseDir = "/opt/gokku"
 			fmt.Printf("Checking status on local server...\n\n")
 		}
+	}
 
+	// Handle all services status (no specific app)
+	if app == "" {
 		if localExecution {
 			// Local execution for all services
 			fmt.Println("==> Docker Containers")
@@ -103,6 +119,7 @@ func handleStatus(args []string) {
 		return
 	}
 
+	// Handle specific app status
 	serviceName := fmt.Sprintf("%s-%s", app, env)
 
 	if localExecution {

@@ -17,43 +17,67 @@ func handleRollback(args []string) {
 	var releaseID string
 	var localExecution bool
 
-	if appName != "" {
-		remoteInfo, err := internal.GetRemoteInfo(appName)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		app = remoteInfo.App
-		host = remoteInfo.Host
-		baseDir = remoteInfo.BaseDir
+	// Check if we're in client mode or server mode
+	if internal.IsClientMode() {
+		// Client mode: -a flag requires git remote for SSH execution
+		if appName != "" {
+			remoteInfo, err := internal.GetRemoteInfo(appName)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			app = remoteInfo.App
+			host = remoteInfo.Host
+			baseDir = remoteInfo.BaseDir
 
-		if len(remainingArgs) > 0 {
-			releaseID = remainingArgs[0]
-		}
-	} else if len(remainingArgs) >= 2 {
-		// Check if running on server - allow local execution
-		if internal.IsRunningOnServer() {
-			localExecution = true
-			app = remainingArgs[0]
-			baseDir = "/opt/gokku"
+			if len(remainingArgs) > 0 {
+				releaseID = remainingArgs[0]
+			}
 		} else {
-			// Client without --remote - show error
-			fmt.Println("Error: Local rollback commands can only be run on the server")
+			// Client mode without -a flag
+			fmt.Println("Error: Client mode requires -a flag to specify app")
 			fmt.Println("")
-			fmt.Println("For client usage, use -a flag:")
-			fmt.Println("  gokku rollback -a <app> [release-id]")
+			fmt.Println("Usage: gokku rollback -a <app> [release-id]")
 			fmt.Println("")
-			fmt.Println("Or run this command directly on your server.")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku rollback -a api-production")
+			fmt.Println("  gokku rollback -a api-production 20231201-123456")
 			os.Exit(1)
 		}
 	} else {
-		fmt.Println("Usage: gokku rollback <app> <env> [release-id]")
-		fmt.Println("   or: gokku rollback -a <app> [release-id]")
-		os.Exit(1)
+		// Server mode: -a flag uses app name directly, no git remote needed
+		if appName != "" {
+			localExecution = true
+			app = appName
+			baseDir = "/opt/gokku"
+
+			if len(remainingArgs) > 0 {
+				releaseID = remainingArgs[0]
+			}
+		} else if len(remainingArgs) >= 1 {
+			// Server mode with positional args
+			localExecution = true
+			app = remainingArgs[0]
+			baseDir = "/opt/gokku"
+
+			if len(remainingArgs) > 1 {
+				releaseID = remainingArgs[1]
+			}
+		} else {
+			// Server mode without args
+			fmt.Println("Error: Server mode requires -a flag to specify app")
+			fmt.Println("")
+			fmt.Println("Usage: gokku rollback -a <app> [release-id]")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku rollback -a api")
+			fmt.Println("  gokku rollback -a api 20231201-123456")
+			os.Exit(1)
+		}
 	}
 
 	appDir := fmt.Sprintf("%s/apps/%s", baseDir, app)
-	serviceName := fmt.Sprintf("%s", app)
+	serviceName := app
 
 	if releaseID == "" {
 		// Get previous release
@@ -95,7 +119,7 @@ func handleRollback(args []string) {
 			docker run -d --name %s --env-file %s/shared/.env %s:release-%s && \
 			docker start %s && \
 			echo "✓ Rollback complete"
-		`, appDir, serviceName, serviceName, serviceName, app, releaseID, serviceName)
+		`, appDir, serviceName, serviceName, serviceName, appDir, app, releaseID, serviceName)
 
 		cmd := exec.Command("bash", "-c", rollbackCmd)
 		cmd.Stdout = os.Stdout
