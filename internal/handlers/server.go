@@ -69,7 +69,7 @@ func handleServerAdd(args []string) {
 	}
 
 	fmt.Printf("Added remote '%s' -> %s\n", appName, remoteURL)
-	fmt.Printf("You can now use: gokku connect --remote %s\n", appName)
+	fmt.Printf("You can now use: gokku ssh --remote %s\n", appName)
 }
 
 // handleServerList lists all configured remotes
@@ -123,5 +123,5 @@ Examples:
   gokku server remove stt
 
 After adding a remote, you can connect with:
-  gokku connect --remote <remote_name>`)
+  gokku ssh --remote <remote_name>`)
 }

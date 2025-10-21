@@ -50,11 +50,6 @@ func HandleTool(args []string) {
 	handleTool(args)
 }
 
-// HandleConnect establishes SSH connections to servers (alias for SSH)
-func HandleConnect(args []string) {
-	handleSSH(args)
-}
-
 // HandleServer manages server connections and remotes
 func HandleServer(args []string) {
 	handleServer(args)
