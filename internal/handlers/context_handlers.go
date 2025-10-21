@@ -165,19 +165,22 @@ func handleRestartWithContext(ctx *internal.ExecutionContext, args []string) {
 		ctx.PrintUsageError("restart", err.Error())
 	}
 
-	fmt.Printf("Restarting %s...\n", ctx.GetAppName())
+	appName := ctx.GetAppName()
+	fmt.Printf("Restarting %s...\n", appName)
 
 	// Print connection info for remote execution
 	ctx.PrintConnectionInfo()
 
-	// Build restart command
-	restartCmd := fmt.Sprintf("gokku restart -a %s", ctx.GetAppName())
+	// Build docker restart command
+	restartCmd := fmt.Sprintf("docker restart %s", appName)
 
 	// Execute command
 	if err := ctx.ExecuteCommand(restartCmd); err != nil {
 		fmt.Printf("Error restarting app: %v\n", err)
 		os.Exit(1)
 	}
+
+	fmt.Printf("✓ %s restarted successfully\n", appName)
 }
 
 // handleRollbackWithContext rolls back to a previous release using context
