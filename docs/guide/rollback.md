@@ -8,168 +8,112 @@ Gokku keeps multiple releases, allowing you to rollback instantly without redepl
 
 ## How It Works
 
-### For Systemd Apps
+### Release Management
 
-Each deployment creates a new release directory:
+Each deployment creates a new release directory with a timestamp:
 
 ```
-/opt/gokku/apps/api/production/
+/opt/gokku/apps/api/
 ├── releases/
-│   ├── 1/        ← First deploy
-│   ├── 2/        ← Second deploy
-│   ├── 3/        ← Third deploy
-│   ├── 4/        ← Fourth deploy
-│   └── 5/        ← Latest deploy
-└── current -> releases/5  ← Symlink to active release
+│   ├── 20240115-100000/  ← First deploy
+│   ├── 20240115-113000/  ← Second deploy
+│   ├── 20240115-142000/  ← Third deploy
+│   ├── 20240116-091500/  ← Fourth deploy
+│   └── 20240116-104500/  ← Latest deploy
+└── current -> releases/20240116-104500/  ← Symlink to active release
 ```
 
 The `current` symlink points to the active release.
 
-### For Docker Apps
+### Docker Images
 
-Each deployment creates a tagged image:
+For Docker applications, each deployment creates a tagged image:
 
 ```
-api:release-1
-api:release-2
-api:release-3
-api:release-4
-api:release-5  ← Latest
+api:release-20240115-100000
+api:release-20240115-113000
+api:release-20240115-142000
+api:release-20240116-091500
+api:release-20240116-104500  ← Latest
 ```
 
 The container runs the latest tagged image.
 
-## Configure Retention
+## Automatic Cleanup
 
-Set how many releases/images to keep:
+Gokku automatically keeps the last 5 releases and removes older ones during deployment. This helps manage disk space while keeping recent releases available for rollback.
 
-```yaml
-apps:
-  - name: api
-    deployment:
-      keep_releases: 10  # Keep last 10 releases (systemd)
-      keep_images: 10    # Keep last 10 images (docker)
-```
+## Using the Rollback Command
 
-**Defaults:**
-- `keep_releases`: 5
-- `keep_images`: 5
+Gokku provides a built-in rollback command that handles the rollback process automatically.
 
-## Manual Rollback
+### Basic Rollback
 
-### Systemd Apps
-
-#### List Available Releases
+Rollback to the previous release:
 
 ```bash
-ssh ubuntu@server "ls -la /opt/gokku/apps/api/production/releases/"
+# Remote execution
+gokku rollback -a api-production
+
+# Local execution (on server)
+gokku rollback api production
 ```
 
-Output:
-```
-1/  2024-01-15 10:00
-2/  2024-01-15 11:30
-3/  2024-01-15 14:20
-4/  2024-01-16 09:15
-5/  2024-01-16 10:45  ← Current
-```
+### Rollback to Specific Release
 
-#### Rollback to Previous Release
+Rollback to a specific release by providing the release ID:
 
 ```bash
-# SSH to server
-ssh ubuntu@server
+# Remote execution
+gokku rollback -a api-production 20240115-113000
 
-# Navigate to app directory
-cd /opt/gokku/apps/api/production
-
-# Change symlink to previous release
-rm current
-ln -s releases/4 current
-
-# Restart service
-sudo systemctl restart api-production
+# Local execution (on server)
+gokku rollback api production 20240115-113000
 ```
 
-#### Verify
+### List Available Releases
+
+To see available releases for rollback:
 
 ```bash
-sudo systemctl status api-production
-```
+# SSH to server and list releases
+ssh ubuntu@server "ls -la /opt/gokku/apps/api/releases/"
 
-### Docker Apps
-
-#### List Available Images
-
-```bash
+# Or check Docker images
 ssh ubuntu@server "docker images | grep api"
 ```
 
-Output:
-```
-api  release-5  1.2GB  10 minutes ago
-api  release-4  1.2GB  2 hours ago
-api  release-3  1.2GB  1 day ago
-```
+### Verify Rollback
 
-#### Rollback to Previous Image
+After rollback, verify the application is running:
 
 ```bash
-# Stop current container
-ssh ubuntu@server "docker stop api-production"
-ssh ubuntu@server "docker rm api-production"
+# Check status
+gokku status -a api-production
 
-# Start with previous image
-ssh ubuntu@server "docker run -d \
-  --name api-production \
-  --env-file /opt/gokku/apps/api/production/.env \
-  -p 8080:8080 \
-  api:release-4"
+# Check logs
+gokku logs -a api-production -f
 ```
-
-#### Verify
-
-```bash
-ssh ubuntu@server "docker logs api-production"
-```
-
-## Rollback Script (Planned)
-
-Future `rollback.sh` script:
-
-```bash
-# Systemd
-./rollback.sh api production 4
-
-# Docker
-./rollback.sh api production 4
-```
-
-This will:
-1. Detect build type (systemd or docker)
-2. Rollback to specified release
-3. Restart service/container
-4. Verify deployment
 
 ## Quick Rollback Workflow
 
 ### 1. Deploy New Version
 
 ```bash
-git push production main
+gokku deploy -a api-production
 ```
 
 Output:
 ```
 -----> Deploying api to production...
------> Release 5 deployed
+-----> Release 20240116-104500 deployed
 ```
 
 ### 2. Notice Issue
 
 ```bash
 # Check logs
-ssh ubuntu@server "sudo journalctl -u api-production -f"
+gokku logs -a api-production -f
 
 # Test endpoint
 curl https://api.example.com/health
@@ -179,16 +123,17 @@ curl https://api.example.com/health
 ### 3. Rollback
 
 ```bash
-# Systemd
-ssh ubuntu@server "cd /opt/gokku/apps/api/production && rm current && ln -s releases/4 current && sudo systemctl restart api-production"
-
-# Docker
-ssh ubuntu@server "docker stop api-production && docker rm api-production && docker run -d --name api-production --env-file /opt/gokku/apps/api/production/.env -p 8080:8080 api:release-4"
+# Rollback to previous release
+gokku rollback -a api-production
 ```
 
 ### 4. Verify
 
 ```bash
+# Check status
+gokku status -a api-production
+
+# Test endpoint
 curl https://api.example.com/health
 # OK!
 ```
@@ -200,7 +145,7 @@ curl https://api.example.com/health
 git commit -am "fix: critical bug"
 
 # Redeploy
-git push production main
+gokku deploy -a api-production
 ```
 
 ## Rollback Best Practices
@@ -211,10 +156,10 @@ Check if issue is deployment-related:
 
 ```bash
 # Check service status
-ssh ubuntu@server "sudo systemctl status api-production"
+gokku status -a api-production
 
 # Check logs
-ssh ubuntu@server "sudo journalctl -u api-production -n 100"
+gokku logs -a api-production
 
 # Test endpoint
 curl https://api.example.com/health
@@ -226,7 +171,7 @@ Keep track of rollbacks:
 
 ```bash
 # Note the issue
-echo "2024-01-16 10:50 - Rolled back from release 5 to 4 due to database migration issue" >> rollback.log
+echo "2024-01-16 10:50 - Rolled back from release 20240116-104500 to 20240115-113000 due to database migration issue" >> rollback.log
 ```
 
 ### 3. Investigate Root Cause
@@ -234,21 +179,16 @@ echo "2024-01-16 10:50 - Rolled back from release 5 to 4 due to database migrati
 After rollback, find and fix the issue:
 
 ```bash
-# Get logs from failed deployment
-ssh ubuntu@server "cat /opt/gokku/apps/api/production/releases/5/deploy.log"
+# Check deployment logs
+gokku logs -a api-production
 
-# Review changes
-git diff releases/4 releases/5
+# Review changes in your local repository
+git log --oneline -10
 ```
 
 ### 4. Don't Delete Failed Release
 
-Keep it for debugging:
-
-```bash
-# Don't do this immediately
-rm -rf /opt/gokku/apps/api/production/releases/5
-```
+Gokku automatically manages old releases, keeping the last 5. Failed releases are automatically cleaned up after 5 successful deployments.
 
 ### 5. Test Staging First
 
@@ -256,29 +196,29 @@ Deploy to staging before production:
 
 ```bash
 # Deploy to staging
-git push staging main
+gokku deploy -a api-staging
 
 # Test thoroughly
 curl https://staging.example.com/health
 
 # Then deploy to production
-git push production main
+gokku deploy -a api-production
 ```
 
 ## Database Migrations
 
-### Problem
+### Important Consideration
 
-Rolling back code doesn't rollback database:
+Rolling back code doesn't automatically rollback database changes:
 
 ```
-Release 5: Add column 'email' to users
-Release 4: Code doesn't know about 'email' column
+Release 20240116-104500: Add column 'email' to users
+Release 20240115-113000: Code doesn't know about 'email' column
 ```
 
-Rollback to Release 4 → Code expects old schema!
+Rollback to previous release → Code expects old schema!
 
-### Solutions
+### Best Practices
 
 #### 1. Backward Compatible Migrations
 
@@ -294,46 +234,44 @@ ALTER TABLE users ADD COLUMN email VARCHAR(255) NOT NULL;
 
 #### 2. Two-Phase Migrations
 
-**Phase 1:** Add column (deploy Release 5)
+**Phase 1:** Add column (deploy new release)
 ```sql
 ALTER TABLE users ADD COLUMN email VARCHAR(255);
 ```
 
-**Phase 2:** Make required (deploy Release 6)
+**Phase 2:** Make required (deploy next release)
 ```sql
 ALTER TABLE users ALTER COLUMN email SET NOT NULL;
 ```
 
-Now rollback from Release 6 to Release 5 is safe.
+Now rollback from latest to previous release is safe.
 
-#### 3. Separate Migration Rollback
+#### 3. Manual Database Rollback
 
-If you must rollback:
+If you must rollback database changes:
 
 ```bash
 # 1. Rollback code
-ssh ubuntu@server "cd /opt/gokku/apps/api/production && rm current && ln -s releases/4 current"
+gokku rollback -a api-production
 
-# 2. Rollback database manually
-ssh ubuntu@server "psql -d mydb -c \"ALTER TABLE users DROP COLUMN email;\""
-
-# 3. Restart
-ssh ubuntu@server "sudo systemctl restart api-production"
+# 2. Rollback database manually (if needed)
+gokku run bundle exec rails db:rollback -a api-production
+# or
+gokku run "python manage.py migrate app_name 0001" -a api-production
 ```
 
 ## Environment Variables
 
 ### After Rollback
 
-Check if env vars are compatible:
+Environment variables are shared across releases, so they remain consistent after rollback:
 
 ```bash
 # List current vars
 gokku config list -a api-production
 
-# If needed, restore backup
-scp backup.env ubuntu@server:/opt/gokku/apps/api/production/.env
-ssh ubuntu@server "sudo systemctl restart api-production"
+# Environment variables are stored in shared/.env
+# and linked to each release directory
 ```
 
 ## Partial Rollback
@@ -344,7 +282,7 @@ If deploying multiple apps:
 
 ```bash
 # Rollback only API
-ssh ubuntu@server "cd /opt/gokku/apps/api/production && rm current && ln -s releases/4 current && sudo systemctl restart api-production"
+gokku rollback -a api-production
 
 # Keep worker on latest
 # (no changes)
@@ -356,39 +294,15 @@ Rollback staging but not production:
 
 ```bash
 # Rollback staging
-ssh ubuntu@server "cd /opt/gokku/apps/api/staging && rm current && ln -s releases/3 current && sudo systemctl restart api-staging"
+gokku rollback -a api-staging
 
 # Production stays on latest
 ```
 
-## Automated Rollback (Future)
-
-Planned auto-rollback on failure:
-
-```yaml
-apps:
-  - name: api
-    deployment:
-      auto_rollback: true
-      health_check: /health
-```
-
-If deployment fails health check, automatically rollback.
 
 ## Troubleshooting
 
-### Symlink Error (Systemd)
-
-```
-ln: failed to create symbolic link 'current': File exists
-```
-
-**Fix:**
-```bash
-ssh ubuntu@server "cd /opt/gokku/apps/api/production && rm -f current && ln -s releases/4 current"
-```
-
-### Container Won't Start (Docker)
+### Container Won't Start
 
 ```
 docker: Error response from daemon: Conflict
@@ -396,17 +310,20 @@ docker: Error response from daemon: Conflict
 
 **Fix:**
 ```bash
-# Remove old container first
-ssh ubuntu@server "docker rm -f api-production"
+# Check container status
+gokku status -a api-production
 
-# Then start with old image
-ssh ubuntu@server "docker run -d --name api-production ... api:release-4"
+# Check logs for errors
+gokku logs -a api-production
+
+# If needed, restart the application
+gokku restart -a api-production
 ```
 
 ### Release Not Found
 
 ```
-ls: cannot access 'releases/4': No such file or directory
+Error: No previous release found
 ```
 
 **Fix:**
@@ -414,54 +331,45 @@ ls: cannot access 'releases/4': No such file or directory
 Release was cleaned up. Check available releases:
 
 ```bash
-ssh ubuntu@server "ls /opt/gokku/apps/api/production/releases/"
+# List available releases
+ssh ubuntu@server "ls /opt/gokku/apps/api/releases/"
+
+# Or check Docker images
+ssh ubuntu@server "docker images | grep api"
 ```
 
-Rollback to an existing one.
+Rollback to an existing one using the specific release ID.
 
-### Service Won't Restart
+### Application Won't Start After Rollback
 
 ```bash
 # Check status
-ssh ubuntu@server "sudo systemctl status api-production"
+gokku status -a api-production
 
 # Check logs
-ssh ubuntu@server "sudo journalctl -u api-production -n 50"
+gokku logs -a api-production
 
-# Manual restart
-ssh ubuntu@server "sudo systemctl daemon-reload && sudo systemctl restart api-production"
+# If needed, restart
+gokku restart -a api-production
 ```
 
 ## Monitoring Rollbacks
 
 ### Track Rollbacks
 
-Keep a log:
+Keep a log of rollbacks for debugging:
 
 ```bash
 # Create rollback log
-ssh ubuntu@server "echo \"$(date) - Rollback api-production: release-5 -> release-4\" >> /opt/gokku/rollback.log"
+echo "$(date) - Rollback api-production: 20240116-104500 -> 20240115-113000" >> rollback.log
 
 # View history
-ssh ubuntu@server "cat /opt/gokku/rollback.log"
-```
-
-### Alert on Rollback
-
-Send notification when rollback happens (custom script):
-
-```bash
-#!/bin/bash
-# rollback-notify.sh
-
-# Send to Slack, email, etc.
-curl -X POST "https://slack.com/api/chat.postMessage" \
-  -d "text=Rollback performed: $APP_NAME from $OLD_RELEASE to $NEW_RELEASE"
+cat rollback.log
 ```
 
 ## Next Steps
 
 - [Deployment](/guide/deployment) - Deployment strategies
 - [Environment Variables](/guide/env-vars) - Manage configs
-- [Troubleshooting](/reference/troubleshooting) - Debug issues
+- [CLI Reference](/reference/cli) - Complete command reference
 
