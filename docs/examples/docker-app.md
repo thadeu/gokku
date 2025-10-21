@@ -205,7 +205,7 @@ CMD ["/usr/bin/supervisord"]
 Set via gokku config:
 
 ```bash
-gokku config set DATABASE_URL=postgres://... --remote my-app-production
+gokku config set DATABASE_URL=postgres://... -a my-app-production
 ```
 
 Access in container:

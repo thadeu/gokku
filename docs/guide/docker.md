@@ -340,7 +340,7 @@ Docker maps: `8080:8080`
 Set via environment variables:
 
 ```bash
-gokku config set PORT=8081 --app api --env production --remote api-production
+gokku config set PORT=8081 --app api --env production -a api-production
 ```
 
 Then redeploy.
@@ -357,7 +357,7 @@ ssh ubuntu@server "docker ps | grep my-app"
 
 ```bash
 # Using CLI
-gokku logs --remote my-app-production -f
+gokku logs -a my-app-production -f
 
 # Or directly
 ssh ubuntu@server "docker logs -f my-app-blue"
@@ -367,7 +367,7 @@ ssh ubuntu@server "docker logs -f my-app-blue"
 
 ```bash
 # Using CLI
-gokku restart --remote my-app-production
+gokku restart -a my-app-production
 
 # Or directly
 ssh ubuntu@server "docker restart my-app-blue"
@@ -403,10 +403,10 @@ All environment variables are passed to the container:
 
 ```bash
 # Set variable
-gokku config set DATABASE_URL=postgres://... --remote api-production
+gokku config set DATABASE_URL=postgres://... -a api-production
 
 # Restart container to pick up changes
-gokku restart --remote api-production
+gokku restart -a api-production
 ```
 
 ## Health Checks
@@ -516,7 +516,7 @@ Gokku uses blue-green deployment for zero-downtime updates:
 ### Enable Zero-Downtime
 
 ```bash
-gokku config set ZERO_DOWNTIME=true --remote <app>-<env>
+gokku config set ZERO_DOWNTIME=true -a <app>-<env>
 ```
 
 ### Container Naming

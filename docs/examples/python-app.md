@@ -64,7 +64,7 @@ git remote add production ubuntu@server:flask-app
 git push production main
 
 # Or use CLI
-gokku deploy --remote flask-app-production
+gokku deploy -a flask-app-production
 ```
 
 ## With Gunicorn (Production)
@@ -426,7 +426,7 @@ apps:
 
 ```bash
 # Using CLI
-gokku logs --remote flask-app-production -f
+gokku logs -a flask-app-production -f
 
 # Or directly
 ssh ubuntu@server "docker logs -f flask-app-blue"
@@ -436,7 +436,7 @@ ssh ubuntu@server "docker logs -f flask-app-blue"
 
 ```bash
 # Using CLI
-gokku status --remote flask-app-production
+gokku status -a flask-app-production
 
 # Or directly
 ssh ubuntu@server "docker ps | grep flask-app"
@@ -446,7 +446,7 @@ ssh ubuntu@server "docker ps | grep flask-app"
 
 ```bash
 # Using CLI
-gokku restart --remote flask-app-production
+gokku restart -a flask-app-production
 
 # Or directly
 ssh ubuntu@server "docker restart flask-app-blue"

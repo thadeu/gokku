@@ -77,7 +77,7 @@ Now deploy your application:
 **Using gokku CLI:**
 
 ```bash
-gokku deploy --remote production
+gokku deploy -a production
 ```
 
 **Or manual git push:**
@@ -113,20 +113,20 @@ Watch the magic happen:
 
 ```bash
 # View logs
-gokku logs --remote api-production -f
+gokku logs -a api-production -f
 
 # Check status
-gokku status --remote api-production
+gokku status -a api-production
 
 # Configure environment
-gokku config set PORT=8080 --remote api-production
-gokku config set DATABASE_URL="postgres://..." --remote api-production
+gokku config set PORT=8080 -a api-production
+gokku config set DATABASE_URL="postgres://..." -a api-production
 
 # Restart
-gokku restart --remote api-production
+gokku restart -a api-production
 
 # Run commands
-gokku run "docker ps" --remote api-production
+gokku run "docker ps" -a api-production
 ```
 
 **Or use SSH directly:**
@@ -171,7 +171,7 @@ Check the deployment logs:
 
 ```bash
 # Using CLI
-gokku logs --remote api-production
+gokku logs -a api-production
 
 # Or directly
 ssh ubuntu@your-server "docker logs api-blue"
@@ -183,7 +183,7 @@ Set a different port using gokku CLI:
 
 ```bash
 # Using gokku CLI
-gokku config set PORT=8081 --remote api-production
+gokku config set PORT=8081 -a api-production
 ```
 
 ## Troubleshooting

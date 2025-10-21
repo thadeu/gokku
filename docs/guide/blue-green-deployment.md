@@ -38,10 +38,10 @@ Environment files are located at:
 
 ```bash
 # Enable zero-downtime deployment
-gokku config set ZERO_DOWNTIME=true --remote <app>-<env>
+gokku config set ZERO_DOWNTIME=true -a <app>-<env>
 
 # Disable zero-downtime deployment
-gokku config set ZERO_DOWNTIME=false --remote <app>-<env>
+gokku config set ZERO_DOWNTIME=false -a <app>-<env>
 ```
 
 ## Container Naming
@@ -103,7 +103,7 @@ Gokku performs health checks on new deployments:
 Set a custom health check endpoint:
 
 ```bash
-gokku config set HEALTH_CHECK_PATH=/api/health --remote <app>-<env>
+gokku config set HEALTH_CHECK_PATH=/api/health -a <app>-<env>
 ```
 
 ### Health Check Timeout
@@ -111,7 +111,7 @@ gokku config set HEALTH_CHECK_PATH=/api/health --remote <app>-<env>
 Configure health check timeout (default: 30 seconds):
 
 ```bash
-gokku config set HEALTH_CHECK_TIMEOUT=60 --remote <app>-<env>
+gokku config set HEALTH_CHECK_TIMEOUT=60 -a <app>-<env>
 ```
 
 ## Monitoring Deployments
@@ -131,7 +131,7 @@ docker ps | grep api-green
 
 ```bash
 # View logs from active container
-gokku logs --remote <app>-<env> -f
+gokku logs -a <app>-<env> -f
 
 # View logs from specific container
 ssh ubuntu@server "docker logs -f <app-name>-blue"
@@ -142,7 +142,7 @@ ssh ubuntu@server "docker logs -f <app-name>-green"
 
 ```bash
 # Check application status
-gokku status --remote <app>-<env>
+gokku status -a <app>-<env>
 
 # Check container health
 ssh ubuntu@server "docker inspect <app-name>-blue"
@@ -161,10 +161,10 @@ If health checks fail, Gokku automatically:
 
 ```bash
 # Rollback to previous release
-gokku rollback --remote <app>-<env>
+gokku rollback -a <app>-<env>
 
 # Rollback to specific release
-gokku rollback --remote <app>-<env> <release-id>
+gokku rollback -a <app>-<env> <release-id>
 ```
 
 ## Troubleshooting
@@ -264,7 +264,7 @@ Run database migrations before deployment:
 
 ```bash
 # Set migration command
-gokku config set MIGRATION_COMMAND="python manage.py migrate" --remote <app>-<env>
+gokku config set MIGRATION_COMMAND="python manage.py migrate" -a <app>-<env>
 ```
 
 ### 4. Environment Variables
@@ -273,8 +273,8 @@ Use environment variables for configuration:
 
 ```bash
 # Set required environment variables
-gokku config set DATABASE_URL="postgres://..." --remote <app>-<env>
-gokku config set REDIS_URL="redis://..." --remote <app>-<env>
+gokku config set DATABASE_URL="postgres://..." -a <app>-<env>
+gokku config set REDIS_URL="redis://..." -a <app>-<env>
 ```
 
 ## Configuration Reference
@@ -317,10 +317,10 @@ apps:
 
 ```bash
 # Environment configuration
-gokku config set ZERO_DOWNTIME=true --remote api-production
-gokku config set HEALTH_CHECK_PATH=/api/health --remote api-production
-gokku config set HEALTH_CHECK_TIMEOUT=60 --remote api-production
-gokku config set DATABASE_URL="postgres://..." --remote api-production
+gokku config set ZERO_DOWNTIME=true -a api-production
+gokku config set HEALTH_CHECK_PATH=/api/health -a api-production
+gokku config set HEALTH_CHECK_TIMEOUT=60 -a api-production
+gokku config set DATABASE_URL="postgres://..." -a api-production
 ```
 
 ### Deployment Commands
@@ -330,13 +330,13 @@ gokku config set DATABASE_URL="postgres://..." --remote api-production
 git push api-production main
 
 # Check deployment status
-gokku status --remote api-production
+gokku status -a api-production
 
 # View logs
-gokku logs --remote api-production -f
+gokku logs -a api-production -f
 
 # Rollback if needed
-gokku rollback --remote api-production
+gokku rollback -a api-production
 ```
 
 ## Next Steps

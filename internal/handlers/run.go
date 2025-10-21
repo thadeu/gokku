@@ -31,14 +31,14 @@ func handleRun(args []string) {
 		// Join all remaining args as the command
 		command := strings.Join(remainingArgs, " ")
 
-		// Build the command to run in the app's current directory
-		appDir := fmt.Sprintf("/opt/gokku/apps/%s/current", remoteInfo.App)
-		fullCommand := fmt.Sprintf("cd %s && %s", appDir, command)
+		// Build the docker exec command to run in the active container
+		containerName := remoteInfo.App
+		dockerCommand := fmt.Sprintf("docker exec -it %s %s", containerName, command)
 
 		fmt.Printf("→ %s (%s)\n", remoteInfo.App, remoteInfo.Host)
 		fmt.Printf("$ %s\n\n", command)
 
-		cmd := exec.Command("ssh", "-t", remoteInfo.Host, fullCommand)
+		cmd := exec.Command("ssh", "-t", remoteInfo.Host, dockerCommand)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
@@ -55,18 +55,23 @@ func handleRun(args []string) {
 			os.Exit(1)
 		}
 
-		if len(remainingArgs) < 1 {
-			fmt.Println("Error: command is required")
-			fmt.Println("Usage: gokku run <command>")
+		if len(remainingArgs) < 2 {
+			fmt.Println("Error: app name and command are required")
+			fmt.Println("Usage: gokku run <command> --app <app>")
 			os.Exit(1)
 		}
 
 		// Join all remaining args as the command
-		command := strings.Join(remainingArgs, " ")
+		command := strings.Join(remainingArgs[1:], " ")
+		appName := remainingArgs[0]
+
+		// Build the docker exec command to run in the active container
+		containerName := appName
+		dockerCommand := fmt.Sprintf("docker exec -it %s %s", containerName, command)
 
 		fmt.Printf("$ %s\n\n", command)
 
-		cmd := exec.Command("bash", "-c", command)
+		cmd := exec.Command("bash", "-c", dockerCommand)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin

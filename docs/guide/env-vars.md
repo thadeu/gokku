@@ -20,7 +20,7 @@ gokku config <command> [args] -a <app> [-e <env>]  # shorthand
 
 **Remote execution (from local machine):**
 ```bash
-gokku config <command> [args] --remote <git-remote>
+gokku config <command> [args] -a <git-remote>
 ```
 
 ::: tip Default Environment
@@ -45,8 +45,8 @@ gokku config set DATABASE_URL="postgres://user:pass@localhost/db" -a api -e prod
 
 **From local machine:**
 ```bash
-gokku config set PORT=8080 --remote api-production
-gokku config set DATABASE_URL="postgres://..." --remote api-production
+gokku config set PORT=8080 -a api-production
+gokku config set DATABASE_URL="postgres://..." -a api-production
 ```
 
 **Multiple variables:**
@@ -69,7 +69,7 @@ gokku config get PORT -a api -e production
 
 **From local machine:**
 ```bash
-gokku config get PORT --remote api-production
+gokku config get PORT -a api-production
 ```
 
 Output:
@@ -89,7 +89,7 @@ gokku config list -a api -e production
 
 **From local machine:**
 ```bash
-gokku config list --remote api-production
+gokku config list -a api-production
 ```
 
 Output:
@@ -112,7 +112,7 @@ gokku config unset PORT -a api -e production
 
 **From local machine:**
 ```bash
-gokku config unset PORT --remote api-production
+gokku config unset PORT -a api-production
 ```
 
 ## Storage
@@ -191,17 +191,17 @@ gokku config set LOG_LEVEL=debug -a api -e production
 
 ## Remote Management
 
-With `gokku config --remote`, you don't need SSH commands:
+With `gokku config -a`, you don't need SSH commands:
 
 ```bash
 # Set variable
-gokku config set PORT=8081 --remote api-production
+gokku config set PORT=8081 -a api-production
 
 # Get variable
-gokku config get PORT --remote api-production
+gokku config get PORT -a api-production
 
 # List all
-gokku config list --remote api-production
+gokku config list -a api-production
 ```
 
 ## Apply Changes
@@ -212,7 +212,7 @@ After changing environment variables, restart the application:
 
 **From local machine:**
 ```bash
-gokku restart api production --remote api-production
+gokku restart api production -a api-production
 ```
 
 **On server:**
@@ -353,10 +353,10 @@ gokku config set SECRET_KEY="staging-secret" -a api -e staging
 NEW_SECRET=$(openssl rand -hex 32)
 
 # Update
-gokku config set SECRET_KEY="$NEW_SECRET" --remote api-production
+gokku config set SECRET_KEY="$NEW_SECRET" -a api-production
 
 # Restart app
-gokku restart api production --remote api-production
+gokku restart api production -a api-production
 ```
 
 ### 5. Limit Access
@@ -420,7 +420,7 @@ Restart the application:
 
 ```bash
 # Using gokku CLI
-gokku restart api production --remote api-production
+gokku restart api production -a api-production
 
 # Or manually on server
 sudo systemctl restart api-production  # Systemd
@@ -479,7 +479,7 @@ ssh ubuntu@server "cat /opt/gokku/apps/api/production/.env" > backup.env
 
 # Restore
 scp backup.env ubuntu@server:/opt/gokku/apps/api/production/.env
-gokku restart api production --remote api-production
+gokku restart api production -a api-production
 ```
 
 ### Template Variables
@@ -503,7 +503,7 @@ The `gokku` CLI provides additional management commands:
 
 ```bash
 # From local machine
-gokku restart api production --remote api-production
+gokku restart api production -a api-production
 
 # On server
 gokku restart api production
@@ -513,7 +513,7 @@ gokku restart api production
 
 ```bash
 # From local machine
-gokku logs api production --remote api-production
+gokku logs api production -a api-production
 
 # On server  
 gokku logs api production
@@ -523,7 +523,7 @@ gokku logs api production
 
 ```bash
 # From local machine
-gokku status api production --remote api-production
+gokku status api production -a api-production
 
 # On server
 gokku status api production

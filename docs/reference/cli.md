@@ -1,28 +1,28 @@
 # CLI Reference
 
-Command-line tools and scripts reference.
+Complete command-line interface reference for Gokku.
 
-## gokku (Client CLI)
+## Installation
 
-Local CLI for managing deployments. Abstracts SSH commands for easier server management.
-
-### Installation
+### Client (Local Machine)
 
 ```bash
-curl -fsSL https://gokku-vm.com/install | bash
+curl -fsSL https://gokku-vm.com/install | bash -s -- --client
 ```
 
-### Usage
+### Server
 
 ```bash
-gokku [command] [options]
+curl -fsSL https://gokku-vm.com/install | bash -s -- --server
 ```
 
-### Global Options
+## Global Options
 
-- `--remote <git-remote>` - Specify git remote name (e.g., `api-production`, `vad-staging`)
+- `-a, --app <app-name>` - Specify app name (e.g., `api-production`, `vad-staging`)
+- `--version, -v` - Show version information
+- `--help, -h` - Show help information
 
-The `--remote` flag uses your **git remote name**:
+The `-a/--app` flag uses your **git remote name**:
 - Must be a configured git remote
 - Gokku runs `git remote get-url <name>` to extract connection info
 - Environment is parsed from the remote name suffix
@@ -38,835 +38,303 @@ The `--remote` flag uses your **git remote name**:
 2. Gokku parses the remote URL to extract:
    - **SSH host**: `ubuntu@server`
    - **App name**: `api` (from `/repos/api.git`)
-   - **Environment**: `production` (from remote name `api-production`)
 
-3. You use the remote name directly:
+3. You use the app name directly:
    ```bash
-   gokku config set PORT=8080 --remote api-production
-   gokku logs --remote vad-staging -f
+   gokku config set PORT=8080 -a api-production
+   gokku logs -a vad-staging -f
    ```
 
-**Remote name format:**
-- `<app>-<environment>` (recommended)
-- Examples: `api-production`, `vad-staging`, `worker-dev`
-- Environment is extracted from the last part after `-`
-- If no `-`, defaults to `production`
+## Commands
 
-### Commands
+### Server Management
 
-#### server - Manage Servers
+#### `gokku server add <app_name> <user@server_ip>`
+
+Add a new server remote.
 
 ```bash
-# Add a server
-gokku server add <name> <host>
+gokku server add stt ubuntu@54.233.138.116
+```
 
-# List servers
+#### `gokku server list`
+
+List all configured remotes.
+
+```bash
 gokku server list
-
-# Remove a server
-gokku server remove <name>
-
-# Set default server
-gokku server set-default <name>
 ```
 
-**Examples:**
+#### `gokku server remove <remote_name>`
+
+Remove a server remote.
+
 ```bash
-gokku server add prod ubuntu@ec2-54-123-45-67.compute-1.amazonaws.com
-gokku server list
-gokku server set-default prod
+gokku server remove stt
 ```
 
-#### config - Manage Environment Variables
+### Application Management
 
-Manage application environment variables without SSH commands.
+#### `gokku apps list`
+
+List applications on the server.
 
 ```bash
-# Set variable
-gokku config set KEY=VALUE --remote <app>-<env>
-
-# Set multiple variables
-gokku config set KEY1=VALUE1 KEY2=VALUE2 --remote <app>-<env>
-
-# Get variable
-gokku config get KEY --remote <app>-<env>
-
-# List all variables
-gokku config list --remote <app>-<env>
-
-# Unset variable
-gokku config unset KEY --remote <app>-<env>
+gokku apps list -a api-production
 ```
 
-**Setup (one-time):**
+#### `gokku apps create <app>`
+
+Create a new application.
+
 ```bash
-# Add git remote (standard git command)
-git remote add api-production ubuntu@server:api
+gokku apps create myapp -a myapp
 ```
 
-**Examples:**
+#### `gokku apps destroy <app>`
+
+Destroy an application.
+
 ```bash
-# Set variables
-gokku config set PORT=8080 --remote api-production
-gokku config set DATABASE_URL="postgres://localhost/db" --remote api-production
-gokku config set LOG_LEVEL=info WORKERS=4 --remote api-production
-
-# Get variable
-gokku config get PORT --remote api-production
-
-# List all
-gokku config list --remote vad-production
-
-# Unset
-gokku config unset DEBUG --remote api-staging
+gokku apps destroy myapp -a myapp
 ```
 
-**Before (with SSH):**
+### Configuration
+
+#### `gokku config set KEY=VALUE [-a <app>]`
+
+Set environment variables.
+
 ```bash
-ssh ubuntu@server "cd /opt/gokku && gokku config set PORT=8080 --app api --env production"
+# Remote execution
+gokku config set PORT=8080 -a api-production
+gokku config set DATABASE_URL="postgres://..." -a api-production
+
+# Local execution (on server)
+gokku config set PORT=8080 --app api
 ```
 
-**Now (with gokku):**
-```bash
-# One-time setup
-git remote add api-production ubuntu@server:api
+#### `gokku config get KEY [-a <app>]`
 
-# Use it
-gokku config set PORT=8080 --remote api-production
+Get environment variable value.
+
+```bash
+gokku config get PORT -a api-production
 ```
 
-#### run - Execute Commands
+#### `gokku config list [-a <app>]`
 
-Run arbitrary commands on the server without manual SSH.
+List all environment variables.
 
 ```bash
-gokku run <command> --remote <app>-<env>
+gokku config list -a api-production
 ```
 
-**Examples:**
+#### `gokku config unset KEY [-a <app>]`
+
+Remove environment variable.
+
 ```bash
-# Check service status
-gokku run "systemctl status api-production" --remote api-production
-
-# View Docker containers
-gokku run "docker ps" --remote vad-production
-
-# Run Rails console
-gokku run "bundle exec bin/console" --remote app-production
-
-# Check disk usage
-gokku run "df -h" --remote api-production
-
-# View specific log file
-gokku run "tail -f /var/log/app.log" --remote api-production
-
-# Database migration
-gokku run "python manage.py migrate" --remote django-production
-
-# Clear cache
-gokku run "redis-cli FLUSHALL" --remote api-production
+gokku config unset PORT -a api-production
 ```
 
-**Before (with SSH):**
+### Execution
+
+#### `gokku run <command> [-a <app>]`
+
+Run arbitrary commands inside the application container.
+
 ```bash
-ssh ubuntu@server "docker ps"
+# Remote execution (inside container)
+gokku run bundle exec rails console -a api-production
+gokku run npm install -a myapp
+gokku run python manage.py shell -a django-app
+
+# Local execution (on server, inside container)
+gokku run bundle exec rails console --app api
 ```
 
-**Now (with gokku):**
+**Security Note:** Commands are executed inside the application's Docker container (named after the app), not directly on the server. This provides isolation and security.
+
+**Container Naming:** The container name matches the application name (e.g., `stt`, `api-production`).
+
+### Logs
+
+#### `gokku logs [-a <app>] [-f]`
+
+View application logs.
+
 ```bash
-gokku run "docker ps" --remote api-production
-```
+# Remote execution
+gokku logs -a api-production -f
+gokku logs -a api-production
 
-#### logs - View Logs
-
-View application logs from Docker containers.
-
-```bash
-# View logs
-gokku logs <app> <env>
-
-# Follow logs
-gokku logs <app> <env> -f
-
-# With --remote flag
-gokku logs --remote <app>-<env>
-gokku logs --remote <app>-<env> -f
-```
-
-**Examples:**
-```bash
-# View last 100 lines
-gokku logs api production
-
-# Follow logs in real-time
+# Local execution (on server)
 gokku logs api production -f
-
-# Using --remote
-gokku logs --remote vad-staging -f
 ```
 
-Shows logs from Docker containers with blue-green deployment support.
+### Status
 
-#### status - Check Status
+#### `gokku status [-a <app>]`
 
-Check Docker container status.
+Check service status.
 
 ```bash
-# Specific app
-gokku status <app> <env>
+# Remote execution
+gokku status -a api-production
 
-# With --remote
-gokku status --remote <app>-<env>
-
-# All containers
+# Local execution (on server)
 gokku status
 ```
 
-**Examples:**
-```bash
-gokku status api production
-gokku status --remote vad-production
-gokku status  # All containers
-```
+### Restart
 
-#### restart - Restart Container
+#### `gokku restart [-a <app>]`
 
-Restart a Docker container.
+Restart services.
 
 ```bash
-gokku restart <app> <env>
+# Remote execution
+gokku restart -a api-production
 
-# With --remote
-gokku restart --remote <app>-<env>
+# Local execution (on server)
+gokku restart api
 ```
 
-**Examples:**
-```bash
-gokku restart api production
-gokku restart --remote vad-staging
-```
+### Deployment
 
-Restarts the active Docker container (blue or green).
+#### `gokku deploy [-a <app>]`
 
-#### deploy - Deploy Application
-
-Deploy application via git push.
+Deploy applications.
 
 ```bash
-gokku deploy <app> <env>
+# Remote execution
+gokku deploy -a api-production
 
-# With --remote
-gokku deploy --remote <app>-<env>
+# Local execution (on server)
+gokku deploy api
 ```
 
-**Examples:**
-```bash
-gokku deploy api production
-gokku deploy --remote vad-staging
-```
+### Rollback
 
-Automatically:
-1. Adds git remote if not exists
-2. Determines branch based on environment
-3. Pushes code
-4. Triggers deployment
-
-#### rollback - Rollback Deployment
+#### `gokku rollback [-a <app>] [release-id]`
 
 Rollback to previous release.
 
 ```bash
-# Rollback to previous release
-gokku rollback <app> <env>
-
-# Rollback to specific release
-gokku rollback <app> <env> <release-id>
-
-# With --remote
-gokku rollback --remote <app>-<env>
-gokku rollback --remote <app>-<env> <release-id>
-```
-
-**Examples:**
-```bash
-gokku rollback api production
-gokku rollback api production 5
-gokku rollback --remote vad-production
-```
-
-#### apps - List Applications
-
-List all deployed applications on server.
-
-```bash
-gokku apps
-```
-
-#### tool - Utility Commands
-
-Utility commands for scripts and automation.
-
-```bash
-gokku tool <command>
-```
-
-**Examples:**
-```bash
-gokku tool version
-gokku tool help
-```
-
-#### ssh - SSH to Server
-
-Direct SSH to server.
-
-```bash
-gokku ssh [command]
-```
-
-**Examples:**
-```bash
-# Interactive shell
-gokku ssh
-
-# Run command
-gokku ssh "uptime"
-```
-
-### Configuration File
-
-Location: `~/.gokku/config.yml`
-
-**Example:**
-```yaml
-servers:
-  - name: production
-    host: ubuntu@ec2-54-123-45-67.compute-1.amazonaws.com
-    base_dir: /opt/gokku
-    default: true
-  
-  - name: staging
-    host: ubuntu@ec2-54-234-56-78.compute-1.amazonaws.com
-    base_dir: /opt/gokku
-```
-
-### Complete Workflow
-
-#### 1. Add Git Remote (One-Time Setup)
-
-```bash
-# Add remote using standard git command
-git remote add api-production ubuntu@server:api
-git remote add vad-staging ubuntu@server:vad
-```
-
-Gokku will automatically extract:
-- SSH host: `ubuntu@server`
-- App name: `api`, `vad`
-- Environment: `production`, `staging`
-
-#### 2. Configure Application
-
-```bash
-gokku config set PORT=8080 --remote api-production
-gokku config set DATABASE_URL="postgres://..." --remote api-production
-gokku config set LOG_LEVEL=info --remote api-production
-```
-
-#### 3. Deploy
-
-```bash
-gokku deploy --remote api-production
-```
-
-Or traditional:
-```bash
-git push api-production main
-```
-
-#### 4. Check Status
-
-```bash
-gokku status --remote api-production
-```
-
-#### 5. View Logs
-
-```bash
-gokku logs --remote api-production -f
-```
-
-#### 6. Run Commands
-
-```bash
-gokku run "docker ps" --remote api-production
-gokku run "df -h" --remote api-production
-```
-
-### Comparison: Before vs After
-
-**Before (Manual SSH):**
-```bash
-# Set environment variable
-gokku config set PORT=8080 --app api --env production --remote api-production
-
-# View logs
-ssh ubuntu@server "sudo journalctl -u api-production -f"
-
-# Restart service
-ssh ubuntu@server "sudo systemctl restart api-production"
-
-# Run command
-ssh ubuntu@server "docker ps"
-```
-
-**After (gokku CLI):**
-```bash
-# Set environment variable
-gokku config set PORT=8080 --remote api-production
-
-# View logs
-gokku logs --remote api-production -f
-
-# Restart service
-gokku restart --remote api-production
-
-# Run command
-gokku run "docker ps" --remote api-production
-```
-
-✅ **Benefits:**
-- No manual SSH commands
-- Cleaner syntax
-- Automatic app/env parsing
-- Works with both systemd and Docker
-- Consistent interface
-
-## Server Scripts
-
-Scripts located in `/opt/gokku/scripts/` on the server.
-
-### deploy-server-setup.sh
-
-Setup a new application on the server.
-
-**Usage:**
-```bash
-./deploy-server-setup.sh APP_NAME ENVIRONMENT
-```
-
-**Arguments:**
-- `APP_NAME` - Application name from `gokku.yml`
-- `ENVIRONMENT` - Environment name (e.g., `production`, `staging`)
-
-**Example:**
-```bash
-./deploy-server-setup.sh api production
-```
-
-**What it does:**
-1. Creates Git repository at `/opt/gokku/repos/APP_NAME.git`
-2. Creates app directory at `/opt/gokku/apps/APP_NAME/ENVIRONMENT/`
-3. Sets up Git post-receive hook
-4. Creates systemd service (if `build.type: systemd`)
-5. Creates environment file
-
-### config
-
-Manage environment variables for applications.
-
-**Usage:**
-```bash
-gokku config <command> [KEY[=VALUE]] [options]
-```
-
-**Options:**
-- `--remote <git-remote>` - Execute on remote server via SSH
-- `--app, -a <app>` - Application name (required for local execution)
-- `--env, -e <env>` - Environment name (defaults to 'default' for local)
-
-**Commands:**
-
-#### set
-
-Set an environment variable:
-
-```bash
 # Remote execution
-gokku config set PORT=8080 --remote api-production
-gokku config set DATABASE_URL="postgres://..." --remote api-production
+gokku rollback -a api-production
+gokku rollback -a api-production 2
 
 # Local execution (on server)
-gokku config set PORT=8080 --app api --env production
+gokku rollback api production
 ```
 
-#### get
+### SSH
 
-Get a variable value:
+#### `gokku ssh [-a <app>]`
+
+SSH to server.
 
 ```bash
-# Remote
-gokku config get PORT --remote api-production
-
-# Local
-gokku config get PORT --app api --env production
+gokku ssh -a api-production
 ```
 
-#### list
+## Examples
 
-List all variables:
+### Basic Workflow
 
 ```bash
-# Remote
-gokku config list --remote api-production
+# 1. Add server remote
+gokku server add api ubuntu@54.233.138.116
 
-# Local
-gokku config list --app api --env production
+# 2. Set environment variables
+gokku config set PORT=8080 -a api
+gokku config set DATABASE_URL="postgres://..." -a api
+
+# 3. Deploy application
+gokku deploy -a api
+
+# 4. Check status
+gokku status -a api
+
+# 5. View logs
+gokku logs -a api -f
 ```
 
-Output:
-```
-PORT=8080
-DATABASE_URL=postgres://...
-LOG_LEVEL=info
-```
-
-#### unset
-
-Delete a variable:
+### Rails Application
 
 ```bash
-# Remote
-gokku config unset PORT --remote api-production
+# Connect to Rails console (inside container)
+gokku run bundle exec rails console -a api-production
 
-# Local
-gokku config unset PORT --app api --env production
+# Run database migrations (inside container)
+gokku run bundle exec rails db:migrate -a api-production
+
+# Check application status
+gokku status -a api-production
 ```
 
-**Examples:**
+### Node.js Application
 
 ```bash
-# Remote execution (from local machine)
-gokku config set PORT=8080 --remote api-production
-gokku config set LOG_LEVEL=info DATABASE_URL="postgres://..." --remote api-production
-gokku config list --remote api-production
-gokku config unset LOG_LEVEL --remote api-production
+# Install dependencies (inside container)
+gokku run npm install -a myapp
 
-# Local execution (on server)
-gokku config set PORT=8080 --app api --env production
-gokku config list --app api --env production
-gokku config unset PORT --app api --env production
+# Run build process (inside container)
+gokku run npm run build -a myapp
+
+# Check logs
+gokku logs -a myapp -f
 ```
 
-## Git Commands
-
-### Deploy
-
-Push to deploy:
+### Python/Django Application
 
 ```bash
-git push REMOTE BRANCH
+# Connect to Django shell (inside container)
+gokku run python manage.py shell -a django-app
+
+# Run migrations (inside container)
+gokku run python manage.py migrate -a django-app
+
+# Install Python packages (inside container)
+gokku run pip install requests -a django-app
 ```
 
-**Example:**
-```bash
-git push production main
-git push staging develop
-```
+## Environment Variables
 
-### Add Remote
-
-```bash
-git remote add REMOTE_NAME USER@SERVER:APP_NAME
-```
-
-**Example:**
-```bash
-git remote add production ubuntu@server:api
-git remote add staging ubuntu@server:api
-```
-
-### List Remotes
+Gokku supports environment-specific configuration:
 
 ```bash
-git remote -v
+# Set production environment variables
+gokku config set NODE_ENV=production -a api-production
+
+# Set staging environment variables
+gokku config set NODE_ENV=staging -a api-staging
 ```
 
-### Remove Remote
-
-```bash
-git remote remove REMOTE_NAME
-```
-
-## Docker Management
-
-All applications run in Docker containers with blue-green deployment.
-
-### Container Status
-
-Check container status:
-
-```bash
-docker ps | grep APP_NAME
-```
-
-**Example:**
-```bash
-docker ps | grep api
-```
-
-### Container Logs
-
-View container logs:
-
-```bash
-docker logs APP_NAME-blue
-docker logs APP_NAME-green
-```
-
-**Options:**
-- `-f` - Follow (tail) logs
-- `--tail 100` - Show last 100 lines
-- `--since "1h"` - Show logs from last hour
-
-**Examples:**
-```bash
-# Follow logs from active container
-docker logs -f api-blue
-
-# Last 50 lines
-docker logs --tail 50 api-blue
-
-# Logs from last hour
-docker logs --since "1h" api-blue
-```
-
-### Container Management
-
-```bash
-# Start container
-docker start APP_NAME-blue
-
-# Stop container
-docker stop APP_NAME-blue
-
-# Restart container
-docker restart APP_NAME-blue
-
-# Remove container
-docker rm APP_NAME-blue
-```
-
-## Docker Commands
-
-Manage Docker containers (all applications use Docker).
-
-### List Containers
-
-```bash
-docker ps | grep APP_NAME
-```
-
-### Logs
-
-View container logs:
-
-```bash
-docker logs APP_NAME-blue
-docker logs APP_NAME-green
-```
-
-**Options:**
-- `-f` - Follow (tail) logs
-- `--tail 100` - Show last 100 lines
-
-**Example:**
-```bash
-docker logs -f --tail 50 api-blue
-```
-
-### Stop Container
-
-```bash
-docker stop APP_NAME-blue
-docker stop APP_NAME-green
-```
-
-### Start Container
-
-```bash
-docker start APP_NAME-blue
-docker start APP_NAME-green
-```
-
-### Restart Container
-
-```bash
-docker restart APP_NAME-blue
-docker restart APP_NAME-green
-```
-
-### Inspect Container
-
-```bash
-docker inspect APP_NAME-blue
-docker inspect APP_NAME-green
-```
-
-### Execute Command in Container
-
-```bash
-docker exec -it APP_NAME-blue COMMAND
-docker exec -it APP_NAME-green COMMAND
-```
-
-**Example:**
-```bash
-# Shell access
-docker exec -it api-blue /bin/sh
-
-# Run command
-docker exec api-blue python manage.py migrate
-```
-
-### List Images
-
-```bash
-docker images | grep APP_NAME
-```
-
-### Remove Old Images
-
-```bash
-docker rmi APP_NAME:TAG
-```
-
-## SSH Commands
-
-### Connect to Server
-
-```bash
-ssh USER@SERVER
-```
-
-### Run Command on Server
-
-```bash
-ssh USER@SERVER "COMMAND"
-```
-
-**Examples:**
-```bash
-# Check service status
-ssh ubuntu@server "sudo systemctl status api-production"
-
-# View logs
-ssh ubuntu@server "sudo journalctl -u api-production -n 50"
-
-# List containers
-ssh ubuntu@server "docker ps"
-```
-
-### Copy Files
-
-```bash
-# From local to server
-scp FILE USER@SERVER:/path/to/destination
-
-# From server to local
-scp USER@SERVER:/path/to/file LOCAL_PATH
-```
-
-## Common Workflows
-
-### Deploy New App
-
-```bash
-# 1. Setup on server
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api production"
-
-# 2. Add Git remote locally
-git remote add production ubuntu@server:api
-
-# 3. Deploy
-git push production main
-```
-
-### Update Environment Variable
-
-```bash
-# 1. Set variable
-gokku config set PORT=8081 --app api --env production --remote api-production
-
-# 2. Restart service
-ssh ubuntu@server "sudo systemctl restart api-production"
-```
-
-### View Logs
-
-```bash
-# Systemd
-ssh ubuntu@server "sudo journalctl -u api-production -f"
-
-# Docker
-ssh ubuntu@server "docker logs -f api-production"
-```
-
-### Rollback (Manual)
-
-```bash
-# 1. SSH to server
-ssh ubuntu@server
-
-# 2. Navigate to app directory
-cd /opt/gokku/apps/api/production
-
-# 3. List releases
-ls -la releases/
-
-# 4. Change symlink
-rm current
-ln -s releases/2 current
-
-# 5. Restart
-sudo systemctl restart api-production
-```
-
-## Troubleshooting Commands
-
-### Check Disk Space
-
-```bash
-ssh ubuntu@server "df -h"
-```
-
-### Check Memory Usage
-
-```bash
-ssh ubuntu@server "free -h"
-```
-
-### Check Ports
-
-```bash
-ssh ubuntu@server "sudo lsof -i :8080"
-```
-
-### Check Processes
-
-```bash
-ssh ubuntu@server "ps aux | grep api"
-```
-
-### Test HTTP Endpoint
-
-```bash
-ssh ubuntu@server "curl http://localhost:8080/health"
-```
+## Troubleshooting
+
+### Common Issues
+
+1. **Remote not found**: Make sure the git remote exists
+   ```bash
+   git remote -v
+   ```
+
+2. **Permission denied**: Check SSH key configuration
+   ```bash
+   ssh -T ubuntu@your-server
+   ```
+
+3. **App not found**: Verify the app exists on the server
+   ```bash
+   gokku apps list -a your-app
+   ```
 
 ## Next Steps
 
 - [Configuration Reference](/reference/configuration) - Config file docs
-- [Troubleshooting](/reference/troubleshooting) - Common issues
-- [Examples](/examples/) - Real-world usage
+- [Getting Started Guide](/guide/getting-started) - Quick start tutorial
+- [Examples](/examples/) - Real-world usage examples
 

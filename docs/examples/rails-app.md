@@ -89,10 +89,10 @@ Gokku will automatically:
 
 ```bash
 # Check application status
-gokku status rails-app production --remote rails-app-production
+gokku status rails-app production -a rails-app-production
 
 # View logs
-gokku logs rails-app production -f --remote rails-app-production
+gokku logs rails-app production -f -a rails-app-production
 ```
 
 ## Environment Variables
@@ -101,35 +101,35 @@ gokku logs rails-app production -f --remote rails-app-production
 
 ```bash
 # Set database URL
-gokku config set DATABASE_URL="postgres://user:password@localhost:5432/rails_app_production" --remote rails-app-production
+gokku config set DATABASE_URL="postgres://user:password@localhost:5432/rails_app_production" -a rails-app-production
 
 # Set Redis URL for Sidekiq
-gokku config set REDIS_URL="redis://localhost:6379" --remote rails-app-production
+gokku config set REDIS_URL="redis://localhost:6379" -a rails-app-production
 ```
 
 ### Rails Configuration
 
 ```bash
 # Set Rails secret key base
-gokku config set SECRET_KEY_BASE="$(bundle exec rails secret)" --remote rails-app-production
+gokku config set SECRET_KEY_BASE="$(bundle exec rails secret)" -a rails-app-production
 
 # Set environment
-gokku config set RAILS_ENV=production --remote rails-app-production
+gokku config set RAILS_ENV=production -a rails-app-production
 
 # Set log level
-gokku config set RAILS_LOG_LEVEL=info --remote rails-app-production
+gokku config set RAILS_LOG_LEVEL=info -a rails-app-production
 ```
 
 ### Application-Specific Variables
 
 ```bash
 # Set SMTP configuration
-gokku config set SMTP_HOST="smtp.gmail.com" --remote rails-app-production
-gokku config set SMTP_PORT="587" --remote rails-app-production
+gokku config set SMTP_HOST="smtp.gmail.com" -a rails-app-production
+gokku config set SMTP_PORT="587" -a rails-app-production
 
 # Set API keys
-gokku config set STRIPE_SECRET_KEY="sk_live_..." --remote rails-app-production
-gokku config set AWS_ACCESS_KEY_ID="..." --remote rails-app-production
+gokku config set STRIPE_SECRET_KEY="sk_live_..." -a rails-app-production
+gokku config set AWS_ACCESS_KEY_ID="..." -a rails-app-production
 ```
 
 ## Monitoring
@@ -138,7 +138,7 @@ gokku config set AWS_ACCESS_KEY_ID="..." --remote rails-app-production
 
 ```bash
 # Check application status
-gokku status rails-app production --remote rails-app-production
+gokku status rails-app production -a rails-app-production
 
 # Output:
 # === Application Status: rails-app (production) ===
@@ -152,7 +152,7 @@ gokku status rails-app production --remote rails-app-production
 
 ```bash
 # Rails application logs
-gokku logs rails-app production -f --remote rails-app-production
+gokku logs rails-app production -f -a rails-app-production
 ```
 
 ## Next Steps

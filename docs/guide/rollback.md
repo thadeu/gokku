@@ -329,7 +329,7 @@ Check if env vars are compatible:
 
 ```bash
 # List current vars
-gokku config list --remote api-production
+gokku config list -a api-production
 
 # If needed, restore backup
 scp backup.env ubuntu@server:/opt/gokku/apps/api/production/.env

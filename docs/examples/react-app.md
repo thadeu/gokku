@@ -94,10 +94,10 @@ Gokku will automatically:
 
 ```bash
 # Check application status
-gokku status react-app production --remote react-app-production
+gokku status react-app production -a react-app-production
 
 # View logs
-gokku logs react-app production -f --remote react-app-production
+gokku logs react-app production -f -a react-app-production
 ```
 
 ## Environment Variables
@@ -106,34 +106,34 @@ gokku logs react-app production -f --remote react-app-production
 
 ```bash
 # Set database URL
-gokku config set DATABASE_URL="mongodb://localhost:27017/react_app_production" --remote react-app-production
+gokku config set DATABASE_URL="mongodb://localhost:27017/react_app_production" -a react-app-production
 
 # Set Redis URL
-gokku config set REDIS_URL="redis://localhost:6379" --remote react-app-production
+gokku config set REDIS_URL="redis://localhost:6379" -a react-app-production
 ```
 
 ### Application Configuration
 
 ```bash
 # Set JWT secret
-gokku config set JWT_SECRET="your-jwt-secret-here" --remote react-app-production
+gokku config set JWT_SECRET="your-jwt-secret-here" -a react-app-production
 
 # Set environment
-gokku config set NODE_ENV=production --remote react-app-production
+gokku config set NODE_ENV=production -a react-app-production
 
 # Set API port
-gokku config set API_PORT=3001 --remote react-app-production
+gokku config set API_PORT=3001 -a react-app-production
 ```
 
 ### API Keys and External Services
 
 ```bash
 # Set API keys
-gokku config set STRIPE_SECRET_KEY="sk_live_..." --remote react-app-production
-gokku config set AWS_ACCESS_KEY_ID="..." --remote react-app-production
+gokku config set STRIPE_SECRET_KEY="sk_live_..." -a react-app-production
+gokku config set AWS_ACCESS_KEY_ID="..." -a react-app-production
 
 # Set external service URLs
-gokku config set EXTERNAL_API_URL="https://api.example.com" --remote react-app-production
+gokku config set EXTERNAL_API_URL="https://api.example.com" -a react-app-production
 ```
 
 ## Monitoring
@@ -142,7 +142,7 @@ gokku config set EXTERNAL_API_URL="https://api.example.com" --remote react-app-p
 
 ```bash
 # Check application status
-gokku status react-app production --remote react-app-production
+gokku status react-app production -a react-app-production
 
 # Output:
 # === Application Status: react-app (production) ===
@@ -156,7 +156,7 @@ gokku status react-app production --remote react-app-production
 
 ```bash
 # Application logs
-gokku logs react-app production -f --remote react-app-production
+gokku logs react-app production -f -a react-app-production
 ```
 
 ## Next Steps

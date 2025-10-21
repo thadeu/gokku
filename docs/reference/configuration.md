@@ -333,19 +333,19 @@ Set via `gokku config`:
 
 ```bash
 # Set variable (remote)
-gokku config set KEY=value --app api --env production --remote api-production
+gokku config set KEY=value --app api --env production -a api-production
 
 # Set variable (local, on server)
 gokku config set KEY=value --app api --env production
 
 # List variables (remote)
-gokku config list --app api --env production --remote api-production
+gokku config list --app api --env production -a api-production
 
 # List variables (local, on server)
 gokku config list --app api --env production
 
 # Delete variable (remote)
-gokku config unset KEY --app api --env production --remote api-production
+gokku config unset KEY --app api --env production -a api-production
 ```
 
 **Don't put secrets in `gokku.yml`!** Use `gokku config` instead.

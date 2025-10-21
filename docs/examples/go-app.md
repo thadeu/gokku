@@ -74,7 +74,7 @@ git remote add production ubuntu@server:api
 git push production main
 
 # Or use CLI
-gokku deploy --remote api-production
+gokku deploy -a api-production
 ```
 
 ## With Gin Framework
@@ -372,7 +372,7 @@ func main() {
 
 ```bash
 # Using CLI
-gokku logs --remote api-production -f
+gokku logs -a api-production -f
 
 # Or directly
 ssh ubuntu@server "docker logs -f api-blue"
@@ -382,7 +382,7 @@ ssh ubuntu@server "docker logs -f api-blue"
 
 ```bash
 # Using CLI
-gokku status --remote api-production
+gokku status -a api-production
 
 # Or directly
 ssh ubuntu@server "docker ps | grep api"
@@ -392,7 +392,7 @@ ssh ubuntu@server "docker ps | grep api"
 
 ```bash
 # Using CLI
-gokku restart --remote api-production
+gokku restart -a api-production
 
 # Or directly
 ssh ubuntu@server "docker restart api-blue"
@@ -402,7 +402,7 @@ ssh ubuntu@server "docker restart api-blue"
 
 ```bash
 # Using CLI
-gokku config list --remote api-production
+gokku config list -a api-production
 
 # Or directly
 ssh ubuntu@server "cat /opt/gokku/apps/api/shared/.env"

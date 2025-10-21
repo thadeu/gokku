@@ -148,10 +148,10 @@ Override with `gokku config`:
 
 ```bash
 # Production
-gokku config set DATABASE_URL=postgres://... --remote api-production
+gokku config set DATABASE_URL=postgres://... -a api-production
 
 # Staging
-gokku config set DATABASE_URL=postgres://... --remote api-staging
+gokku config set DATABASE_URL=postgres://... -a api-staging
 ```
 
 ## Directory Structure
@@ -300,8 +300,8 @@ environments:
 Or set manually:
 
 ```bash
-gokku config set PORT=8080 --remote api-production
-gokku config set PORT=8081 --remote api-staging
+gokku config set PORT=8080 -a api-production
+gokku config set PORT=8081 -a api-staging
 ```
 
 ## Database Per Environment
@@ -353,10 +353,10 @@ git push production main
 
 ```bash
 # Production config
-gokku config list --remote api-production
+gokku config list -a api-production
 
 # Staging config
-gokku config list --remote api-staging
+gokku config list -a api-staging
 ```
 
 ### View Code Differences
@@ -404,8 +404,8 @@ func main() {
 Set `APP_ENV`:
 
 ```bash
-gokku config set APP_ENV=production --remote api-production
-gokku config set APP_ENV=staging --remote api-staging
+gokku config set APP_ENV=production -a api-production
+gokku config set APP_ENV=staging -a api-staging
 ```
 
 ## Custom Environments
@@ -468,7 +468,7 @@ ssh ubuntu@server "sudo lsof -i :8080"
 Change port:
 
 ```bash
-gokku config set PORT=8081 --remote api-staging
+gokku config set PORT=8081 -a api-staging
 ssh ubuntu@server "sudo systemctl restart api-staging"
 ```
 

@@ -316,18 +316,18 @@ gokku deploy api-production
 gokku deploy worker-staging
 
 # Manage environment variables
-gokku config set API_KEY=xxx --remote api-production
-gokku config list --remote api-production
+gokku config set API_KEY=xxx -a api-production
+gokku config list -a api-production
 
 # View logs and status
-gokku logs api production --remote api-production
-gokku status --remote api-production
+gokku logs -a api-production
+gokku status -a api-production
 
 # Restart services
-gokku restart api production --remote api-production
+gokku restart -a api-production
 
 # Rollback if needed
-gokku rollback api production --remote api-production
+gokku rollback -a api-production
 ```
 
 ---
@@ -563,8 +563,8 @@ The first push will:
 
 ```bash
 # Using gokku CLI
-gokku config set PORT=8080 --remote api-production
-gokku config list --remote api-production
+gokku config set PORT=8080 -a api-production
+gokku config list -a api-production
 ```
 
 ---
