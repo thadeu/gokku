@@ -171,7 +171,7 @@ func handleRestartWithContext(ctx *internal.ExecutionContext, args []string) {
 	ctx.PrintConnectionInfo()
 
 	// Build restart command
-	restartCmd := fmt.Sprintf("gokku restart %s", ctx.GetAppName())
+	restartCmd := fmt.Sprintf("gokku restart -a %s", ctx.GetAppName())
 
 	// Execute command
 	if err := ctx.ExecuteCommand(restartCmd); err != nil {
