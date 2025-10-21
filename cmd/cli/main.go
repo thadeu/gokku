@@ -8,7 +8,7 @@ import (
 	"infra/internal/handlers"
 )
 
-const version = "1.0.51"
+const version = "1.0.52"
 
 func main() {
 	if len(os.Args) < 2 {

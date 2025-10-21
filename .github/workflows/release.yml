@@ -75,6 +75,7 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          make_latest: true
           name: Gokku ${{ steps.version.outputs.version }}
           tag_name: ${{ github.ref_name }}
           body: |
