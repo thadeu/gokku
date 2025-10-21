@@ -67,12 +67,15 @@ apps:
     build:
       path: ./cmd/api
       binary_name: api
+    ports:
+      - 80:3000
 ```
 
 Deploy your app:
 
 ```bash
-git remote add production user@server:api
+git remote add production user@server:api 
+
 git push production main
 ```
 
