@@ -22,11 +22,16 @@ func NewExecutionContext(appName string) (*ExecutionContext, error) {
 		AppName: appName,
 	}
 
-	// Determine mode
 	if IsClientMode() {
 		ctx.Mode = "client"
 		ctx.LocalExecution = false
+	} else {
+		ctx.Mode = "server"
+		ctx.LocalExecution = true
+	}
 
+	// Determine mode
+	if !ctx.LocalExecution {
 		if appName != "" {
 			// Client mode with app - use git remote
 			remoteInfo, err := GetRemoteInfo(appName)
@@ -38,8 +43,6 @@ func NewExecutionContext(appName string) (*ExecutionContext, error) {
 			ctx.BaseDir = remoteInfo.BaseDir
 		}
 	} else {
-		ctx.Mode = "server"
-		ctx.LocalExecution = true
 		ctx.Host = ""
 		ctx.BaseDir = "/opt/gokku"
 

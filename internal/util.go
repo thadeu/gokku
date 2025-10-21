@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,33 +66,36 @@ func ReadGokkuRcMode() string {
 	rcPath := GetGokkuRcPath()
 
 	file, err := os.Open(rcPath)
+
 	if err != nil {
+		fmt.Printf("DEBUG: Could not open ~/.gokkurc: %v\n", err)
 		return ""
 	}
+
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+
+	var mode string
+
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "mode=") {
-			mode := strings.TrimPrefix(line, "mode=")
-			if mode == "client" || mode == "server" {
-				return mode
-			}
-		}
+		mode, _ = strings.CutPrefix(line, "mode=")
 	}
 
-	return ""
+	return mode
 }
 
 // IsClientMode returns true if running in client mode
 // Falls back to client mode if ~/.gokkurc doesn't exist
 func IsClientMode() bool {
 	mode := ReadGokkuRcMode()
+
 	if mode == "" {
 		// If file doesn't exist, assume client mode (fallback)
 		return true
 	}
+
 	return mode == "client"
 }
 
@@ -99,9 +103,11 @@ func IsClientMode() bool {
 // Falls back to client mode if ~/.gokkurc doesn't exist
 func IsServerMode() bool {
 	mode := ReadGokkuRcMode()
+
 	if mode == "" {
 		// If file doesn't exist, assume client mode (fallback)
 		return false
 	}
+
 	return mode == "server"
 }

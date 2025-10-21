@@ -26,7 +26,7 @@ for platform in "${platforms[@]}"; do
     binary_name="gokku-$os-$arch"
 
     # Build with optimizations to reduce binary size
-    GOOS=$os GOARCH=$arch go build -ldflags="-s -w" -o "bin/$binary_name" ./cmd/cli
+    GOMAXPROCS=1 GOOS=$os GOARCH=$arch go build -ldflags="-s -w" -o "bin/$binary_name" ./cmd/cli
 
     echo "✓ Built bin/$binary_name"
 done
