@@ -30,22 +30,22 @@ func handleApps(args []string) {
 		fmt.Println("  destroy, rm <app>     Destroy application")
 		fmt.Println("")
 		fmt.Println("Options:")
-		fmt.Println("  --remote <remote>     Use specific git remote")
+		fmt.Println("  -a, --app <app>       Use specific app")
 		os.Exit(1)
 	}
 }
 
 // handleAppsList lists applications on the server
 func handleAppsList(args []string) {
-	remote, remainingArgs := internal.ExtractRemoteFlag(args)
+	app, remainingArgs := internal.ExtractAppFlag(args)
 
 	if len(remainingArgs) < 1 {
-		fmt.Println("Usage: gokku apps list [--remote <remote>]")
+		fmt.Println("Usage: gokku apps list [-a <app>]")
 		os.Exit(1)
 	}
 
 	appName := remainingArgs[0]
-	remoteInfo, err := internal.GetRemoteInfo(remote)
+	remoteInfo, err := internal.GetRemoteInfo(app)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)

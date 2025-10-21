@@ -7,7 +7,7 @@ import (
 	"infra/internal/handlers"
 )
 
-const version = "1.0.33"
+const version = "1.0.34"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -60,11 +60,11 @@ Usage:
 CLIENT COMMANDS (run from local machine):
   server         Manage server connections
   apps           List applications on remote server
-  config         Manage environment variables (use --remote)
-  run            Run arbitrary commands (use --remote)
-  logs           View application logs (use --remote)
-  status         Check services status (use --remote)
-  restart        Restart services (use --remote)
+  config         Manage environment variables (use -a)
+  run            Run arbitrary commands (use -a)
+  logs           View application logs (use -a)
+  status         Check services status (use -a)
+  restart        Restart services (use -a)
   deploy         Deploy applications
   rollback       Rollback to previous release
   ssh            SSH to server
@@ -86,20 +86,20 @@ Server Management:
   gokku server remove <name>               Remove a server
   gokku server set-default <name>          Set default server
 
-Client Commands (always use --remote):
-  gokku config set KEY=VALUE --remote <git-remote>
-  gokku config get KEY --remote <git-remote>
-  gokku config list --remote <git-remote>
-  gokku config unset KEY --remote <git-remote>
+Client Commands (always use -a):
+  gokku config set KEY=VALUE -a <app>
+  gokku config get KEY -a <app>
+  gokku config list -a <app>
+  gokku config unset KEY -a <app>
 
-  gokku run <command> --remote <git-remote>
+  gokku run <command> -a <app>
 
-  gokku logs <app> <env> [-f] [--remote <git-remote>]
-  gokku status [app] [env] [--remote <git-remote>]
-  gokku restart --remote <git-remote>
+  gokku logs -a <app> [-f]
+  gokku status -a <app>
+  gokku restart -a <app>
 
-  gokku deploy <app> <env> [--remote <git-remote>]
-  gokku rollback <app> <env> [--remote <git-remote>]
+  gokku deploy -a <app>
+  gokku rollback -a <app>
 
 
 Server Commands (run on server only):
@@ -123,12 +123,12 @@ Examples:
   # Setup git remote (standard git)
   git remote add api-production ubuntu@server:api
 
-  # Client usage - all commands use --remote
-  gokku config set PORT=8080 --remote api-production
-  gokku config list --remote api-production
-  gokku logs api production -f --remote api-production
-  gokku status --remote api-production
-  gokku deploy api production --remote api-production
+  # Client usage - all commands use -a
+  gokku config set PORT=8080 -a api-production
+  gokku config list -a api-production
+  gokku logs -a api-production -f
+  gokku status -a api-production
+  gokku deploy -a api-production
 
   # Server usage - run directly on server (no --remote needed)
   gokku config set PORT=8080 --app api
@@ -137,10 +137,10 @@ Examples:
   gokku status
   gokku restart api
 
-Remote Format:
-  --remote <git-remote-name>
+App Format:
+  -a, --app <app-name>
 
-  The git remote name (e.g., "api-production", "vad-staging")
+  The app name (e.g., "api-production", "vad-staging")
   Gokku will run 'git remote get-url <name>' to extract:
   - SSH host (user@ip or user@hostname)
   - App name from path

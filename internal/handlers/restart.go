@@ -10,13 +10,13 @@ import (
 
 // handleRestart restarts services/containers by doing a full rebuild and redeploy
 func handleRestart(args []string) {
-	remote, remainingArgs := internal.ExtractRemoteFlag(args)
+	appName, remainingArgs := internal.ExtractAppFlag(args)
 
 	var app, host string
 	var localExecution bool
 
-	if remote != "" {
-		remoteInfo, err := internal.GetRemoteInfo(remote)
+	if appName != "" {
+		remoteInfo, err := internal.GetRemoteInfo(appName)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -32,15 +32,15 @@ func handleRestart(args []string) {
 			// Client without --remote - show error
 			fmt.Println("Error: Local restart commands can only be run on the server")
 			fmt.Println("")
-			fmt.Println("For client usage, use --remote flag:")
-			fmt.Println("  gokku restart <app> --remote <git-remote>")
+			fmt.Println("For client usage, use -a flag:")
+			fmt.Println("  gokku restart -a <app>")
 			fmt.Println("")
 			fmt.Println("Or run this command directly on your server.")
 			os.Exit(1)
 		}
 	} else {
 		fmt.Println("Usage: gokku restart <app>")
-		fmt.Println("   or: gokku restart --remote <git-remote>")
+		fmt.Println("   or: gokku restart -a <app>")
 		os.Exit(1)
 	}
 

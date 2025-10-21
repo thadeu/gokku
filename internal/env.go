@@ -33,11 +33,12 @@ func EnvGet(envFile string, key string) {
 	envVars := LoadEnvFile(envFile)
 
 	if value, ok := envVars[key]; ok {
-		fmt.Println(value)
-	} else {
-		fmt.Printf("Error: variable '%s' not found\n", key)
-		os.Exit(1)
+		fmt.Printf("%s=%s\n", key, value)
+		return
 	}
+
+	fmt.Printf("Error: variable '%s' not found\n", key)
+	os.Exit(1)
 }
 
 // EnvList lists all environment variables in the env file

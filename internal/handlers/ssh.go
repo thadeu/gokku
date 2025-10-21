@@ -10,12 +10,12 @@ import (
 
 // handleSSH establishes SSH connections to servers
 func handleSSH(args []string) {
-	remote, remainingArgs := internal.ExtractRemoteFlag(args)
+	app, remainingArgs := internal.ExtractAppFlag(args)
 
 	var host string
 
-	if remote != "" {
-		remoteInfo, err := internal.GetRemoteInfo(remote)
+	if app != "" {
+		remoteInfo, err := internal.GetRemoteInfo(app)
 
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)

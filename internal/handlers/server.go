@@ -37,7 +37,7 @@ func handleServer(args []string) {
 func handleServerAdd(args []string) {
 	if len(args) < 2 {
 		fmt.Println("Usage: gokku server add <app_name> <user@server_ip>")
-		fmt.Println("Example: gokku server add stt ubuntu@54.233.138.116")
+		fmt.Println("Example: gokku server add stt USER@SERVER_IP")
 		os.Exit(1)
 	}
 
@@ -53,7 +53,7 @@ func handleServerAdd(args []string) {
 	// Validate server host format
 	if !strings.Contains(serverHost, "@") {
 		fmt.Println("Error: server host must be in format user@host")
-		fmt.Println("Example: ubuntu@54.233.138.116")
+		fmt.Println("Example: USER@SERVER_IP")
 		os.Exit(1)
 	}
 
@@ -118,7 +118,7 @@ Commands:
   help                               Show this help
 
 Examples:
-  gokku server add stt ubuntu@54.233.138.116
+  gokku server add stt USER@SERVER_IP
   gokku server list
   gokku server remove stt
 

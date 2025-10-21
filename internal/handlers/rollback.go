@@ -11,14 +11,14 @@ import (
 
 // handleRollback rolls back to a previous release
 func handleRollback(args []string) {
-	remote, remainingArgs := internal.ExtractRemoteFlag(args)
+	appName, remainingArgs := internal.ExtractAppFlag(args)
 
 	var app, host, baseDir string
 	var releaseID string
 	var localExecution bool
 
-	if remote != "" {
-		remoteInfo, err := internal.GetRemoteInfo(remote)
+	if appName != "" {
+		remoteInfo, err := internal.GetRemoteInfo(appName)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -40,15 +40,15 @@ func handleRollback(args []string) {
 			// Client without --remote - show error
 			fmt.Println("Error: Local rollback commands can only be run on the server")
 			fmt.Println("")
-			fmt.Println("For client usage, use --remote flag:")
-			fmt.Println("  gokku rollback <app> <env> [release-id] --remote <git-remote>")
+			fmt.Println("For client usage, use -a flag:")
+			fmt.Println("  gokku rollback -a <app> [release-id]")
 			fmt.Println("")
 			fmt.Println("Or run this command directly on your server.")
 			os.Exit(1)
 		}
 	} else {
 		fmt.Println("Usage: gokku rollback <app> <env> [release-id]")
-		fmt.Println("   or: gokku rollback --remote <git-remote> [release-id]")
+		fmt.Println("   or: gokku rollback -a <app> [release-id]")
 		os.Exit(1)
 	}
 

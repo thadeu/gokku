@@ -30,6 +30,23 @@ func ExtractRemoteFlag(args []string) (string, []string) {
 	return remote, remaining
 }
 
+// ExtractAppFlag extracts the -a or --app flag from arguments and returns the app name and remaining args
+func ExtractAppFlag(args []string) (string, []string) {
+	var app string
+	var remaining []string
+
+	for i := 0; i < len(args); i++ {
+		if (args[i] == "-a" || args[i] == "--app") && i+1 < len(args) {
+			app = args[i+1]
+			i++ // Skip next arg
+		} else {
+			remaining = append(remaining, args[i])
+		}
+	}
+
+	return app, remaining
+}
+
 // IsRunningOnServer returns true if running on the server environment
 // Uses ~/.gokkurc file to determine mode, with fallback to client mode if file doesn't exist
 func IsRunningOnServer() bool {

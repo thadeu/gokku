@@ -17,40 +17,40 @@ import (
 
 // handleDeploy deploys applications directly or via git push
 func handleDeploy(args []string) {
-	remote, remainingArgs := internal.ExtractRemoteFlag(args)
+	app, remainingArgs := internal.ExtractAppFlag(args)
 
-	var app, remoteName string
+	var appName, remoteName string
 	var isDirectDeploy bool
 
-	if remote != "" {
+	if app != "" {
 		// Remote deployment via git push (legacy mode)
-		remoteInfo, err := internal.GetRemoteInfo(remote)
+		remoteInfo, err := internal.GetRemoteInfo(app)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
-		app = remoteInfo.App
-		remoteName = remote
+		appName = remoteInfo.App
+		remoteName = app
 		isDirectDeploy = false
 	} else if len(remainingArgs) >= 1 {
 		// Direct deployment (new mode)
-		app = remainingArgs[0]
+		appName = remainingArgs[0]
 		isDirectDeploy = true
 	} else {
 		fmt.Println("Usage: gokku deploy <app>")
-		fmt.Println("   or: gokku deploy --remote <git-remote>")
+		fmt.Println("   or: gokku deploy -a <app>")
 		os.Exit(1)
 	}
 
 	if isDirectDeploy {
 		// Direct deployment - execute deployment logic directly
-		fmt.Printf("-----> Deploying %s directly...\n", app)
+		fmt.Printf("-----> Deploying %s directly...\n", appName)
 
 		// Check if repository exists and has commits
 		baseDir := "/opt/gokku"
-		reposDir := filepath.Join(baseDir, "repos", app+".git")
+		reposDir := filepath.Join(baseDir, "repos", appName+".git")
 		if _, err := os.Stat(reposDir); os.IsNotExist(err) {
-			fmt.Printf("Error: Repository for app '%s' not found at %s\n", app, reposDir)
+			fmt.Printf("Error: Repository for app '%s' not found at %s\n", appName, reposDir)
 			fmt.Printf("Make sure the repository exists on the server.\n")
 			os.Exit(1)
 		}

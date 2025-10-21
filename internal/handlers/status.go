@@ -11,13 +11,13 @@ import (
 
 // handleStatus shows service/container status
 func handleStatus(args []string) {
-	remote, remainingArgs := internal.ExtractRemoteFlag(args)
+	appName, remainingArgs := internal.ExtractAppFlag(args)
 
 	var app, env, host, baseDir string
 	var localExecution bool
 
-	if remote != "" {
-		remoteInfo, err := internal.GetRemoteInfo(remote)
+	if appName != "" {
+		remoteInfo, err := internal.GetRemoteInfo(appName)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -36,8 +36,8 @@ func handleStatus(args []string) {
 			// Client without --remote - show error
 			fmt.Println("Error: Local status commands can only be run on the server")
 			fmt.Println("")
-			fmt.Println("For client usage, use --remote flag:")
-			fmt.Println("  gokku status [app] [env] --remote <git-remote>")
+			fmt.Println("For client usage, use -a flag:")
+			fmt.Println("  gokku status -a <app>")
 			fmt.Println("")
 			fmt.Println("Or run this command directly on your server.")
 			os.Exit(1)
