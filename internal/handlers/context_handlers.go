@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"infra/internal"
@@ -81,9 +82,14 @@ func handleLogsClientMode(ctx *internal.ExecutionContext, serviceName, followFla
 
 	// Execute command with proper signal handling for follow mode
 	if follow {
-		// For follow mode, use a more robust SSH command that handles signals properly
-		sshCmd := fmt.Sprintf("ssh -t %s '%s'", ctx.Host, dockerCmd)
-		if err := ctx.ExecuteCommandWithSignalHandling(sshCmd); err != nil {
+		// For follow mode, use SSH with TTY allocation and proper signal handling
+		// Use a more robust approach with proper signal forwarding
+		sshCmd := exec.Command("ssh", "-t", "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=3", ctx.Host, dockerCmd)
+		sshCmd.Stdout = os.Stdout
+		sshCmd.Stderr = os.Stderr
+		sshCmd.Stdin = os.Stdin
+
+		if err := sshCmd.Run(); err != nil {
 			// Don't exit on signal interruption for follow mode
 			if !internal.IsSignalInterruption(err) {
 				os.Exit(1)
