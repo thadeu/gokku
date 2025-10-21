@@ -31,10 +31,14 @@ func handleRun(args []string) {
 		// Join all remaining args as the command
 		command := strings.Join(remainingArgs, " ")
 
+		// Build the command to run in the app's current directory
+		appDir := fmt.Sprintf("/opt/gokku/apps/%s/current", remoteInfo.App)
+		fullCommand := fmt.Sprintf("cd %s && %s", appDir, command)
+
 		fmt.Printf("→ %s (%s)\n", remoteInfo.App, remoteInfo.Host)
 		fmt.Printf("$ %s\n\n", command)
 
-		cmd := exec.Command("ssh", "-t", remoteInfo.Host, command)
+		cmd := exec.Command("ssh", "-t", remoteInfo.Host, fullCommand)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
