@@ -31,7 +31,6 @@ apps:
   - name: react-app
     lang: nodejs
     build:
-      type: docker
       path: .
     environments:
       - name: production

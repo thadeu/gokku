@@ -49,7 +49,6 @@ apps:
   - name: ml-service
     lang: python
     build:
-      type: docker
       path: ./services/ml
       entrypoint: server.py
 ```
@@ -170,14 +169,12 @@ apps:
   - name: api
     lang: go
     build:
-      type: systemd
       path: ./cmd/api
   
   # Python ML Service
   - name: ml
     lang: python
     build:
-      type: docker
       path: ./services/ml
       entrypoint: server.py
   
@@ -185,7 +182,6 @@ apps:
   - name: frontend
     lang: nodejs
     build:
-      type: docker
       path: ./frontend
       entrypoint: server.js
 ```
@@ -309,7 +305,6 @@ apps:
   - name: celery-worker
     lang: python
     build:
-      type: docker
       path: ./services/worker
       entrypoint: worker.py
 ```
@@ -516,5 +511,5 @@ Full monorepo example: [github.com/thadeu/gokku-examples/monorepo](https://githu
 
 - [Configuration](/guide/configuration) - Advanced multi-app config
 - [Environments](/guide/environments) - Manage multiple environments
-- [Docker Support](/guide/docker) - Mix systemd and Docker
+- [Docker Support](/guide/docker) - Advanced Docker configuration
 

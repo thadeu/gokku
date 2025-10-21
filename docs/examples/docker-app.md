@@ -11,7 +11,6 @@ apps:
   - name: my-app
     lang: python
     build:
-      type: docker
       path: ./app
       dockerfile: ./app/Dockerfile
 ```
@@ -25,7 +24,6 @@ apps:
   - name: my-app
     lang: python
     build:
-      type: docker
       path: ./app
       entrypoint: main.py
 ```
@@ -41,7 +39,6 @@ apps:
   - name: python-app
     lang: python
     build:
-      type: docker
       path: .
       entrypoint: app.py
       base_image: python:3.11-slim
@@ -65,7 +62,6 @@ apps:
   - name: nodejs-app
     lang: nodejs
     build:
-      type: docker
       path: .
       entrypoint: index.js
       base_image: node:20-alpine
@@ -89,7 +85,6 @@ apps:
   - name: go-app
     lang: go
     build:
-      type: docker
       path: ./cmd/api
       base_image: golang:1.25-alpine
 ```
@@ -172,13 +167,11 @@ apps:
   - name: web
     lang: python
     build:
-      type: docker
       path: ./web
   
   - name: worker
     lang: python
     build:
-      type: docker
       path: ./worker
 ```
 
@@ -312,7 +305,6 @@ docker:
 apps:
   - name: my-app
     build:
-      type: docker
       base_image: registry.example.com/python:3.11
 ```
 
@@ -348,29 +340,15 @@ ssh ubuntu@server "docker exec -it my-app-production /bin/sh"
 ssh ubuntu@server "cat /opt/gokku/apps/my-app/production/deploy.log"
 ```
 
-## Comparison: systemd vs Docker
+## Docker Benefits
 
-| Feature | systemd | Docker |
-|---------|---------|--------|
-| **Speed** | ⚡ Faster | Slower |
-| **Size** | Smaller | Larger |
-| **Isolation** | Process | Container |
-| **Dependencies** | System-wide | Isolated |
-| **Best For** | Go apps | Python/Node/Complex deps |
+Docker provides several advantages for application deployment:
 
-### When to Use Docker
-
-- ✅ Python/Node.js apps
-- ✅ Complex dependencies
-- ✅ Need isolation
-- ✅ Multi-language project
-
-### When to Use systemd
-
-- ✅ Go applications
-- ✅ Simple dependencies
-- ✅ Want fastest deploys
-- ✅ Lower resource usage
+- **Isolation**: Each app runs in its own container
+- **Consistency**: Same environment in dev and production
+- **Dependencies**: All dependencies bundled in the image
+- **Portability**: Easy to move between servers
+- **Zero-Downtime**: Built-in blue-green deployment support
 
 ## Complete Examples
 

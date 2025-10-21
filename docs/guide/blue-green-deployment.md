@@ -306,7 +306,6 @@ apps:
   - name: api
     lang: go
     build:
-      type: docker
       path: ./cmd/api
       binary_name: api
     deployment:

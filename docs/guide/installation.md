@@ -129,7 +129,7 @@ git push production main
 The first push automatically creates:
 - Git repository at `api`
 - App directory at `/opt/gokku/apps/api/`
-- Systemd service `api-production`
+- Docker container `api`
 - Environment file
 
 ### Add Git Remote
@@ -206,16 +206,16 @@ You should see:
 
 ## Verify Deployment
 
-Check service status:
+Check container status:
 
 ```bash
-ssh ubuntu@your-server "sudo systemctl status api-production"
+ssh ubuntu@your-server "docker ps | grep api"
 ```
 
 Check logs:
 
 ```bash
-ssh ubuntu@your-server "sudo journalctl -u api-production -f"
+ssh ubuntu@your-server "docker logs -f api"
 ```
 
 ## Multiple Environments
@@ -239,12 +239,9 @@ git push staging develop
 ### Remove Gokku from Server
 
 ```bash
-# Stop all services
-sudo systemctl stop api-*
-
-# Remove systemd services
-sudo rm /etc/systemd/system/api-*.service
-sudo systemctl daemon-reload
+# Stop all containers
+docker stop $(docker ps -a | grep gokku | awk '{print $1}')
+docker rm $(docker ps -a | grep gokku | awk '{print $1}')
 
 # Remove Gokku directory
 sudo rm -rf /opt/gokku
@@ -279,12 +276,12 @@ Check deployment logs:
 ssh ubuntu@your-server "cat /opt/gokku/apps/api/production/deploy.log"
 ```
 
-### Service Won't Start
+### Container Won't Start
 
-Check systemd logs:
+Check Docker logs:
 
 ```bash
-ssh ubuntu@your-server "sudo journalctl -u api-production -n 100"
+ssh ubuntu@your-server "docker logs api"
 ```
 
 ## Next Steps
@@ -292,7 +289,7 @@ ssh ubuntu@your-server "sudo journalctl -u api-production -n 100"
 - [Configuration](/guide/configuration) - Customize your deployment
 - [Environments](/guide/environments) - Setup staging/production
 - [Environment Variables](/guide/env-vars) - Configure your app
-- [Docker Support](/guide/docker) - Use Docker instead of systemd
+- [Docker Support](/guide/docker) - Advanced Docker configuration
 
 ## Getting Help
 

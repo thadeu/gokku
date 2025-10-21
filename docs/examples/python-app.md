@@ -21,7 +21,6 @@ apps:
   - name: flask-app
     lang: python
     build:
-      type: docker
       path: .
       entrypoint: app.py
 ```
@@ -92,7 +91,6 @@ apps:
   - name: flask-app
     lang: python
     build:
-      type: docker
       path: .
       entrypoint: app.py
 ```
@@ -123,7 +121,6 @@ apps:
   - name: flask-app
     lang: python
     build:
-      type: docker
       path: .
       dockerfile: ./Dockerfile
 ```
@@ -165,7 +162,6 @@ apps:
   - name: fastapi-app
     lang: python
     build:
-      type: docker
       path: .
       entrypoint: main.py
 ```
@@ -287,7 +283,6 @@ apps:
   - name: ml-service
     lang: python
     build:
-      type: docker
       path: .
       entrypoint: server.py
       base_image: python:3.11
@@ -309,7 +304,6 @@ apps:
   - name: audio-service
     lang: python
     build:
-      type: docker
       path: .
       entrypoint: server.py
 ```
@@ -366,14 +360,12 @@ apps:
   - name: web
     lang: python
     build:
-      type: docker
       path: .
       entrypoint: app.py
   
   - name: worker
     lang: python
     build:
-      type: docker
       path: .
       entrypoint: worker.py
 ```
@@ -402,7 +394,6 @@ apps:
   - name: flask-app
     lang: python
     build:
-      type: docker
       path: .
       entrypoint: app.py
     

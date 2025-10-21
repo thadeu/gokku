@@ -9,14 +9,10 @@ apps:
   - name: speech-to-text
     lang: go
     build:
-      type: docker
       path: ./cmd/speech-to-text
       binary_name: speech-to-text
       work_dir: apps/trunk
       go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
     env_vars:
       AWS_REGION: us-east-1
       LOG_LEVEL: info
@@ -28,14 +24,10 @@ apps:
   - name: voice-agent
     lang: go
     build:
-      type: docker
       path: ./cmd/voice-agent
       binary_name: voice-agent
       work_dir: apps/trunk
       go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
     ports:
       - "5064:5064"
     network:
@@ -51,7 +43,6 @@ apps:
   - name: vad
     lang: python
     build:
-      type: docker
       path: ./apps/vad
       dockerfile: ./apps/vad/Dockerfile  # optional, will generate if not exists
       entrypoint: main.py
