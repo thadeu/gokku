@@ -24,15 +24,9 @@ project:
   name: my-project
   base_dir: /opt/gokku
 
-defaults:
-  build_type: systemd
-  lang: go
-
 apps:
   - name: api
-    lang: go
     build:
-      type: systemd
       path: ./cmd/api
       binary_name: api
       work_dir: .
@@ -40,31 +34,10 @@ apps:
       goos: linux
       goarch: amd64
       cgo_enabled: 0
-    
-    environments:
-      - name: production
-        branch: main
-        default_env_vars:
-          PORT: 8080
-          LOG_LEVEL: info
-      
-      - name: staging
-        branch: develop
-        default_env_vars:
-          PORT: 8081
-          LOG_LEVEL: debug
-    
     deployment:
       keep_releases: 5
       restart_policy: always
       restart_delay: 5
-
-docker:
-  registry: ""
-  base_images:
-    go: "golang:1.25-alpine"
-    python: "python:3.11-slim"
-    nodejs: "node:20-alpine"
 ```
 
 ## Configuration Sections
@@ -83,16 +56,6 @@ project:
 - `name`: (required)
 - `base_dir`: `/opt/gokku`
 
-### Defaults
-
-Default values for all apps:
-
-```yaml
-defaults:
-  build_type: systemd  # systemd or docker
-  lang: go             # go, python, nodejs, etc
-```
-
 ### Apps
 
 The main configuration section. Each app can have:
@@ -109,9 +72,7 @@ apps:
 
 ```yaml
     build:
-      type: systemd           # Build type: systemd or docker
       path: ./cmd/api         # Path to main file/directory
-      binary_name: api        # Output binary name (Go only)
       work_dir: .             # Working directory for build
       
       # Go-specific settings
@@ -122,7 +83,6 @@ apps:
       
       # Docker-specific settings
       dockerfile: ./Dockerfile     # Custom Dockerfile path
-      entrypoint: main.py          # Entrypoint file (non-Go)
       base_image: python:3.11-slim # Base image
       
 ```
@@ -131,39 +91,13 @@ apps:
 
 | Setting | systemd | docker |
 |---------|---------|--------|
-| `type` | systemd | docker |
 | `path` | (required) | (required) |
-| `binary_name` | `{app_name}` | - |
 | `work_dir` | `.` | `.` |
 | `go_version` | `1.25` | - |
 | `goos` | `linux` | - |
 | `goarch` | `amd64` | - |
 | `cgo_enabled` | `0` | - |
-| `entrypoint` | - | `main.py` (python), `index.js` (node) |
-| `base_image` | - | From `docker.base_images` |
 
-#### Environments
-
-Define deployment environments:
-
-```yaml
-    environments:
-      - name: production          # Environment name
-        branch: main              # Git branch
-        default_env_vars:         # Default environment variables
-          PORT: 8080
-          LOG_LEVEL: info
-      
-      - name: staging
-        branch: develop
-        default_env_vars:
-          PORT: 8081
-          LOG_LEVEL: debug
-```
-
-**Defaults:**
-- If no environments defined, defaults to `production` environment
-- Default branches: `main` (production), `staging` (staging), `develop` (develop)
 
 #### Deployment
 
@@ -182,21 +116,6 @@ Deployment settings:
 - `keep_images`: `5`
 - `restart_policy`: `always`
 - `restart_delay`: `5`
-
-### Docker
-
-Global Docker settings:
-
-```yaml
-docker:
-  registry: ""                     # Docker registry URL (optional)
-  base_images:
-    go: "golang:1.25-alpine"
-    python: "python:3.11-slim"
-    nodejs: "node:20-alpine"
-```
-
-Used when `build.type: docker` and no `build.base_image` specified.
 
 ### User Configuration
 
@@ -218,11 +137,8 @@ git remote add production ubuntu@server:api
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
-      type: systemd
       path: ./cmd/api
-      binary_name: api
       go_version: "1.25"
 ```
 
@@ -235,7 +151,6 @@ apps:
     build:
       type: docker
       path: ./apps/worker
-      entrypoint: main.py
       base_image: python:3.11-slim
 ```
 
@@ -246,9 +161,7 @@ apps:
   - name: frontend
     lang: nodejs
     build:
-      type: docker
       path: ./apps/frontend
-      entrypoint: index.js
       base_image: node:20-alpine
 ```
 
@@ -329,35 +242,6 @@ apps:
       path: ./cmd/api  # Required!
 ```
 
-### Invalid Build Type
-
-```
-Error: invalid build type 'systemd-docker' for app 'api'
-```
-
-**Fix:** Use `systemd` or `docker`:
-
-```yaml
-apps:
-  - name: api
-    build:
-      type: systemd  # or docker
-```
-
-### Duplicate App Names
-
-```
-Error: duplicate app name 'api'
-```
-
-**Fix:** Each app needs a unique name:
-
-```yaml
-apps:
-  - name: api-v1
-  - name: api-v2
-```
-
 ## Best Practices
 
 ### 1. Use Sensible Defaults
@@ -380,39 +264,13 @@ apps:
     build:
       type: systemd
       path: ./cmd/api
-      binary_name: api
       go_version: "1.25"
       goos: linux
       goarch: amd64
       cgo_enabled: 0
 ```
 
-### 2. Keep Environments Simple
-
-Only define what's different:
-
-✅ **Good:**
-```yaml
-environments:
-  - name: production
-    branch: main
-  - name: staging
-    branch: staging
-```
-
-❌ **Bad:**
-```yaml
-environments:
-  - name: production
-    branch: main
-    default_env_vars:
-      # Don't put secrets in config!
-      DATABASE_URL: postgres://...
-```
-
-Use `gokku config` for secrets instead.
-
-### 3. Version Control
+### 2. Version Control
 
 Always commit `gokku.yml`:
 
@@ -421,7 +279,7 @@ git add gokku.yml
 git commit -m "feat: add gokku configuration"
 ```
 
-### 4. Document Custom Settings
+### 3. Document Custom Settings
 
 Add comments for non-obvious settings:
 
