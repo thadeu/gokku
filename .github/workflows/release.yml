@@ -64,10 +64,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            bin/gokku-darwin-amd64
-            bin/gokku-darwin-arm64
-            bin/gokku-linux-amd64
-            bin/gokku-linux-arm64
+            bin/gokku-darwin-amd64.tar.gz
+            bin/gokku-darwin-arm64.tar.gz
+            bin/gokku-linux-amd64.tar.gz
+            bin/gokku-linux-arm64.tar.gz
           draft: false
           prerelease: false
           generate_release_notes: true

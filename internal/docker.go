@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/docker/docker/client"
 )
 
 // ContainerInfo represents container information from docker ps --format json
@@ -49,27 +46,8 @@ type DeploymentConfig struct {
 	DockerPorts   []string
 }
 
-// DockerClient wraps the Docker client with additional functionality
-type DockerClient struct {
-	client *client.Client
-	ctx    context.Context
-}
-
-// NewDockerClient creates a new Docker client
-func NewDockerClient() (*DockerClient, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Docker client: %v", err)
-	}
-
-	return &DockerClient{
-		client: cli,
-		ctx:    context.Background(),
-	}, nil
-}
-
 // ListContainers returns list of containers in JSON format
-func (dc *DockerClient) ListContainers(all bool) ([]ContainerInfo, error) {
+func ListContainers(all bool) ([]ContainerInfo, error) {
 	cmd := exec.Command("docker", "ps", "--format", "json")
 	if all {
 		cmd = exec.Command("docker", "ps", "-a", "--format", "json")
@@ -97,8 +75,8 @@ func (dc *DockerClient) ListContainers(all bool) ([]ContainerInfo, error) {
 }
 
 // ContainerExists checks if a container exists
-func (dc *DockerClient) ContainerExists(name string) bool {
-	containers, err := dc.ListContainers(true)
+func ContainerExists(name string) bool {
+	containers, err := ListContainers(true)
 	if err != nil {
 		return false
 	}
@@ -112,8 +90,8 @@ func (dc *DockerClient) ContainerExists(name string) bool {
 }
 
 // ContainerIsRunning checks if a container is running
-func (dc *DockerClient) ContainerIsRunning(name string) bool {
-	containers, err := dc.ListContainers(false)
+func ContainerIsRunning(name string) bool {
+	containers, err := ListContainers(false)
 	if err != nil {
 		return false
 	}
@@ -127,7 +105,7 @@ func (dc *DockerClient) ContainerIsRunning(name string) bool {
 }
 
 // StopContainer stops a container
-func (dc *DockerClient) StopContainer(name string) error {
+func StopContainer(name string) error {
 	cmd := exec.Command("docker", "stop", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -137,7 +115,7 @@ func (dc *DockerClient) StopContainer(name string) error {
 }
 
 // RemoveContainer removes a container
-func (dc *DockerClient) RemoveContainer(name string, force bool) error {
+func RemoveContainer(name string, force bool) error {
 	args := []string{"rm"}
 	if force {
 		args = append(args, "-f")
@@ -153,7 +131,7 @@ func (dc *DockerClient) RemoveContainer(name string, force bool) error {
 }
 
 // CreateContainer creates a new container with the given configuration
-func (dc *DockerClient) CreateContainer(config ContainerConfig) error {
+func CreateContainer(config ContainerConfig) error {
 	args := []string{"run", "-d", "--name", config.Name}
 
 	// Add restart policy
@@ -260,7 +238,7 @@ func IsZeroDowntimeEnabled(envFile string) bool {
 }
 
 // WaitForContainerHealth waits for container to be healthy
-func (dc *DockerClient) WaitForContainerHealth(name string, timeout int) error {
+func WaitForContainerHealth(name string, timeout int) error {
 	startTime := time.Now()
 	maxWait := time.Duration(timeout) * time.Second
 
@@ -304,20 +282,20 @@ func (dc *DockerClient) WaitForContainerHealth(name string, timeout int) error {
 }
 
 // StandardDeploy performs standard deployment (kill and restart)
-func (dc *DockerClient) StandardDeploy(config DeploymentConfig) error {
+func StandardDeploy(config DeploymentConfig) error {
 	fmt.Println("=====> Starting Standard Deployment")
 
 	containerName := config.AppName
 
 	// Stop and remove old container
-	if dc.ContainerExists(containerName) {
+	if ContainerExists(containerName) {
 		fmt.Printf("-----> Stopping old container: %s\n", containerName)
 
-		if err := dc.StopContainer(containerName); err != nil {
+		if err := StopContainer(containerName); err != nil {
 			fmt.Printf("Warning: Failed to stop container: %v\n", err)
 		}
 
-		if err := dc.RemoveContainer(containerName, true); err != nil {
+		if err := RemoveContainer(containerName, true); err != nil {
 			fmt.Printf("Warning: Failed to remove container: %v\n", err)
 		}
 
@@ -356,7 +334,7 @@ func (dc *DockerClient) StandardDeploy(config DeploymentConfig) error {
 
 	// Create new container
 	fmt.Printf("-----> Starting new container: %s\n", containerName)
-	if err := dc.CreateContainer(containerConfig); err != nil {
+	if err := CreateContainer(containerConfig); err != nil {
 		return fmt.Errorf("failed to start container: %v", err)
 	}
 
@@ -365,7 +343,7 @@ func (dc *DockerClient) StandardDeploy(config DeploymentConfig) error {
 	time.Sleep(5 * time.Second)
 
 	// Check if container is running
-	if !dc.ContainerIsRunning(containerName) {
+	if !ContainerIsRunning(containerName) {
 		// Get container logs for debugging
 		logCmd := exec.Command("docker", "logs", containerName)
 		logOutput, _ := logCmd.Output()
@@ -380,45 +358,45 @@ func (dc *DockerClient) StandardDeploy(config DeploymentConfig) error {
 }
 
 // BlueGreenDeploy performs blue/green deployment
-func (dc *DockerClient) BlueGreenDeploy(config DeploymentConfig) error {
+func BlueGreenDeploy(config DeploymentConfig) error {
 	fmt.Println("=====> Starting Blue/Green Deployment")
 
 	// Get container port
 	containerPort := GetContainerPort(config.EnvFile, 0)
 
 	// Start green container
-	if err := dc.startGreenContainer(config, containerPort); err != nil {
+	if err := startGreenContainer(config, containerPort); err != nil {
 		return fmt.Errorf("failed to start green container: %v", err)
 	}
 
 	// Wait for green to be healthy
-	if err := dc.WaitForContainerHealth(config.AppName+"-green", config.HealthTimeout); err != nil {
+	if err := WaitForContainerHealth(config.AppName+"-green", config.HealthTimeout); err != nil {
 		// Cleanup green container on failure
-		dc.StopContainer(config.AppName + "-green")
-		dc.RemoveContainer(config.AppName+"-green", true)
+		StopContainer(config.AppName + "-green")
+		RemoveContainer(config.AppName+"-green", true)
 		return fmt.Errorf("green container failed health check: %v", err)
 	}
 
 	// Check if we have an existing container
 	activeContainerName := config.AppName
-	if dc.ContainerExists(activeContainerName) {
+	if ContainerExists(activeContainerName) {
 		// Switch traffic: active → green
-		if err := dc.switchTrafficBlueToGreen(config.AppName, containerPort); err != nil {
+		if err := switchTrafficBlueToGreen(config.AppName, containerPort); err != nil {
 			// Cleanup green container on failure
-			dc.StopContainer(config.AppName + "-green")
-			dc.RemoveContainer(config.AppName+"-green", true)
+			StopContainer(config.AppName + "-green")
+			RemoveContainer(config.AppName+"-green", true)
 			return fmt.Errorf("failed to switch traffic: %v", err)
 		}
 
 		// Cleanup old active container
-		dc.cleanupOldBlueContainer(config.AppName)
+		cleanupOldBlueContainer(config.AppName)
 	} else {
 		// First deployment, just rename green to active
 		fmt.Println("-----> First deployment, activating green")
-		if err := dc.renameContainer(config.AppName+"-green", activeContainerName); err != nil {
+		if err := renameContainer(config.AppName+"-green", activeContainerName); err != nil {
 			return fmt.Errorf("failed to rename green to active: %v", err)
 		}
-		dc.updateContainerRestartPolicy(activeContainerName, "always")
+		updateContainerRestartPolicy(activeContainerName, "always")
 	}
 
 	fmt.Println("=====> Blue/Green Deployment Complete!")
@@ -429,13 +407,13 @@ func (dc *DockerClient) BlueGreenDeploy(config DeploymentConfig) error {
 }
 
 // DeployContainer determines and executes deployment strategy
-func (dc *DockerClient) DeployContainer(config DeploymentConfig) error {
+func DeployContainer(config DeploymentConfig) error {
 	if IsZeroDowntimeEnabled(config.EnvFile) {
 		fmt.Println("=====> ZERO_DOWNTIME deployment enabled")
-		return dc.BlueGreenDeploy(config)
+		return BlueGreenDeploy(config)
 	} else {
 		fmt.Println("=====> ZERO_DOWNTIME deployment disabled")
-		return dc.StandardDeploy(config)
+		return StandardDeploy(config)
 	}
 }
 
@@ -446,15 +424,15 @@ func fileExists(filename string) bool {
 	return !os.IsNotExist(err)
 }
 
-func (dc *DockerClient) startGreenContainer(config DeploymentConfig, containerPort int) error {
+func startGreenContainer(config DeploymentConfig, containerPort int) error {
 	greenName := config.AppName + "-green"
 	fmt.Printf("-----> Starting green container: %s\n", greenName)
 
 	// Stop and remove old green container if exists
-	if dc.ContainerExists(greenName) {
+	if ContainerExists(greenName) {
 		fmt.Println("       Removing old green container...")
-		dc.StopContainer(greenName)
-		dc.RemoveContainer(greenName, true)
+		StopContainer(greenName)
+		RemoveContainer(greenName, true)
 	}
 
 	// Build container configuration
@@ -482,7 +460,7 @@ func (dc *DockerClient) startGreenContainer(config DeploymentConfig, containerPo
 	}
 
 	// Create green container
-	if err := dc.CreateContainer(containerConfig); err != nil {
+	if err := CreateContainer(containerConfig); err != nil {
 		return fmt.Errorf("failed to start green container: %v", err)
 	}
 
@@ -490,14 +468,14 @@ func (dc *DockerClient) startGreenContainer(config DeploymentConfig, containerPo
 	return nil
 }
 
-func (dc *DockerClient) switchTrafficBlueToGreen(appName string, containerPort int) error {
+func switchTrafficBlueToGreen(appName string, containerPort int) error {
 	activeName := appName
 	greenName := appName + "-green"
 
 	fmt.Println("-----> Switching traffic: active → green")
 
 	// Stop accepting connections on active
-	if dc.ContainerIsRunning(activeName) {
+	if ContainerIsRunning(activeName) {
 		fmt.Println("       Pausing active container...")
 		cmd := exec.Command("docker", "pause", activeName)
 		cmd.Run() // Ignore errors
@@ -508,41 +486,41 @@ func (dc *DockerClient) switchTrafficBlueToGreen(appName string, containerPort i
 	fmt.Println("       Swapping container names...")
 
 	// Temporary rename old active to active-old
-	if dc.ContainerExists(activeName) {
-		dc.renameContainer(activeName, activeName+"-old")
+	if ContainerExists(activeName) {
+		renameContainer(activeName, activeName+"-old")
 	}
 
 	// Rename green to active
-	if err := dc.renameContainer(greenName, activeName); err != nil {
+	if err := renameContainer(greenName, activeName); err != nil {
 		return fmt.Errorf("failed to rename green container to active: %v", err)
 	}
 
 	// Set proper restart policy for new active container
-	dc.updateContainerRestartPolicy(activeName, "always")
+	updateContainerRestartPolicy(activeName, "always")
 
 	fmt.Println("-----> Traffic switch complete (green → active)")
 	return nil
 }
 
-func (dc *DockerClient) cleanupOldBlueContainer(appName string) {
+func cleanupOldBlueContainer(appName string) {
 	oldActiveName := appName + "-old"
 
 	fmt.Println("-----> Cleaning up old active container...")
 
-	if dc.ContainerExists(oldActiveName) {
+	if ContainerExists(oldActiveName) {
 		// Give it time to drain connections
 		fmt.Println("       Waiting 5s before removing old container...")
 		time.Sleep(5 * time.Second)
 
 		fmt.Println("       Removing old active container...")
-		dc.StopContainer(oldActiveName)
-		dc.RemoveContainer(oldActiveName, true)
+		StopContainer(oldActiveName)
+		RemoveContainer(oldActiveName, true)
 
 		fmt.Println("-----> Old container cleaned up")
 	}
 }
 
-func (dc *DockerClient) renameContainer(oldName, newName string) error {
+func renameContainer(oldName, newName string) error {
 	cmd := exec.Command("docker", "rename", oldName, newName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -551,19 +529,19 @@ func (dc *DockerClient) renameContainer(oldName, newName string) error {
 	return nil
 }
 
-func (dc *DockerClient) updateContainerRestartPolicy(containerName, policy string) {
+func updateContainerRestartPolicy(containerName, policy string) {
 	cmd := exec.Command("docker", "update", "--restart", policy, containerName)
 	cmd.Run() // Ignore errors
 }
 
 // RecreateActiveContainer recreates the active container with new environment variables
 // This is kept for backward compatibility but is deprecated in favor of full redeploy
-func (dc *DockerClient) RecreateActiveContainer(appName, envFile, appDir string) error {
+func RecreateActiveContainer(appName, envFile, appDir string) error {
 	// Determine which container is active
 	var activeContainer string
-	if dc.ContainerExists(appName) {
+	if ContainerExists(appName) {
 		activeContainer = appName
-	} else if dc.ContainerExists(appName + "-green") {
+	} else if ContainerExists(appName + "-green") {
 		activeContainer = appName + "-green"
 	} else {
 		return fmt.Errorf("no active container found for %s", appName)
@@ -604,8 +582,8 @@ func (dc *DockerClient) RecreateActiveContainer(appName, envFile, appDir string)
 
 	// Stop and remove old container
 	fmt.Println("       Stopping old container...")
-	dc.StopContainer(activeContainer)
-	dc.RemoveContainer(activeContainer, true)
+	StopContainer(activeContainer)
+	RemoveContainer(activeContainer, true)
 
 	// Build container configuration
 	containerConfig := ContainerConfig{
@@ -631,7 +609,7 @@ func (dc *DockerClient) RecreateActiveContainer(appName, envFile, appDir string)
 
 	// Start new container with same name and updated env
 	fmt.Println("       Starting new container with updated configuration...")
-	if err := dc.CreateContainer(containerConfig); err != nil {
+	if err := CreateContainer(containerConfig); err != nil {
 		return fmt.Errorf("failed to recreate container: %v", err)
 	}
 
@@ -640,22 +618,22 @@ func (dc *DockerClient) RecreateActiveContainer(appName, envFile, appDir string)
 }
 
 // BlueGreenRollback performs rollback to previous blue container
-func (dc *DockerClient) BlueGreenRollback(appName string) error {
+func BlueGreenRollback(appName string) error {
 	blueName := appName + "-blue"
 	oldBlueName := appName + "-blue-old"
 
 	fmt.Println("=====> Starting Blue/Green Rollback")
 
 	// Check if old blue exists
-	if !dc.ContainerExists(oldBlueName) {
+	if !ContainerExists(oldBlueName) {
 		return fmt.Errorf("no previous blue container found for rollback")
 	}
 
 	fmt.Println("-----> Stopping current blue container...")
-	dc.StopContainer(blueName)
+	StopContainer(blueName)
 
 	fmt.Println("-----> Restoring previous blue container...")
-	if err := dc.renameContainer(oldBlueName, blueName); err != nil {
+	if err := renameContainer(oldBlueName, blueName); err != nil {
 		return fmt.Errorf("failed to restore previous blue container: %v", err)
 	}
 
@@ -677,13 +655,8 @@ func (dc *DockerClient) BlueGreenRollback(appName string) error {
 
 // Legacy functions for backward compatibility
 
-func ListContainers(remoteInfo *RemoteInfo, format string) string {
-	dc, err := NewDockerClient()
-	if err != nil {
-		return fmt.Sprintf("Error creating Docker client: %v", err)
-	}
-
-	containers, err := dc.ListContainers(true)
+func ListContainersLegacy(remoteInfo *RemoteInfo, format string) string {
+	containers, err := ListContainers(true)
 	if err != nil {
 		return fmt.Sprintf("Error listing containers: %v", err)
 	}
@@ -708,32 +681,22 @@ func ListImages(remoteInfo *RemoteInfo, format string) string {
 	return string(output)
 }
 
-func RemoveContainer(remoteInfo *RemoteInfo, containerName string) string {
-	dc, err := NewDockerClient()
-	if err != nil {
-		return fmt.Sprintf("Error creating Docker client: %v", err)
-	}
-
-	if err := dc.RemoveContainer(containerName, true); err != nil {
+func RemoveContainerLegacy(remoteInfo *RemoteInfo, containerName string) string {
+	if err := RemoveContainer(containerName, true); err != nil {
 		return fmt.Sprintf("Error removing container: %v", err)
 	}
 
 	return "Container removed successfully"
 }
 
-func CreateContainer(remoteInfo *RemoteInfo, options map[string]string) string {
-	dc, err := NewDockerClient()
-	if err != nil {
-		return fmt.Sprintf("Error creating Docker client: %v", err)
-	}
-
+func CreateContainerLegacy(remoteInfo *RemoteInfo, options map[string]string) string {
 	config := ContainerConfig{
 		Name:    options["name"],
 		Image:   options["image"],
 		Command: []string{options["command"]},
 	}
 
-	if err := dc.CreateContainer(config); err != nil {
+	if err := CreateContainer(config); err != nil {
 		return fmt.Sprintf("Error creating container: %v", err)
 	}
 
