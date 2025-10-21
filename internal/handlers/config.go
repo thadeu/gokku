@@ -16,133 +16,129 @@ func handleConfig(args []string) {
 		fmt.Println("Usage: gokku config <set|get|list|unset> [KEY[=VALUE]] [options]")
 		fmt.Println("")
 		fmt.Println("Options:")
-		fmt.Println("  -a, --app <app>           App name (required for remote execution)")
+		fmt.Println("  -a, --app <app>           App name")
 		fmt.Println("")
 		fmt.Println("Examples:")
-		fmt.Println("  # Remote execution (from local machine)")
+		fmt.Println("  # Client mode (from local machine)")
 		fmt.Println("  gokku config set PORT=8080 -a api-production")
 		fmt.Println("  gokku config list -a api-production")
 		fmt.Println("")
-		fmt.Println("  # Local execution (on server)")
-		fmt.Println("  gokku config set PORT=8080 --app api")
-		fmt.Println("  gokku config set PORT=8080 -a api                     (uses 'default' env)")
-		fmt.Println("  gokku config list -a api                              (uses 'default' env)")
+		fmt.Println("  # Server mode (on server)")
+		fmt.Println("  gokku config set PORT=8080 -a api")
+		fmt.Println("  gokku config list -a api")
 		os.Exit(1)
 	}
 
 	app, remainingArgs := internal.ExtractAppFlag(args)
 
-	// If -a/--app is provided, execute via SSH
-	if app != "" {
-		remoteInfo, err := internal.GetRemoteInfo(app)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		if len(remainingArgs) < 1 {
-			fmt.Println("Usage: gokku config <set|get|list|unset> [args...] -a <app>")
-			os.Exit(1)
-		}
-
-		subcommand := remainingArgs[0]
-
-		// Build command to run on server
-		var sshCmd string
-		switch subcommand {
-		case "set":
-			if len(remainingArgs) < 2 {
-				fmt.Println("Usage: gokku config set KEY=VALUE [KEY2=VALUE2...] -a <app>")
+	// Check if we're in client mode or server mode
+	if internal.IsClientMode() {
+		// Client mode: -a flag requires git remote for SSH execution
+		if app != "" {
+			remoteInfo, err := internal.GetRemoteInfo(app)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
-			pairs := strings.Join(remainingArgs[1:], " ")
-			sshCmd = fmt.Sprintf("gokku config set %s --app %s", pairs, remoteInfo.App)
-		case "get":
-			if len(remainingArgs) < 2 {
-				fmt.Println("Usage: gokku config get KEY -a <app>")
+
+			if len(remainingArgs) < 1 {
+				fmt.Println("Usage: gokku config <set|get|list|unset> [args...] -a <app>")
 				os.Exit(1)
 			}
-			key := remainingArgs[1]
-			sshCmd = fmt.Sprintf("gokku config get %s --app %s", key, remoteInfo.App)
-		case "list":
-			sshCmd = fmt.Sprintf("gokku config list --app %s", remoteInfo.App)
-		case "unset":
-			if len(remainingArgs) < 2 {
-				fmt.Println("Usage: gokku config unset KEY [KEY2...] -a <app>")
+
+			subcommand := remainingArgs[0]
+
+			// Build command to run on server
+			var sshCmd string
+			switch subcommand {
+			case "set":
+				if len(remainingArgs) < 2 {
+					fmt.Println("Usage: gokku config set KEY=VALUE [KEY2=VALUE2...] -a <app>")
+					os.Exit(1)
+				}
+				pairs := strings.Join(remainingArgs[1:], " ")
+				sshCmd = fmt.Sprintf("gokku config set %s --app %s", pairs, remoteInfo.App)
+			case "get":
+				if len(remainingArgs) < 2 {
+					fmt.Println("Usage: gokku config get KEY -a <app>")
+					os.Exit(1)
+				}
+				key := remainingArgs[1]
+				sshCmd = fmt.Sprintf("gokku config get %s --app %s", key, remoteInfo.App)
+			case "list":
+				sshCmd = fmt.Sprintf("gokku config list --app %s", remoteInfo.App)
+			case "unset":
+				if len(remainingArgs) < 2 {
+					fmt.Println("Usage: gokku config unset KEY [KEY2...] -a <app>")
+					os.Exit(1)
+				}
+				keys := strings.Join(remainingArgs[1:], " ")
+				sshCmd = fmt.Sprintf("gokku config unset %s --app %s", keys, remoteInfo.App)
+			default:
+				fmt.Printf("Unknown subcommand: %s\n", subcommand)
 				os.Exit(1)
 			}
-			keys := strings.Join(remainingArgs[1:], " ")
-			sshCmd = fmt.Sprintf("gokku config unset %s --app %s", keys, remoteInfo.App)
-		default:
-			fmt.Printf("Unknown subcommand: %s\n", subcommand)
-			os.Exit(1)
-		}
 
-		fmt.Printf("→ %s (%s)\n", remoteInfo.App, remoteInfo.Host)
+			fmt.Printf("→ %s (%s)\n", remoteInfo.App, remoteInfo.Host)
 
-		cmd := exec.Command("ssh", remoteInfo.Host, sshCmd)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
-		if err := cmd.Run(); err != nil {
-			os.Exit(1)
-		}
-
-		// Auto-restart container after set/unset to apply changes
-		if subcommand == "set" || subcommand == "unset" {
-			fmt.Printf("\n-----> Restarting container to apply changes...\n")
-			restartCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf("gokku restart %s", remoteInfo.App))
-			restartCmd.Stdout = os.Stdout
-			restartCmd.Stderr = os.Stderr
-			if err := restartCmd.Run(); err != nil {
-				fmt.Printf("Warning: Failed to restart container. Run 'gokku restart -a %s' manually.\n", app)
-			} else {
-				fmt.Printf("✓ Container restarted with new configuration\n")
+			cmd := exec.Command("ssh", remoteInfo.Host, sshCmd)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Stdin = os.Stdin
+			if err := cmd.Run(); err != nil {
+				os.Exit(1)
 			}
+
+			// Auto-restart container after set/unset to apply changes
+			if subcommand == "set" || subcommand == "unset" {
+				fmt.Printf("\n-----> Restarting container to apply changes...\n")
+				restartCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf("gokku restart %s", remoteInfo.App))
+				restartCmd.Stdout = os.Stdout
+				restartCmd.Stderr = os.Stderr
+				if err := restartCmd.Run(); err != nil {
+					fmt.Printf("Warning: Failed to restart container. Run 'gokku restart -a %s' manually.\n", app)
+				} else {
+					fmt.Printf("✓ Container restarted with new configuration\n")
+				}
+			}
+			return
+		} else {
+			// Client mode without -a flag
+			fmt.Println("Error: Client mode requires -a flag to specify app")
+			fmt.Println("")
+			fmt.Println("Usage: gokku config <command> [args...] -a <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku config set PORT=8080 -a api-production")
+			fmt.Println("  gokku config list -a api-production")
+			os.Exit(1)
 		}
-		return
+	} else {
+		// Server mode: -a flag uses app name directly, no git remote needed
+		if app == "" {
+			fmt.Println("Error: Server mode requires -a flag to specify app")
+			fmt.Println("")
+			fmt.Println("Usage: gokku config <command> [args...] -a <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku config set PORT=8080 -a api")
+			fmt.Println("  gokku config list -a api")
+			os.Exit(1)
+		}
 	}
 
-	// Check if we're running on server - local execution only works on server
-	if !internal.IsRunningOnServer() {
-		fmt.Println("Error: Local config commands can only be run on the server")
-		fmt.Println("")
-		fmt.Println("For client usage, use -a flag:")
-		fmt.Println("  gokku config set KEY=VALUE -a <app>")
-		fmt.Println("  gokku config get KEY -a <app>")
-		fmt.Println("  gokku config list -a <app>")
-		fmt.Println("  gokku config unset KEY -a <app>")
-		fmt.Println("")
-		fmt.Println("Or run this command directly on your server.")
-		os.Exit(1)
-	}
-
-	// Local execution - parse --app and --env flags
-	var appName string
+	// Server mode execution - use app name directly
+	appName := app
 	var finalArgs []string
 
+	// Parse remaining args for env flags
 	for i := 0; i < len(remainingArgs); i++ {
-		if (remainingArgs[i] == "--app" || remainingArgs[i] == "-a") && i+1 < len(remainingArgs) {
-			appName = remainingArgs[i+1]
+		if (remainingArgs[i] == "--env" || remainingArgs[i] == "-e") && i+1 < len(remainingArgs) {
+			// Skip env flag and value for now (could be used in future)
 			i++
 		} else {
 			finalArgs = append(finalArgs, remainingArgs[i])
 		}
-	}
-
-	// If no app specified, error
-	if appName == "" {
-		fmt.Println("Error: --app is required for local execution")
-		fmt.Println("")
-		fmt.Println("Usage: gokku config <command> [args...] --app <app> [--env <env>]")
-		fmt.Println("   or: gokku config <command> [args...] -a <app> [-e <env>]")
-		fmt.Println("")
-		fmt.Println("Examples:")
-		fmt.Println("  gokku config set PORT=8080 --app api                    (uses 'default' env)")
-		fmt.Println("  gokku config set PORT=8080 -a api                        (uses 'default' env)")
-		fmt.Println("  gokku config set PORT=8080 -a api -e production          (explicit env)")
-		fmt.Println("  gokku config list -a api                                 (uses 'default' env)")
-		os.Exit(1)
 	}
 
 	if len(finalArgs) < 1 {
