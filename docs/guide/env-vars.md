@@ -252,8 +252,8 @@ gokku config set SECRET_KEY="random-secret-key" -a api-production
 ❌ **Bad:**
 ```yaml
 # gokku.yml
-environments:
-  - name: production
+apps:
+  - name: api
     default_env_vars:
       DATABASE_URL: "postgres://user:password@localhost/db"  # NO!
 ```
@@ -261,7 +261,7 @@ environments:
 ✅ **Good:**
 ```bash
 # Use gokku config instead
-gokku config set DATABASE_URL="postgres://..." -a api -e production
+gokku config set DATABASE_URL="postgres://..." -a api-production
 ```
 
 ### 2. Use Strong Secrets
@@ -269,17 +269,17 @@ gokku config set DATABASE_URL="postgres://..." -a api -e production
 ```bash
 # Generate random secret
 SECRET=$(openssl rand -hex 32)
-gokku config set SECRET_KEY="$SECRET" -a api -e production
+gokku config set SECRET_KEY="$SECRET" -a api-production
 ```
 
 ### 3. Different Secrets Per Environment
 
 ```bash
 # Production
-gokku config set SECRET_KEY="prod-secret" -a api -e production
+gokku config set SECRET_KEY="prod-secret" -a api-production
 
 # Staging
-gokku config set SECRET_KEY="staging-secret" -a api -e staging
+gokku config set SECRET_KEY="staging-secret" -a api-staging
 ```
 
 ### 4. Rotate Secrets Regularly
@@ -291,15 +291,8 @@ NEW_SECRET=$(openssl rand -hex 32)
 # Update
 gokku config set SECRET_KEY="$NEW_SECRET" -a api-production
 
-# Restart app
-gokku restart api production -a api-production
-```
-
-### 5. Limit Access
-
-```bash
-# Set proper permissions on .env file
-ssh ubuntu@server "chmod 600 /opt/gokku/apps/api/production/.env"
+# Restart app (optional)
+gokku restart -a api-production
 ```
 
 ## Multiple Environments
@@ -308,19 +301,104 @@ Different variables for different environments:
 
 ```bash
 # Production - Real database
-gokku config set -a production DATABASE_URL="postgres://prod-db/app"
-gokku config set -a production LOG_LEVEL=info
-gokku config set -a production DEBUG=false
+gokku config set DATABASE_URL="postgres://prod-db/app" -a api-production
+gokku config set LOG_LEVEL=info -a api-production
+gokku config set DEBUG=false -a api-production
 
 # Staging - Staging database
-gokku config set -a staging DATABASE_URL="postgres://staging-db/app"
-gokku config set -a staging LOG_LEVEL=debug
-gokku config set -a staging DEBUG=true
+gokku config set DATABASE_URL="postgres://staging-db/app" -a api-staging
+gokku config set LOG_LEVEL=debug -a api-staging
+gokku config set DEBUG=true -a api-staging
+```
+
+## Troubleshooting
+
+### Variable Not Found
+
+Check if variable exists:
+
+```bash
+# From local machine
+gokku config get PORT -a api-production
+
+# On server
+gokku config get PORT --app api
+```
+
+If empty, set it:
+
+```bash
+gokku config set PORT=8080 -a api-production
+```
+
+### Changes Not Applied
+
+Environment variables are automatically available to your application. If you need to restart:
+
+```bash
+# Using gokku CLI
+gokku restart -a api-production
+
+# Or manually on server
+gokku restart --app api
+```
+
+### .env File Missing
+
+The `.env` file is created automatically when you first set a variable:
+
+```bash
+gokku config set PORT=8080 -a api-production
+```
+
+### Permission Denied
+
+Fix permissions:
+
+```bash
+ssh ubuntu@server "sudo chown ubuntu:ubuntu /opt/gokku/apps/api/shared/.env"
+ssh ubuntu@server "chmod 600 /opt/gokku/apps/api/shared/.env"
+```
+
+## Advanced Usage
+
+### Bulk Set
+
+Set multiple variables at once:
+
+```bash
+# Set multiple variables in one command
+gokku config set PORT=8080 -a api-production
+gokku config set LOG_LEVEL=info -a api-production
+gokku config set WORKERS=4 -a api-production
+```
+
+### Backup Variables
+
+```bash
+# Backup
+ssh ubuntu@server "cat /opt/gokku/apps/api/shared/.env" > backup.env
+
+# Restore
+scp backup.env ubuntu@server:/opt/gokku/apps/api/shared/.env
+gokku restart -a api-production
+```
+
+### Export from Local .env
+
+```bash
+# Read local .env and set on server
+while IFS= read -r line; do
+  if [[ $line && $line != \#* ]]; then
+    gokku config set "$line" -a api-production
+  fi
+done < .env.production
 ```
 
 ## Next Steps
 
 - [Configuration](/guide/configuration) - Configure apps
 - [Deployment](/guide/deployment) - Deploy your app
+- [CLI Reference](/reference/cli) - Complete command reference
 - [Troubleshooting](/reference/troubleshooting) - Common issues
 
