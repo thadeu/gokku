@@ -34,7 +34,6 @@ export default defineConfig({
           text: 'Core Concepts',
           items: [
             { text: 'Configuration', link: '/guide/configuration' },
-            { text: 'Build Types', link: '/guide/build-types' },
             { text: 'Environments', link: '/guide/environments' },
             { text: 'Deployment', link: '/guide/deployment' }
           ]
