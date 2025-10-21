@@ -37,6 +37,18 @@ func handleLogsWithContext(ctx *internal.ExecutionContext, args []string) {
 	// Print connection info for remote execution
 	ctx.PrintConnectionInfo()
 
+	// Check if we're running locally on server or remotely
+	if ctx.ServerExecution {
+		// Server mode - execute docker logs directly
+		handleLogsServerMode(ctx, serviceName, followFlag, follow)
+	} else {
+		// Client mode - execute via SSH with proper signal handling
+		handleLogsClientMode(ctx, serviceName, followFlag, follow)
+	}
+}
+
+// handleLogsServerMode handles logs when running on server
+func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFlag string, follow bool) {
 	// Build docker logs command
 	dockerCmd := fmt.Sprintf(`
 		if docker ps -a | grep -q %s; then
@@ -50,6 +62,36 @@ func handleLogsWithContext(ctx *internal.ExecutionContext, args []string) {
 	// Execute command
 	if err := ctx.ExecuteCommand(dockerCmd); err != nil {
 		if !follow {
+			os.Exit(1)
+		}
+	}
+}
+
+// handleLogsClientMode handles logs when running from client
+func handleLogsClientMode(ctx *internal.ExecutionContext, serviceName, followFlag string, follow bool) {
+	// Build docker logs command
+	dockerCmd := fmt.Sprintf(`
+		if docker ps -a | grep -q %s; then
+			docker logs %s %s
+		else
+			echo "Container '%s' not found"
+			exit 1
+		fi
+	`, serviceName, serviceName, followFlag, serviceName)
+
+	// Execute command with proper signal handling for follow mode
+	if follow {
+		// For follow mode, use a more robust SSH command that handles signals properly
+		sshCmd := fmt.Sprintf("ssh -t %s '%s'", ctx.Host, dockerCmd)
+		if err := ctx.ExecuteCommandWithSignalHandling(sshCmd); err != nil {
+			// Don't exit on signal interruption for follow mode
+			if !internal.IsSignalInterruption(err) {
+				os.Exit(1)
+			}
+		}
+	} else {
+		// For non-follow mode, use regular execution
+		if err := ctx.ExecuteCommand(dockerCmd); err != nil {
 			os.Exit(1)
 		}
 	}

@@ -114,6 +114,11 @@ func handleDeploy(args []string) {
 	cmd.Stdin = os.Stdin
 
 	if err := cmd.Run(); err != nil {
+		// Check if it's a signal interruption
+		if internal.IsSignalInterruption(err) {
+			fmt.Printf("\nDeploy interrupted by user\n")
+			os.Exit(0)
+		}
 		fmt.Printf("\nDeploy failed: %v\n", err)
 		os.Exit(1)
 	}
@@ -234,6 +239,10 @@ func executeDirectDeployment(appName string) error {
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err != nil {
+				// Check if it's a signal interruption
+				if internal.IsSignalInterruption(err) {
+					return fmt.Errorf("docker build interrupted by user")
+				}
 				return fmt.Errorf("docker build failed: %v", err)
 			}
 		} else {

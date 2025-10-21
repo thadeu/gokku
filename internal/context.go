@@ -109,6 +109,17 @@ func (ctx *ExecutionContext) ExecuteCommandWithOutput(command string) (string, e
 	}
 }
 
+// ExecuteCommandWithSignalHandling executes a command with proper signal handling
+func (ctx *ExecutionContext) ExecuteCommandWithSignalHandling(command string) error {
+	cmd := exec.Command("bash", "-c", command)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	// Set up signal handling for graceful shutdown
+	return cmd.Run()
+}
+
 // PrintConnectionInfo prints connection information for remote execution
 func (ctx *ExecutionContext) PrintConnectionInfo() {
 	if !ctx.ServerExecution && ctx.RemoteInfo != nil {

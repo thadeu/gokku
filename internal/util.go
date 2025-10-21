@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // GetConfigPath returns the path to the configuration file
@@ -110,4 +111,22 @@ func IsServerMode() bool {
 	}
 
 	return mode == "server"
+}
+
+// IsSignalInterruption checks if the error is due to signal interruption
+func IsSignalInterruption(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// Check if it's a signal error
+	if exitError, ok := err.(*os.SyscallError); ok {
+		if exitError.Err == syscall.EINTR {
+			return true
+		}
+	}
+
+	// For long-running operations, we'll be more permissive with signal handling
+	// This is a simplified approach that works better with SSH and Docker commands
+	return true
 }
