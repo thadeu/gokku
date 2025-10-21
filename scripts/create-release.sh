@@ -170,7 +170,6 @@ main() {
         if [ "$(git rev-parse "$tag")" = "$(git rev-parse HEAD)" ]; then
             log_warn "Tag '$tag' already points to current HEAD"
             if [ "$auto_yes" = true ]; then
-                log "Auto-pushing existing tag..."
                 git push origin "$tag"
                 log_success "Tag '$tag' pushed successfully!"
                 exit 0
@@ -216,12 +215,6 @@ curl -fsSL https://gokku-vm.com/install | bash"
         log "Auto-pushing tag to origin..."
         git push origin HEAD > /dev/null 2>&1
         git push origin "$tag" > /dev/null 2>&1
-        log_success "Tag '$tag' pushed successfully!"
-        log ""
-        log "GitHub Actions will now:"
-        log "  1. Build binaries for all platforms"
-        log "  2. Create GitHub Release with binaries"
-        log "  3. Make them available for download"
         log ""
         log "Monitor progress at: https://github.com/thadeu/gokku/actions"
         log "Release will be available at: https://github.com/thadeu/gokku/releases/tag/$tag"
