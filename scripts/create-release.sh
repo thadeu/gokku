@@ -76,13 +76,32 @@ update_docs_version() {
         exit 1
     fi
 
-    # Replace {{VERSION}} with actual version
+    # Check if the version is already correct
+    if grep -q "text: '$version'" "$docs_config"; then
+        log "Docs config already has correct version: $version"
+        return 0
+    fi
+
+    # Get current version in docs config
+    local current_version=$(grep -o "[0-9]\+\.[0-9]\+\.[0-9]\+" "$docs_config" | head -1)
+
+    # Replace {{VERSION}} with actual version, or update existing version
     if sed -i.bak "s/{{VERSION}}/$version/g" "$docs_config"; then
+        # Also handle case where version is already set but different
+        if [ -n "$current_version" ] && [ "$current_version" != "$version" ]; then
+            sed -i.bak2 "s/$current_version/$version/g" "$docs_config"
+        fi
+        rm -f "$docs_config.bak" "$docs_config.bak2"  # Remove backup files
         log_success "Updated version in docs config: $version"
-        rm -f "$docs_config.bak"  # Remove backup file
     else
         log_error "Failed to update version in docs config"
         exit 1
+    fi
+
+    # Check if there are changes after the update
+    if git diff --quiet "$docs_config"; then
+        log "No changes detected in docs config after update"
+        return 0
     fi
 
     # Commit the docs version update
