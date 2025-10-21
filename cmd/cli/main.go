@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"infra/internal"
 	"infra/internal/handlers"
 )
 
-const version = "1.0.34"
+const version = "1.0.35"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -16,30 +17,51 @@ func main() {
 	}
 
 	command := os.Args[1]
+	args := os.Args[2:]
+
+	// Create execution context for commands that need it
+	var ctx *internal.ExecutionContext
+	var err error
+
+	// Commands that need context (use -a flag)
+	contextCommands := map[string]bool{
+		"config": true, "run": true, "logs": true,
+		"status": true, "restart": true, "rollback": true,
+	}
+
+	if contextCommands[command] {
+		// Extract app flag to create context
+		appName, _ := internal.ExtractAppFlag(args)
+		ctx, err = internal.NewExecutionContext(appName)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
 	switch command {
 	case "apps":
-		handlers.HandleApps(os.Args[2:])
+		handlers.HandleApps(args)
 	case "config":
-		handlers.HandleConfig(os.Args[2:])
+		handlers.HandleConfigWithContext(ctx, args)
 	case "run":
-		handlers.HandleRun(os.Args[2:])
+		handlers.HandleRunWithContext(ctx, args)
 	case "logs":
-		handlers.HandleLogs(os.Args[2:])
+		handlers.HandleLogsWithContext(ctx, args)
 	case "status":
-		handlers.HandleStatus(os.Args[2:])
+		handlers.HandleStatusWithContext(ctx, args)
 	case "restart":
-		handlers.HandleRestart(os.Args[2:])
+		handlers.HandleRestartWithContext(ctx, args)
 	case "deploy":
-		handlers.HandleDeploy(os.Args[2:])
+		handlers.HandleDeploy(args)
 	case "rollback":
-		handlers.HandleRollback(os.Args[2:])
+		handlers.HandleRollbackWithContext(ctx, args)
 	case "ssh":
-		handlers.HandleSSH(os.Args[2:])
+		handlers.HandleSSH(args)
 	case "server":
-		handlers.HandleServer(os.Args[2:])
+		handlers.HandleServer(args)
 	case "tool":
-		handlers.HandleTool(os.Args[2:])
+		handlers.HandleTool(args)
 	case "version", "--version", "-v":
 		fmt.Printf("gokku version %s\n", version)
 	case "help", "--help", "-h":
