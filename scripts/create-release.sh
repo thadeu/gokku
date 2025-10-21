@@ -16,15 +16,15 @@ log() {
 }
 
 log_success() {
-    echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} ✓ $1"
+    echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $1"
 }
 
 log_error() {
-    echo -e "${RED}[$(date +'%H:%M:%S')]${NC} ✗ $1"
+    echo -e "${RED}[$(date +'%H:%M:%S')]${NC} $1"
 }
 
 log_warn() {
-    echo -e "${YELLOW}[$(date +'%H:%M:%S')]${NC} ⚠ $1"
+    echo -e "${YELLOW}[$(date +'%H:%M:%S')]${NC} $1"
 }
 
 # Extract version from main.go
