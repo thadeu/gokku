@@ -50,22 +50,18 @@ func handleLogsWithContext(ctx *internal.ExecutionContext, args []string) {
 
 // handleLogsServerMode handles logs when running on server
 func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFlag string, follow bool) {
-	// Build docker logs command
-	dockerCmd := fmt.Sprintf(`
-		if docker ps -a | grep -q %s; then
-			docker logs %s %s
-		else
-			echo "Container '%s' not found"
-			exit 1
-		fi
-	`, serviceName, serviceName, followFlag, serviceName)
-
-	// Execute command
-	if err := ctx.ExecuteCommand(dockerCmd); err != nil {
-		if !follow {
-			os.Exit(1)
-		}
+	// Execute docker logs directly on server
+	var cmd *exec.Cmd
+	if follow {
+		cmd = exec.Command("docker", "logs", "-f", serviceName)
+	} else {
+		cmd = exec.Command("docker", "logs", serviceName)
 	}
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	cmd.Run()
 }
 
 // handleLogsClientMode handles logs when running from client
@@ -80,27 +76,12 @@ func handleLogsClientMode(ctx *internal.ExecutionContext, serviceName, followFla
 		fi
 	`, serviceName, serviceName, followFlag, serviceName)
 
-	// Execute command with proper signal handling for follow mode
-	if follow {
-		// For follow mode, use SSH with TTY allocation and proper signal handling
-		// Use a more robust approach with proper signal forwarding
-		sshCmd := exec.Command("ssh", "-t", "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=3", ctx.Host, dockerCmd)
-		sshCmd.Stdout = os.Stdout
-		sshCmd.Stderr = os.Stderr
-		sshCmd.Stdin = os.Stdin
-
-		if err := sshCmd.Run(); err != nil {
-			// Don't exit on signal interruption for follow mode
-			if !internal.IsSignalInterruption(err) {
-				os.Exit(1)
-			}
-		}
-	} else {
-		// For non-follow mode, use regular execution
-		if err := ctx.ExecuteCommand(dockerCmd); err != nil {
-			os.Exit(1)
-		}
-	}
+	// Execute via SSH with TTY allocation
+	cmd := exec.Command("ssh", "-t", ctx.Host, dockerCmd)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	cmd.Run()
 }
 
 // handleStatusWithContext shows service/container status using context

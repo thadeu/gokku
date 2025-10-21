@@ -58,13 +58,6 @@ func HandleRun(args []string) {
 	})
 }
 
-// HandleLogs shows application logs
-func HandleLogs(args []string) {
-	internal.TryCatch(func() {
-		handleLogs(args)
-	})
-}
-
 // HandleStatus shows service/container status
 func HandleStatus(args []string) {
 	internal.TryCatch(func() {
