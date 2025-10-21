@@ -14,7 +14,7 @@ export default defineConfig({
     logo: '/logo.svg',
 
     nav: [
-      { text: '{{VERSION}}', link: '/' },
+      { text: '1.0.37', link: '/' },
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Examples', link: '/examples/' },
