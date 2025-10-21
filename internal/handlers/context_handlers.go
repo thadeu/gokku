@@ -50,6 +50,27 @@ func handleLogsWithContext(ctx *internal.ExecutionContext, args []string) {
 
 // handleLogsServerMode handles logs when running on server
 func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFlag string, follow bool) {
+	// Check if container exists
+	checkCmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
+	output, err := checkCmd.Output()
+	if err != nil {
+		fmt.Printf("Error checking containers: %v\n", err)
+		os.Exit(1)
+	}
+
+	containerExists := false
+	for _, name := range strings.Split(string(output), "\n") {
+		if strings.TrimSpace(name) == serviceName {
+			containerExists = true
+			break
+		}
+	}
+
+	if !containerExists {
+		fmt.Printf("Container '%s' not found\n", serviceName)
+		os.Exit(1)
+	}
+
 	// Execute docker logs directly on server
 	var cmd *exec.Cmd
 	if follow {
@@ -61,23 +82,51 @@ func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFla
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-	cmd.Run()
+
+	// Run the command and check for errors
+	if err := cmd.Run(); err != nil {
+		// Check if it's a signal interruption (Ctrl+C), which is normal
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			// Exit code 130 = SIGINT (Ctrl+C)
+			// Exit code 143 = SIGTERM
+			if exitErr.ExitCode() == 130 || exitErr.ExitCode() == 143 {
+				os.Exit(0)
+			}
+		}
+		fmt.Printf("Error executing docker logs: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 // handleLogsClientMode handles logs when running from client
 func handleLogsClientMode(ctx *internal.ExecutionContext, serviceName, followFlag string, follow bool) {
 	// Build docker logs command
-	dockerCmd := fmt.Sprintf(`
-		if docker ps -a | grep -q %s; then
-			docker logs %s %s
-		else
-			echo "Container '%s' not found"
-			exit 1
-		fi
-	`, serviceName, serviceName, followFlag, serviceName)
+	var dockerCmd string
+	if follow {
+		// For follow mode, use explicit -f flag
+		dockerCmd = fmt.Sprintf(`
+			if docker ps -a --format '{{.Names}}' | grep -q "^%s$"; then
+				docker logs -f %s
+			else
+				echo "Container '%s' not found"
+				exit 1
+			fi
+		`, serviceName, serviceName, serviceName)
+	} else {
+		dockerCmd = fmt.Sprintf(`
+			if docker ps -a --format '{{.Names}}' | grep -q "^%s$"; then
+				docker logs %s
+			else
+				echo "Container '%s' not found"
+				exit 1
+			fi
+		`, serviceName, serviceName, serviceName)
+	}
 
-	// Execute via SSH with TTY allocation
-	cmd := exec.Command("ssh", "-t", ctx.Host, dockerCmd)
+	// Execute via SSH with proper TTY allocation
+	// Use -tt to force TTY allocation even when stdin is not a terminal
+	// This is crucial for follow mode to work correctly
+	cmd := exec.Command("ssh", "-tt", ctx.Host, dockerCmd)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
