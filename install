@@ -209,8 +209,8 @@ download_binary() {
         exit 1
     fi
 
-    # Make binary executable
-    chmod +x gokku
+    # Make binary executable (the extracted binary has the same name as the archive without .tar.gz)
+    chmod +x "$binary_name"
 
     log_success "Binary ready for installation"
 }
@@ -222,12 +222,15 @@ install_binary() {
     local temp_dir="/tmp/gokku-install"
     cd $temp_dir
 
+    # Get the binary name (same as archive name without .tar.gz)
+    local binary_name="gokku-$OS-$ARCH"
+
     # Try to install to /usr/local/bin
     if [ -w "$BIN_DIR" ]; then
-        mv gokku $BIN_DIR/
+        mv "$binary_name" $BIN_DIR/gokku
         chmod +x $BIN_DIR/gokku
     else
-        sudo mv gokku $BIN_DIR/
+        sudo mv "$binary_name" $BIN_DIR/gokku
         sudo chmod +x $BIN_DIR/gokku
     fi
 
