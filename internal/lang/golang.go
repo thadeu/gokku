@@ -215,7 +215,6 @@ func (l *Golang) EnsureDockerfile(releaseDir string, appName string, app *App) e
 	fmt.Printf("-----> Working directory from config: '%s'\n", app.WorkDir)
 	fmt.Printf("-----> Using workDir: '%s'\n", workDir)
 
-	// Build path is relative to work_dir
 	if app.Path != "" {
 		// Since we COPY workdir ., the build path should be relative to workdir
 		build.Path = "./" + strings.TrimPrefix(app.Path, "./")

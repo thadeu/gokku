@@ -24,7 +24,7 @@ type Config struct {
 type App struct {
 	Lang         string            `yaml:"lang,omitempty"`
 	Path         string            `yaml:"path,omitempty"`
-	WorkDir      string            `yaml:"work_dir,omitempty"`
+	WorkDir      string            `yaml:"workdir,omitempty"`
 	BinaryName   string            `yaml:"binary_name,omitempty"`
 	GoVersion    string            `yaml:"go_version,omitempty"`
 	Goos         string            `yaml:"goos,omitempty"`

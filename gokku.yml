@@ -3,7 +3,7 @@
 
 apps:
   speech-to-text:
-    work_dir: apps/trunk
+    workdir: apps/trunk
     path: ./cmd/speech-to-text
     ports:
       - "5064:5064"
@@ -20,7 +20,7 @@ apps:
   voice-agent:
     path: ./cmd/voice-agent
     binary_name: voice-agent
-    work_dir: apps/trunk
+    workdir: apps/trunk
     go_version: "1.25"
     ports:
       - "5064:5064"

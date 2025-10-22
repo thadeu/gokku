@@ -59,7 +59,7 @@ apps:
   api-server:
     path: ./cmd/api
     binary_name: api-server
-    work_dir: .
+    workdir: .
     go_version: "1.25"
     environments:
       - name: production
@@ -78,7 +78,7 @@ apps:
   worker:
     path: ./cmd/worker
     binary_name: worker
-    work_dir: .
+    workdir: .
     go_version: "1.25"
     environments:
       - name: production
@@ -116,7 +116,7 @@ All configuration fields are optional with sensible defaults:
 | Field | Default | Description |
 |-------|---------|-------------|
 | `lang` | `go` | Programming language |
-| `work_dir` | `.` | Working directory for build |
+| `workdir` | `.` | Working directory for build |
 | `go_version` | `1.25` | Go version (for Go apps) |
 | `entrypoint` | `main.py` (Python)<br>`index.js` (Node.js) | Application entrypoint |
 | `image` | ❌ No | Auto-detected | Docker base image or pre-built registry image |
@@ -515,7 +515,7 @@ environments:
   - name: staging
     branch: staging
 
-work_dir: .  # or apps/trunk for your structure
+workdir: .  # or apps/trunk for your structure
 ```
 
 ### Step 2: Deploy (Auto-Setup)
@@ -548,7 +548,7 @@ gokku config list -a api-production
 ```yaml
 apps:
   app-name: 
-    build_path: string     # Path to main package (relative to work_dir)
+    build_path: string     # Path to main package (relative to workdir)
     binary_name: string    # Output binary name (defaults to app name)
 ```
 

@@ -23,7 +23,7 @@ apps:
   api:
     path: ./cmd/api
     binary_name: api
-    work_dir: .
+    workdir: .
     go_version: "1.25"
     goos: linux
     goarch: amd64
@@ -52,7 +52,7 @@ apps:
 
 ```yaml
 path: ./cmd/api         # Path to main file/directory
-work_dir: .             # Working directory for build
+workdir: .             # Working directory for build
 
 # Go-specific settings
 go_version: "1.25"      # Go version
@@ -70,7 +70,7 @@ dockerfile: ./Dockerfile     # Custom Dockerfile path
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `path` | (required) | Build path |
-| `work_dir` | `.` | Working directory |
+| `workdir` | `.` | Working directory |
 | `dockerfile` | `./Dockerfile` | Dockerfile path |
 | `base_image` | (language-specific) | Base Docker image |
 

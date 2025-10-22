@@ -69,7 +69,7 @@ apps:
 | `type` | string | ❌ No | From `defaults.build_type` | Build type: `docker` only |
 | `path` | string | ✅ Yes | - | Path to app code (relative to project root) |
 | `binary_name` | string | ❌ No | Same as `app.name` | Output binary name (Go only) |
-| `work_dir` | string | ❌ No | `.` | Working directory for build |
+| `workdir` | string | ❌ No | `.` | Working directory for build |
 | `go_version` | string | ❌ No | `1.25` | Go version (Go only) |
 | `goos` | string | ❌ No | `linux` | Target OS (Go only) |
 | `goarch` | string | ❌ No | `amd64` | Target architecture (Go only) |
@@ -227,7 +227,7 @@ apps:
   api:
     path: ./cmd/api
     binary_name: api
-    work_dir: .
+    workdir: .
     go_version: "1.25"
     goos: linux
     goarch: amd64
