@@ -241,25 +241,6 @@ git merge feature/new-ui
 git push production main
 ```
 
-## Deployment Hooks
-
-### Pre-Deploy (Manual)
-
-Add to your app:
-
-```bash
-# scripts/pre-deploy.sh
-#!/bin/bash
-echo "Running tests..."
-go test ./...
-```
-
-Run after deploying:
-
-```bash
-git push production main && ./scripts/post-deploy.sh
-```
-
 ## Next Steps
 
 - [Rollback](/guide/rollback) - Revert failed deployments
