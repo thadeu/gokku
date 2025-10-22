@@ -188,14 +188,38 @@ func handlePSList(args []string) {
 		os.Exit(1)
 	}
 
-	registry := containers.NewContainerRegistry()
-	allContainers, err := registry.GetAllContainers(appName)
+	// Use docker ps to get running containers
+	cmd := exec.Command("docker", "ps", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}")
+	output, err := cmd.Output()
 	if err != nil {
-		fmt.Printf("Error getting containers: %v\n", err)
+		fmt.Printf("Error running docker ps: %v\n", err)
 		os.Exit(1)
 	}
 
-	if len(allContainers) == 0 {
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) <= 1 {
+		fmt.Printf("No processes running for app '%s'\n", appName)
+		return
+	}
+
+	// Filter containers that belong to this app
+	var appContainers []string
+	for _, line := range lines[1:] { // Skip header
+		if line == "" {
+			continue
+		}
+
+		// Check if container name starts with app name
+		parts := strings.Fields(line)
+		if len(parts) > 0 {
+			containerName := parts[0]
+			if strings.HasPrefix(containerName, appName+"-") || containerName == appName {
+				appContainers = append(appContainers, line)
+			}
+		}
+	}
+
+	if len(appContainers) == 0 {
 		fmt.Printf("No processes running for app '%s'\n", appName)
 		return
 	}
@@ -204,9 +228,14 @@ func handlePSList(args []string) {
 	fmt.Printf("%-20s %-10s %-15s\n", "NAME", "STATUS", "PORT")
 	fmt.Printf("%-20s %-10s %-15s\n", "----", "------", "----")
 
-	for _, container := range allContainers {
-		port := fmt.Sprintf("%d:8080", container.HostPort)
-		fmt.Printf("%-20s %-10s %-15s\n", container.Name, container.Status, port)
+	for _, container := range appContainers {
+		parts := strings.Fields(container)
+		if len(parts) >= 3 {
+			name := parts[0]
+			status := parts[1]
+			ports := parts[2]
+			fmt.Printf("%-20s %-10s %-15s\n", name, status, ports)
+		}
 	}
 }
 

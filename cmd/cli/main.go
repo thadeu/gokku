@@ -9,7 +9,7 @@ import (
 	"infra/internal/handlers"
 )
 
-const version = "1.0.59"
+const version = "1.0.60"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -39,6 +39,12 @@ func main() {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
+	}
+
+	if strings.HasPrefix(command, "ps:") {
+		subcommand := strings.TrimPrefix(command, "ps:")
+		handlers.HandlePS(append([]string{subcommand}, os.Args[2:]...))
+		return
 	}
 
 	// Execute command with panic recovery
