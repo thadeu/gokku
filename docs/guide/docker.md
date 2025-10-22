@@ -238,16 +238,6 @@ EXPOSE ${PORT:-8080}
 CMD ["python", "app.py"]
 ```
 
-### With Custom Plugins
-
-```yaml
-apps:
-  - name: whisper
-    lang: python
-    build:
-            url: https://github.com/thadeu/asdf-whispercpp.git
-```
-
 `.tool-versions`:
 ```
 python 3.11
