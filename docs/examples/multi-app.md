@@ -205,7 +205,7 @@ apps:
       
   api-v2:
     path: ./cmd/api-v2
-      go_version: "1.25"
+    go_version: "1.25"
 ```
 
 Or with `.tool-versions`:

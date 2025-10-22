@@ -53,15 +53,15 @@ apps:
 ```yaml
 path: ./cmd/api         # Path to main file/directory
 work_dir: .             # Working directory for build
-  
-  # Go-specific settings
-  go_version: "1.25"      # Go version
-  goos: linux             # Target OS
-  goarch: amd64           # Target architecture
-  cgo_enabled: 0          # Enable CGO (0 or 1)
-  
-  # Docker-specific settings
-  dockerfile: ./Dockerfile     # Custom Dockerfile path
+
+# Go-specific settings
+go_version: "1.25"      # Go version
+goos: linux             # Target OS
+goarch: amd64           # Target architecture
+cgo_enabled: 0          # Enable CGO (0 or 1)
+
+# Docker-specific settings
+dockerfile: ./Dockerfile     # Custom Dockerfile path
       
 ```
 
