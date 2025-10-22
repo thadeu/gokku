@@ -247,17 +247,6 @@ gokku config set SECRET_KEY="random-secret-key" -a api-production
 
 ## Security Best Practices
 
-### 1. Never Commit Secrets
-
-❌ **Bad:**
-```yaml
-# gokku.yml
-apps:
-  app-name: api
-    default_env_vars:
-      DATABASE_URL: "postgres://user:password@localhost/db"  # NO!
-```
-
 ✅ **Good:**
 ```bash
 # Use gokku config instead

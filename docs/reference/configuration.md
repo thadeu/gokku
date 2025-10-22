@@ -198,7 +198,7 @@ git remote add production ubuntu@server:api
 
 ```yaml
 apps:
-  app-name: api
+  api:
     path: ./cmd/api
 ```
 
@@ -221,7 +221,7 @@ defaults:
 # Applications
 apps:
   # Go API with Docker
-  app-name: api
+  api:
     path: ./cmd/api
     binary_name: api
     work_dir: .

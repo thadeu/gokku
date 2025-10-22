@@ -16,7 +16,7 @@ Gokku supports two deployment modes:
 ```yaml
 # gokku.yml
 apps:
-  app-name: api
+  api:
     image: "ghcr.io/meu-org/api:latest"
     deployment:
       keep_releases: 3
@@ -106,7 +106,7 @@ You can mix both approaches in the same project:
 # gokku.yml
 apps:
   # Pre-built image (fast deployment)
-  app-name: api
+  api:
     image: "ghcr.io/meu-org/api:latest"
       
   # Local build (development/testing)

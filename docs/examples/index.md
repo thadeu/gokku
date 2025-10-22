@@ -19,7 +19,7 @@ Simple Go API with Docker deployment:
 
 ```yaml
 apps:
-  app-name: api
+  api:
     path: ./cmd/api
     binary_name: api
 ```
@@ -86,7 +86,7 @@ Deploy multiple services from one repository:
 
 ```yaml
 apps:
-  app-name: api
+  api:
     path: ./cmd/api
   
   app-name: worker

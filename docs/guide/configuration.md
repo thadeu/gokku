@@ -143,14 +143,13 @@ Deploy multiple apps from one repository:
 
 ```yaml
 apps:
-  app-name: api
+  api:
     path: ./cmd/api
   
   app-name: worker
     path: ./cmd/worker
   
   app-name: ml-service
-    lang: python
     path: ./services/ml
     entrypoint: server.py
 ```

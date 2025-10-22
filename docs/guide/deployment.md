@@ -19,7 +19,7 @@ In your project root:
 
 ```yaml
 apps:
-  app-name: api
+  api:
     path: ./cmd/api
 ```
 
@@ -110,7 +110,7 @@ Configure in `gokku.yml`:
 
 ```yaml
 apps:
-  app-name: api
+  api:
     deployment:
       keep_releases: 10       # Number of releases to keep
       keep_images: 10         # Number of Docker images to keep
