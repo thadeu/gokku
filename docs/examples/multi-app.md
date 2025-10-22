@@ -267,7 +267,7 @@ if __name__ == '__main__':
 
 ```yaml
 apps:
-  app-name: celery-worker
+  celery-worker:
     lang: python
     path: ./services/worker
     entrypoint: worker.py
@@ -282,7 +282,7 @@ apps:
   api:
     path: ./cmd/api
   
-  app-name: worker
+  worker:
     path: ./cmd/worker
 ```
 
@@ -327,7 +327,7 @@ apps:
   api:
     path: ./cmd/api
   
-  app-name: migrate
+  migrate:
     path: ./cmd/migrate
 ```
 

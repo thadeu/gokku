@@ -25,7 +25,7 @@ my-react-app/
 
 ```yaml
 apps:
-  app-name: react-app
+  react-app:
     lang: nodejs
     path: .
     deployment:

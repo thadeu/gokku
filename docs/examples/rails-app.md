@@ -21,7 +21,7 @@ my-rails-app/
 
 ```yaml
 apps:
-  app-name: rails-app
+  rails-app:
     lang: ruby
     path: .
     deployment:

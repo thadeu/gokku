@@ -180,12 +180,12 @@ docker:
 ```yaml
 # Using custom company registry
 apps:
-  app-name: internal-api
+  internal-api:
     image: "registry.company.com/meu-org/api:latest"
 
 # Using Harbor registry
 apps:
-  app-name: microservice
+  microservice:
     image: "harbor.example.com/project/service:latest"
 ```
 

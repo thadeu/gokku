@@ -112,16 +112,16 @@ git remote add production ubuntu@server:api
 
 ```yaml
 apps:
-  app-name: api
+  api:
     path: ./cmd/api
-      go_version: "1.25"
+    go_version: "1.25"
 ```
 
 ### Python Application
 
 ```yaml
 apps:
-  app-name: worker
+  worker:
     lang: python
     image: python:3.11-slim
     path: ./apps/worker
@@ -131,7 +131,7 @@ apps:
 
 ```yaml
 apps:
-  app-name: frontend
+  frontend:
     lang: nodejs
     image: node:20-alpine
     path: ./apps/frontend
@@ -174,29 +174,8 @@ Error: app 'api' missing required field: build.path
 
 ```yaml
 apps:
-  app-name: api
+  api:
     path: ./cmd/api  # Required!
-```
-
-## Best Practices
-
-### 1. Use Sensible Defaults
-
-Don't repeat defaults:
-
-✅ **Good:**
-```yaml
-apps:
-  app-name: api
-    path: ./cmd/api
-```
-
-❌ **Bad:**
-```yaml
-apps:
-  app-name: api
-    path: ./cmd/api
-      go_version: "1.25"
 ```
 
 ### 2. Version Control
@@ -214,7 +193,7 @@ Add comments for non-obvious settings:
 
 ```yaml
 apps:
-  app-name: api
+  api:
     cgo_enabled: 1  # Required for SQLite
 ```
 

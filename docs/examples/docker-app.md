@@ -212,10 +212,10 @@ Gokku supports Docker volumes through the `volumes` field in your `gokku.yml`:
 apps:
   my-app:
     path: ./cmd/my-app
-      volumes:
-        - "/host/path:/container/path"           # Bind mount
-        - "/usr/lib/data:/app/data"               # Shared data folder
-        - "/var/log/app:/app/logs"                 # Log files
+    volumes:
+      - "/host/path:/container/path"           # Bind mount
+      - "/usr/lib/data:/app/data"               # Shared data folder
+      - "/var/log/app:/app/logs"                 # Log files
 ```
 
 ### Shared Volumes Between Apps
@@ -226,21 +226,21 @@ Perfect for microservices that need to share data:
 apps:
   recorder:
     path: ./cmd/recorder
-      volumes:
-        - "/usr/lib/recordings:/app/recordings"   # Write files here
-        - "/var/log/recordings:/app/logs"
+    volumes:
+      - "/usr/lib/recordings:/app/recordings"   # Write files here
+      - "/var/log/recordings:/app/logs"
   
   processor:
     path: ./cmd/processor
-      volumes:
-        - "/usr/lib/recordings:/app/recordings"   # Read files from here
-        - "/var/log/recordings:/app/logs"
+    volumes:
+      - "/usr/lib/recordings:/app/recordings"   # Read files from here
+      - "/var/log/recordings:/app/logs"
   
   webhook:
     path: ./cmd/webhook
-      volumes:
-        - "/usr/lib/recordings:/app/recordings"   # Access processed files
-        - "/var/log/recordings:/app/logs"
+    volumes:
+      - "/usr/lib/recordings:/app/recordings"   # Access processed files
+      - "/var/log/recordings:/app/logs"
 ```
 
 ### Volume Types Supported
