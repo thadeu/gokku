@@ -8,7 +8,7 @@ Deploy any application using Docker with Gokku.
 
 ```yaml
 apps:
-  - name: my-app
+  my-app:
     lang: python
     build:
       path: ./app
@@ -21,7 +21,7 @@ Gokku will use your existing Dockerfile.
 
 ```yaml
 apps:
-  - name: my-app
+  my-app:
     lang: python
     build:
       path: ./app
@@ -36,7 +36,7 @@ Gokku generates a Dockerfile automatically based on language.
 
 ```yaml
 apps:
-  - name: python-app
+  python-app:
     lang: python
     build:
       path: .
@@ -59,7 +59,7 @@ CMD ["python", "app.py"]
 
 ```yaml
 apps:
-  - name: nodejs-app
+  nodejs-app:
     lang: nodejs
     build:
       path: .
@@ -82,7 +82,7 @@ CMD ["node", "index.js"]
 
 ```yaml
 apps:
-  - name: go-app
+  go-app:
     build:
       path: ./cmd/api
       base_image: golang:1.25-alpine
@@ -163,12 +163,12 @@ Gokku currently uses `docker run`, not `docker-compose`. For services requiring 
 
 ```yaml
 apps:
-  - name: web
+  web:
     lang: python
     build:
       path: ./web
   
-  - name: worker
+  worker:
     lang: python
     build:
       path: ./worker
@@ -213,9 +213,9 @@ Gokku automatically maps ports:
 
 ```yaml
 apps:
-  - name: my-app
+  my-app:
     environments:
-      - name: production
+      app-name: production
         default_env_vars:
           PORT: 8080  # Container port
 ```
@@ -252,9 +252,9 @@ Then connect from your app:
 
 ```yaml
 apps:
-  - name: my-app
+  my-app:
     environments:
-      - name: production
+      app-name: production
         default_env_vars:
           DATABASE_URL: postgres://postgres:secret@172.17.0.1:5432/mydb
 ```
@@ -302,7 +302,7 @@ docker:
   registry: "registry.example.com"
 
 apps:
-  - name: my-app
+  my-app:
     build:
       base_image: registry.example.com/python:3.11
 ```

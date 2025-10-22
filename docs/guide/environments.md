@@ -17,14 +17,14 @@ Define environments in `gokku.yml`:
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     environments:
-      - name: production
+      app-name: production
         default_env_vars:
           LOG_LEVEL: info
           WORKERS: 4
       
-      - name: staging
+      app-name: staging
         default_env_vars:
           LOG_LEVEL: debug
           WORKERS: 2
@@ -36,14 +36,14 @@ Different variables per environment:
 
 ```yaml
 environments:
-  - name: production
+  app-name: production
     default_env_vars:
       DATABASE_URL: postgres://prod-db/app
       LOG_LEVEL: error
       CACHE_TTL: 3600
       DEBUG: false
   
-  - name: staging
+  app-name: staging
     default_env_vars:
       DATABASE_URL: postgres://staging-db/app
       LOG_LEVEL: debug

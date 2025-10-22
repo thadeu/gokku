@@ -17,33 +17,17 @@ my-project/
 ## Schema Overview
 
 ```yaml
-project:          # Global project settings
 defaults:         # Default values for all apps
 apps:             # Application definitions
-  - name:         # App name
+  app-name:       # App name (key)
     lang:         # Programming language
     build:        # Build configuration
     environments: # Deployment environments
     deployment:   # Deployment settings
 docker:           # Global Docker settings
-user:             # Server user settings
 ```
 
 ## Full Reference
-
-### project
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `name` | string | ✅ Yes | - | Project name |
-| `base_dir` | string | ❌ No | `/opt/gokku` | Installation directory on server |
-
-**Example:**
-```yaml
-project:
-  name: my-awesome-project
-  base_dir: /opt/gokku
-```
 
 ### defaults
 
@@ -58,13 +42,12 @@ defaults:
   lang: go
 ```
 
-### apps[]
+### apps
 
-Array of application definitions.
+Map of application definitions where the key is the application name.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `name` | string | ✅ Yes | - | Application name (must be unique) |
 | `lang` | string | ❌ No | From `defaults.lang` | Programming language |
 | `build` | object | ✅ Yes | - | Build configuration (see below) |
 | `environments` | array | ❌ No | `[{name: "production", branch: "main"}]` | Deployment environments |
@@ -73,7 +56,7 @@ Array of application definitions.
 **Example:**
 ```yaml
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
 ```
@@ -180,13 +163,13 @@ build:
 **Example:**
 ```yaml
 environments:
-  - name: production
+  app-name: production
     branch: main
     default_env_vars:
       LOG_LEVEL: info
       WORKERS: 4
   
-  - name: staging
+  app-name: staging
     branch: staging
     default_env_vars:
       LOG_LEVEL: debug
@@ -252,7 +235,7 @@ git remote add production ubuntu@server:api
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
 ```
@@ -261,7 +244,7 @@ apps:
 
 ```yaml
 apps:
-  - name: app
+  app-name: app
     lang: python
     build:
       path: .
@@ -282,7 +265,7 @@ defaults:
 # Applications
 apps:
   # Go API with Docker
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
       binary_name: api
@@ -293,13 +276,13 @@ apps:
       cgo_enabled: 0
     
     environments:
-      - name: production
+      app-name: production
         branch: main
         default_env_vars:
           PORT: 8080
           LOG_LEVEL: info
       
-      - name: staging
+      app-name: staging
         branch: staging
         default_env_vars:
           PORT: 8080
@@ -311,7 +294,7 @@ apps:
       restart_delay: 5
   
   # Python ML service with Docker
-  - name: ml-service
+  app-name: ml-service
     lang: python
     build:
       path: ./services/ml
@@ -319,7 +302,7 @@ apps:
       image: python:3.11-slim
     
     environments:
-      - name: production
+      app-name: production
         branch: main
         default_env_vars:
           PORT: 8082
@@ -344,8 +327,6 @@ Gokku validates your configuration:
 
 ### Required Fields
 
-- ❌ Missing `project.name`: `Error: project.name is required`
-- ❌ Missing `apps[].name`: `Error: app name is required`
 - ❌ Missing `apps[].build.path`: `Error: app 'api' missing build.path`
 
 ### Invalid Values

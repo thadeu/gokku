@@ -39,11 +39,8 @@ All project-specific settings are in one place.
 Most fields are optional with sensible defaults:
 
 ```yaml
-project:
-  name: my-project
-
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
       binary_name: api
@@ -59,12 +56,8 @@ This minimal config will use defaults:
 ### Full Configuration Example
 
 ```yaml
-project:
-  name: my-project
-  base_dir: /opt/my-project
-
 apps:
-  - name: api-server
+  api-server:
     build:
       path: ./cmd/api
       binary_name: api-server
@@ -84,7 +77,7 @@ apps:
       restart_policy: always
       restart_delay: 5
     
-  - name: worker
+  worker:
     build:
       path: ./cmd/worker
       binary_name: worker
@@ -98,7 +91,7 @@ apps:
       restart_policy: always
       restart_delay: 5
     
-  - name: ml-service
+  ml-service:
     lang: python
     build:
       path: ./services/ml
@@ -208,7 +201,7 @@ When `build.image` is not specified, Gokku automatically detects the version fro
 **Minimal Go app (all defaults):**
 ```yaml
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
       binary_name: api
@@ -217,7 +210,7 @@ apps:
 **Minimal Python app:**
 ```yaml
 apps:
-  - name: ml-service
+  ml-service:
     lang: python
     build:
       path: ./services/ml
@@ -226,7 +219,7 @@ apps:
 **Custom everything:**
 ```yaml
 apps:
-  - name: custom-app
+  custom-app:
     build:
       path: ./cmd/custom
       binary_name: custom
@@ -294,15 +287,12 @@ Gokku now features **automatic setup** on first deploy. No manual configuration 
 Edit `gokku.yml` with your apps and environments:
 
 ```yaml
-project:
-  name: awesome-api
-
 apps:
-  - name: api
+  api:
     build_path: ./cmd/api
     binary_name: api
     
-  - name: worker
+  worker:
     build_path: ./cmd/worker
     binary_name: worker
 
@@ -399,7 +389,7 @@ All applications run in Docker containers with blue-green deployment for zero-do
 
 ```yaml
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
       binary_name: api
@@ -408,7 +398,7 @@ apps:
       goarch: amd64
       cgo_enabled: 0
     
-  - name: ml-service
+  ml-service:
     lang: python
     build:
       path: ./services/ml
@@ -454,7 +444,7 @@ Specify your own Dockerfile in the build config:
 
 ```yaml
 apps:
-  - name: ml-service
+  ml-service:
     lang: python
     build:
       path: ./services/ml
@@ -501,17 +491,17 @@ All applications use Docker containers, regardless of language:
 
 ```yaml
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
       binary_name: api
     
-  - name: worker
+  worker:
     build:
       path: ./cmd/worker
       binary_name: worker
     
-  - name: vad
+  vad:
     lang: python
     build:
       path: ./services/vad
@@ -544,16 +534,12 @@ curl -fsSL https://gokku-vm.com/install | bash
 Configure your project:
 
 ```yaml
-project:
-  name: my-project
-  base_dir: /opt/my-project
-
 apps:
-  - name: api
+  api:
     build_path: ./cmd/api
     binary_name: api
     
-  - name: worker
+  worker:
     build_path: ./cmd/worker
     binary_name: worker
 
@@ -592,19 +578,11 @@ gokku config list -a api-production
 
 ## Configuration Reference
 
-### Project Section
-
-```yaml
-project:
-  name: string        # Project name (used in logs)
-  base_dir: string    # Base directory (default: /opt/gokku)
-```
-
 ### Apps Section
 
 ```yaml
 apps:
-  - name: string           # App name (must be unique)
+  app-name:                # App name (must be unique)
     build_path: string     # Path to main package (relative to work_dir)
     binary_name: string    # Output binary name (defaults to app name)
 ```
@@ -732,11 +710,8 @@ git init
 
 # 4. Create test config
 cat > gokku.yml << EOF
-project:
-  name: test-project
-  
 apps:
-  - name: test-app
+  test-app:
     build:
       path: ./main.go
       binary_name: test-app

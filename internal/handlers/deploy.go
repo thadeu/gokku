@@ -240,7 +240,7 @@ func executeDirectDeployment(appName string) error {
 		if _, err := os.Stat(dockerfilePath); err == nil {
 			fmt.Println("-----> Forcing fresh Docker build (no cache)...")
 			// Remove any existing image with the same name
-			imageTag := fmt.Sprintf("%s:latest", app.Name)
+			imageTag := fmt.Sprintf("%s:latest", appName)
 			exec.Command("docker", "rmi", imageTag).Run() // Ignore errors if image doesn't exist
 
 			// Build with no cache
@@ -256,13 +256,13 @@ func executeDirectDeployment(appName string) error {
 			}
 		} else {
 			// Use language handler for non-Docker builds
-			if err := lang.Build(app, releaseDir); err != nil {
+			if err := lang.Build(appName, app, releaseDir); err != nil {
 				return fmt.Errorf("build failed: %v", err)
 			}
 		}
 	} else {
 		// Use language handler for non-Docker builds
-		if err := lang.Build(app, releaseDir); err != nil {
+		if err := lang.Build(appName, app, releaseDir); err != nil {
 			return fmt.Errorf("build failed: %v", err)
 		}
 	}
@@ -270,12 +270,12 @@ func executeDirectDeployment(appName string) error {
 	fmt.Println("-----> Build complete!")
 
 	// Deploy application using language handler
-	if err := lang.Deploy(app, releaseDir); err != nil {
+	if err := lang.Deploy(appName, app, releaseDir); err != nil {
 		return fmt.Errorf("deploy failed: %v", err)
 	}
 
 	// Cleanup old releases using language handler
-	if err := lang.Cleanup(app); err != nil {
+	if err := lang.Cleanup(appName, app); err != nil {
 		fmt.Printf("Warning: Failed to cleanup old releases: %v\n", err)
 	}
 
@@ -329,11 +329,8 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 
 	// Find the app in the config
 	var app *internal.App
-	for _, a := range serverConfig.Apps {
-		if a.Name == appName {
-			app = &a
-			break
-		}
+	if a, exists := serverConfig.Apps[appName]; exists {
+		app = &a
 	}
 
 	if app == nil {

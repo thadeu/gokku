@@ -28,12 +28,12 @@ project:
   name: my-react-app
 
 apps:
-  - name: react-app
+  app-name: react-app
     lang: nodejs
     build:
       path: .
     environments:
-      - name: production
+      app-name: production
         branch: main
         default_env_vars:
           NODE_ENV: production

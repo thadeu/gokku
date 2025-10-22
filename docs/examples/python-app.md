@@ -18,7 +18,7 @@ my-flask-app/
 
 ```yaml
 apps:
-  - name: flask-app
+  flask-app:
     lang: python
     build:
       path: .
@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
 ```yaml
 apps:
-  - name: flask-app
+  flask-app:
     lang: python
     build:
       path: .
@@ -118,7 +118,7 @@ Update `gokku.yml`:
 
 ```yaml
 apps:
-  - name: flask-app
+  flask-app:
     lang: python
     build:
       path: .
@@ -159,7 +159,7 @@ uvicorn[standard]==0.24.0
 
 ```yaml
 apps:
-  - name: fastapi-app
+  fastapi-app:
     lang: python
     build:
       path: .
@@ -280,7 +280,7 @@ def predict(text: str):
 
 ```yaml
 apps:
-  - name: ml-service
+  ml-service:
     lang: python
     build:
       path: .
@@ -301,7 +301,7 @@ ffmpeg 8.0
 
 ```yaml
 apps:
-  - name: audio-service
+  audio-service:
     lang: python
     build:
       path: .
@@ -357,13 +357,13 @@ def process_video(video_id):
 
 ```yaml
 apps:
-  - name: web
+  web:
     lang: python
     build:
       path: .
       entrypoint: app.py
   
-  - name: worker
+  worker:
     lang: python
     build:
       path: .
@@ -391,20 +391,20 @@ CMD ["celery", "-A", "worker", "worker", "--loglevel=info"]
 
 ```yaml
 apps:
-  - name: flask-app
+  flask-app:
     lang: python
     build:
       path: .
       entrypoint: app.py
     
     environments:
-      - name: production
+      app-name: production
         branch: main
         default_env_vars:
           FLASK_ENV: production
           LOG_LEVEL: info
       
-      - name: staging
+      app-name: staging
         branch: staging
         default_env_vars:
           FLASK_ENV: development

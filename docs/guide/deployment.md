@@ -22,7 +22,7 @@ project:
   name: my-app
 
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
 ```
@@ -114,7 +114,7 @@ Configure in `gokku.yml`:
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     deployment:
       keep_releases: 10       # Number of releases to keep
       keep_images: 10         # Number of Docker images to keep
@@ -165,11 +165,11 @@ Deploy to different environments:
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     environments:
-      - name: production
+      app-name: production
         branch: main
-      - name: staging
+      app-name: staging
         branch: staging
 ```
 
@@ -495,7 +495,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      - name: Deploy
+      app-name: Deploy
         run: |
           git remote add production ${{ secrets.GOKKU_REMOTE }}
           git push production main

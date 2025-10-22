@@ -253,7 +253,7 @@ gokku config set SECRET_KEY="random-secret-key" -a api-production
 ```yaml
 # gokku.yml
 apps:
-  - name: api
+  app-name: api
     default_env_vars:
       DATABASE_URL: "postgres://user:password@localhost/db"  # NO!
 ```

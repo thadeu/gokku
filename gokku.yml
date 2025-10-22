@@ -1,12 +1,8 @@
 # Gokku Deployment Configuration
 # This file defines your applications and environments
 
-project:
-  name: gokku
-  base_dir: /opt/gokku
-
 apps:
-  - name: speech-to-text
+  speech-to-text:
     build:
       path: ./cmd/speech-to-text
       binary_name: speech-to-text
@@ -17,7 +13,7 @@ apps:
       restart_policy: always
       restart_delay: 5
 
-  - name: voice-agent
+  voice-agent:
     build:
       path: ./cmd/voice-agent
       binary_name: voice-agent
@@ -32,7 +28,7 @@ apps:
       restart_policy: always
       restart_delay: 5
 
-  - name: vad
+  vad:
     lang: python
     build:
       path: ./apps/vad
@@ -46,7 +42,7 @@ apps:
       restart_delay: 10
 
   # Example of pre-built image from registry (ultra-fast deployment)
-  - name: api-prebuilt
+  api-prebuilt:
     build:
       image: "ghcr.io/meu-org/api:latest"  # Pre-built image from registry
     deployment:

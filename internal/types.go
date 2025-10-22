@@ -9,26 +9,19 @@ import (
 
 // ServerConfig represents the gokku.yml configuration on the server
 type ServerConfig struct {
-	Project      *Project      `yaml:"project,omitempty"`
-	Apps         []App         `yaml:"apps"`
-	Defaults     *Defaults     `yaml:"defaults,omitempty"`
-	Docker       *Docker       `yaml:"docker,omitempty"`
-	Environments []Environment `yaml:"environments,omitempty"`
-}
-
-// Project represents project-level configuration
-type Project struct {
-	Name string `yaml:"name"`
+	Apps         map[string]App `yaml:"apps"`
+	Defaults     *Defaults      `yaml:"defaults,omitempty"`
+	Docker       *Docker        `yaml:"docker,omitempty"`
+	Environments []Environment  `yaml:"environments,omitempty"`
 }
 
 // Config represents the CLI configuration
 type Config struct {
-	Apps []App `yaml:"apps"`
+	Apps map[string]App `yaml:"apps"`
 }
 
 // App represents an application configuration
 type App struct {
-	Name         string         `yaml:"name"`
 	Lang         string         `yaml:"lang,omitempty"`
 	Build        *Build         `yaml:"build,omitempty"`
 	Deployment   *Deployment    `yaml:"deployment,omitempty"`
@@ -100,7 +93,7 @@ func LoadServerConfigByApp(appName string) (*ServerConfig, error) {
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return &ServerConfig{
-			Apps: []App{},
+			Apps: make(map[string]App),
 		}, nil
 	}
 
@@ -133,12 +126,8 @@ func LoadAppConfig(appName string) (*App, error) {
 	}
 
 	// Find the app by name
-	for _, app := range serverConfig.Apps {
-		if app.Name == appName {
-			// Ensure the app name is set
-			app.Name = appName
-			return &app, nil
-		}
+	if app, exists := serverConfig.Apps[appName]; exists {
+		return &app, nil
 	}
 
 	return nil, fmt.Errorf("app '%s' not found in configuration", appName)
@@ -146,10 +135,8 @@ func LoadAppConfig(appName string) (*App, error) {
 
 // GetApp finds an app by name
 func (c *ServerConfig) GetApp(name string) (*App, error) {
-	for _, app := range c.Apps {
-		if app.Name == name {
-			return &app, nil
-		}
+	if app, exists := c.Apps[name]; exists {
+		return &app, nil
 	}
 	return nil, fmt.Errorf("app '%s' not found", name)
 }
@@ -160,22 +147,17 @@ func (c *ServerConfig) Validate() error {
 		return fmt.Errorf("no apps defined")
 	}
 
-	appNames := make(map[string]bool)
-	for _, app := range c.Apps {
-		if app.Name == "" {
+	for appName, app := range c.Apps {
+		if appName == "" {
 			return fmt.Errorf("app name cannot be empty")
 		}
-		if appNames[app.Name] {
-			return fmt.Errorf("duplicate app name: %s", app.Name)
-		}
-		appNames[app.Name] = true
 
 		if app.Build == nil {
-			return fmt.Errorf("app '%s' missing build configuration", app.Name)
+			return fmt.Errorf("app '%s' missing build configuration", appName)
 		}
 
 		if app.Build.Type != "docker" {
-			return fmt.Errorf("app '%s' has invalid build type: %s (must be 'docker')", app.Name, app.Build.Type)
+			return fmt.Errorf("app '%s' has invalid build type: %s (must be 'docker')", appName, app.Build.Type)
 		}
 	}
 

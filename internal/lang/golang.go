@@ -15,11 +15,11 @@ type Golang struct {
 	app *App
 }
 
-func (l *Golang) Build(app *App, releaseDir string) error {
+func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 	fmt.Println("-----> Building Go application...")
 
 	// Check if using pre-built image from registry
-	if app.Build != nil && app.Build.Image != "" && IsRegistryImage(app.Build.Image, GetCustomRegistries(app.Name)) {
+	if app.Build != nil && app.Build.Image != "" && IsRegistryImage(app.Build.Image, GetCustomRegistries(appName)) {
 		fmt.Println("-----> Using pre-built image from registry...")
 
 		// Pull the pre-built image
@@ -28,7 +28,7 @@ func (l *Golang) Build(app *App, releaseDir string) error {
 		}
 
 		// Tag the image for the app
-		if err := TagImageForApp(app.Build.Image, app.Name); err != nil {
+		if err := TagImageForApp(app.Build.Image, appName); err != nil {
 			return fmt.Errorf("failed to tag image: %v", err)
 		}
 
@@ -37,12 +37,12 @@ func (l *Golang) Build(app *App, releaseDir string) error {
 	}
 
 	// Ensure Dockerfile exists
-	if err := l.EnsureDockerfile(releaseDir, app); err != nil {
+	if err := l.EnsureDockerfile(releaseDir, appName, app); err != nil {
 		return fmt.Errorf("failed to ensure Dockerfile: %v", err)
 	}
 
 	// Build Docker image
-	imageTag := fmt.Sprintf("%s:latest", app.Name)
+	imageTag := fmt.Sprintf("%s:latest", appName)
 
 	// Check if custom Dockerfile path is specified
 	var cmd *exec.Cmd
@@ -83,11 +83,11 @@ func (l *Golang) Build(app *App, releaseDir string) error {
 	return nil
 }
 
-func (l *Golang) Deploy(app *App, releaseDir string) error {
+func (l *Golang) Deploy(appName string, app *App, releaseDir string) error {
 	fmt.Println("-----> Deploying Go application...")
 
 	// Get environment file
-	envFile := filepath.Join("/opt/gokku/apps", app.Name, "shared", ".env")
+	envFile := filepath.Join("/opt/gokku/apps", appName, "shared", ".env")
 
 	networkMode := "bridge"
 
@@ -97,7 +97,7 @@ func (l *Golang) Deploy(app *App, releaseDir string) error {
 
 	// Create deployment config
 	return DeployContainer(DeploymentConfig{
-		AppName:     app.Name,
+		AppName:     appName,
 		ImageTag:    "latest",
 		EnvFile:     envFile,
 		ReleaseDir:  releaseDir,
@@ -106,17 +106,17 @@ func (l *Golang) Deploy(app *App, releaseDir string) error {
 	})
 }
 
-func (l *Golang) Restart(app *App) error {
-	fmt.Printf("-----> Restarting %s...\n", app.Name)
+func (l *Golang) Restart(appName string, app *App) error {
+	fmt.Printf("-----> Restarting %s...\n", appName)
 
 	// Find active container
-	containerName := app.Name
+	containerName := appName
 	if !ContainerExists(containerName) {
-		containerName = app.Name + "-green"
+		containerName = appName + "-green"
 	}
 
 	if !ContainerExists(containerName) {
-		return fmt.Errorf("no active container found for %s", app.Name)
+		return fmt.Errorf("no active container found for %s", appName)
 	}
 
 	// Restart container
@@ -124,10 +124,10 @@ func (l *Golang) Restart(app *App) error {
 	return cmd.Run()
 }
 
-func (l *Golang) Cleanup(app *App) error {
-	fmt.Printf("-----> Cleaning up old releases for %s...\n", app.Name)
+func (l *Golang) Cleanup(appName string, app *App) error {
+	fmt.Printf("-----> Cleaning up old releases for %s...\n", appName)
 
-	appDir := filepath.Join("/opt/gokku/apps", app.Name)
+	appDir := filepath.Join("/opt/gokku/apps", appName)
 	releasesDir := filepath.Join(appDir, "releases")
 
 	// Read all release directories
@@ -164,8 +164,8 @@ func (l *Golang) DetectLanguage(releaseDir string) (string, error) {
 	return "", fmt.Errorf("not a Go project")
 }
 
-func (l *Golang) EnsureDockerfile(releaseDir string, app *App) error {
-	fmt.Printf("-----> EnsureDockerfile called for app: %s\n", app.Name)
+func (l *Golang) EnsureDockerfile(releaseDir string, appName string, app *App) error {
+	fmt.Printf("-----> EnsureDockerfile called for app: %s\n", appName)
 
 	// Check if custom Dockerfile is specified
 	if app.Build != nil && app.Build.Dockerfile != "" {
@@ -224,7 +224,7 @@ func (l *Golang) EnsureDockerfile(releaseDir string, app *App) error {
 	}
 
 	// Generate Dockerfile content
-	dockerfileContent := l.generateDockerfile(build, app)
+	dockerfileContent := l.generateDockerfile(build, appName, app)
 
 	// Write Dockerfile
 	return os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644)
@@ -239,7 +239,7 @@ func (l *Golang) GetDefaultConfig() *Build {
 	}
 }
 
-func (l *Golang) generateDockerfile(build *Build, app *App) string {
+func (l *Golang) generateDockerfile(build *Build, appName string, app *App) string {
 	// Determine build path
 	buildPath := build.Path
 

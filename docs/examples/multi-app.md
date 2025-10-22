@@ -27,26 +27,23 @@ my-project/
 ### gokku.yml
 
 ```yaml
-project:
-  name: my-project
-
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
       binary_name: api
   
-  - name: worker
+  worker:
     build:
       path: ./cmd/worker
       binary_name: worker
   
-  - name: admin
+  admin:
     build:
       path: ./cmd/admin
       binary_name: admin
   
-  - name: ml-service
+  ml-service:
     lang: python
     build:
       path: ./services/ml
@@ -85,31 +82,31 @@ git push ml-prod main
 
 ```yaml
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
     environments:
-      - name: production
+      app-name: production
         branch: main
         default_env_vars:
           PORT: 8080
           WORKER_URL: http://localhost:8081
   
-  - name: worker
+  app-name: worker
     build:
       path: ./cmd/worker
     environments:
-      - name: production
+      app-name: production
         branch: main
         default_env_vars:
           PORT: 8081
           REDIS_URL: redis://localhost:6379
   
-  - name: admin
+  app-name: admin
     build:
       path: ./cmd/admin
     environments:
-      - name: production
+      app-name: production
         branch: main
         default_env_vars:
           PORT: 8082
@@ -166,19 +163,19 @@ Mix Go, Python, Node.js in one project:
 ```yaml
 apps:
   # Go API
-  - name: api
+  api:
     build:
       path: ./cmd/api
   
   # Python ML Service
-  - name: ml
+  app-name: ml
     lang: python
     build:
       path: ./services/ml
       entrypoint: server.py
   
   # Node.js Frontend
-  - name: frontend
+  app-name: frontend
     lang: nodejs
     build:
       path: ./frontend
@@ -230,12 +227,12 @@ Each app can use different tool versions:
 
 ```yaml
 apps:
-  - name: api-v1
+  api-v1:
     build:
       path: ./cmd/api-v1
       go_version: "1.24"
-  
-  - name: api-v2
+      
+  api-v2:
     build:
       path: ./cmd/api-v2
       go_version: "1.25"
@@ -277,7 +274,7 @@ func main() {
 
 ```yaml
 apps:
-  - name: cron-worker
+  app-name: cron-worker
     build:
       path: ./cmd/cron-worker
 ```
@@ -301,7 +298,7 @@ if __name__ == '__main__':
 
 ```yaml
 apps:
-  - name: celery-worker
+  app-name: celery-worker
     lang: python
     build:
       path: ./services/worker
@@ -314,22 +311,22 @@ Each app with both environments:
 
 ```yaml
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
     environments:
-      - name: production
+      app-name: production
         branch: main
-      - name: staging
+      app-name: staging
         branch: staging
   
-  - name: worker
+  app-name: worker
     build:
       path: ./cmd/worker
     environments:
-      - name: production
+      app-name: production
         branch: main
-      - name: staging
+      app-name: staging
         branch: staging
 ```
 
@@ -371,11 +368,11 @@ git push worker-prod main
 
 ```yaml
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
   
-  - name: migrate
+  app-name: migrate
     build:
       path: ./cmd/migrate
 ```
@@ -424,19 +421,19 @@ With multiple instances:
 
 ```yaml
 apps:
-  - name: api-1
+  api-1:
     build:
       path: ./cmd/api
     environments:
-      - name: production
+      app-name: production
         default_env_vars:
           PORT: 8080
   
-  - name: api-2
+  api-2:
     build:
       path: ./cmd/api
     environments:
-      - name: production
+      app-name: production
         default_env_vars:
           PORT: 8081
 ```

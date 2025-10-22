@@ -16,7 +16,7 @@ Gokku supports two deployment modes:
 ```yaml
 # gokku.yml
 apps:
-  - name: api
+  app-name: api
     build:
       image: "ghcr.io/meu-org/api:latest"
     deployment:
@@ -28,7 +28,7 @@ apps:
 
 ```yaml
 apps:
-  - name: worker
+  app-name: worker
     build:
       image: "123456789012.dkr.ecr.us-east-1.amazonaws.com/meu-org/worker:latest"
     deployment:
@@ -40,7 +40,7 @@ apps:
 
 ```yaml
 apps:
-  - name: web
+  app-name: web
     build:
       image: "meu-org/web:latest"
     ports:
@@ -68,12 +68,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      - name: Build Docker image
+      app-name: Build Docker image
         run: |
           docker build -t ghcr.io/meu-org/api:${{ github.sha }} .
           docker push ghcr.io/meu-org/api:${{ github.sha }}
           
-      - name: Deploy to Gokku
+      app-name: Deploy to Gokku
         run: |
           # Update gokku.yml with new image tag
           sed -i "s|ghcr.io/meu-org/api:latest|ghcr.io/meu-org/api:${{ github.sha }}|" gokku.yml
@@ -109,12 +109,12 @@ You can mix both approaches in the same project:
 # gokku.yml
 apps:
   # Pre-built image (fast deployment)
-  - name: api
+  app-name: api
     build:
       image: "ghcr.io/meu-org/api:latest"
       
   # Local build (development/testing)
-  - name: worker
+  app-name: worker
     lang: python
     build:
       image: "python:3.11-slim"  # Base image
@@ -185,13 +185,13 @@ docker:
 ```yaml
 # Using custom company registry
 apps:
-  - name: internal-api
+  app-name: internal-api
     build:
       image: "registry.company.com/meu-org/api:latest"
 
 # Using Harbor registry
 apps:
-  - name: microservice
+  app-name: microservice
     build:
       image: "harbor.example.com/project/service:latest"
 ```

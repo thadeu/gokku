@@ -19,7 +19,7 @@ Simple Go API with Docker deployment:
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
       binary_name: api
@@ -33,7 +33,7 @@ Python web app with Docker:
 
 ```yaml
 apps:
-  - name: flask-app
+  app-name: flask-app
     lang: python
     build:
       path: ./app
@@ -48,7 +48,7 @@ Using custom Dockerfile:
 
 ```yaml
 apps:
-  - name: service
+  app-name: service
     lang: python
     build:
       path: ./services/ml
@@ -63,12 +63,12 @@ Full-stack Rails app with Docker deployment:
 
 ```yaml
 apps:
-  - name: rails-app
+  app-name: rails-app
     lang: ruby
     build:
       path: .
     environments:
-      - name: production
+      app-name: production
         default_env_vars:
           RAILS_ENV: production
           PORT: 3000
@@ -82,12 +82,12 @@ React frontend with Express API backend:
 
 ```yaml
 apps:
-  - name: react-app
+  app-name: react-app
     lang: nodejs
     build:
       path: .
     environments:
-      - name: production
+      app-name: production
         default_env_vars:
           NODE_ENV: production
           PORT: 3000
@@ -102,15 +102,15 @@ Deploy multiple services from one repository:
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
   
-  - name: worker
+  app-name: worker
     build:
       path: ./cmd/worker
   
-  - name: ml-service
+  app-name: ml-service
     lang: python
     build:
       path: ./services/ml

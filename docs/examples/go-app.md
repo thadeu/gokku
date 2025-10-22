@@ -26,7 +26,7 @@ project:
   name: my-go-api
 
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
       binary_name: api
@@ -117,7 +117,7 @@ func main() {
 
 ```yaml
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
       binary_name: api
@@ -127,13 +127,13 @@ apps:
       cgo_enabled: 0
     
     environments:
-      - name: production
+      app-name: production
         branch: main
         default_env_vars:
           GIN_MODE: release
           LOG_LEVEL: info
       
-      - name: staging
+      app-name: staging
         branch: staging
         default_env_vars:
           GIN_MODE: debug
@@ -223,7 +223,7 @@ func main() {
 
 ```yaml
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
       binary_name: api
@@ -233,7 +233,7 @@ apps:
       cgo_enabled: 0
     
     environments:
-      - name: production
+      app-name: production
         default_env_vars:
           REDIS_URL: redis://localhost:6379
 ```

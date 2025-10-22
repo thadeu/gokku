@@ -8,7 +8,7 @@ The simplest `gokku.yml`:
 
 ```yaml
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
 ```
@@ -20,12 +20,8 @@ That's it! Everything else has sensible defaults.
 Here's a complete example with all options:
 
 ```yaml
-project:
-  name: my-project
-  base_dir: /opt/gokku
-
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
       binary_name: api
@@ -42,20 +38,6 @@ apps:
 
 ## Configuration Sections
 
-### Project
-
-Global project settings:
-
-```yaml
-project:
-  name: my-project      # Project name
-  base_dir: /opt/gokku  # Server installation directory
-```
-
-**Defaults:**
-- `name`: (required)
-- `base_dir`: `/opt/gokku`
-
 ### Apps
 
 The main configuration section. Each app can have:
@@ -64,26 +46,26 @@ The main configuration section. Each app can have:
 
 ```yaml
 apps:
-  - name: api           # App name (required)
+  api:           # App name (required)
     lang: go            # Language (optional, default: go)
 ```
 
 #### Build Configuration
 
 ```yaml
-    build:
-      path: ./cmd/api         # Path to main file/directory
-      work_dir: .             # Working directory for build
-      
-      # Go-specific settings
-      go_version: "1.25"      # Go version
-      goos: linux             # Target OS
-      goarch: amd64           # Target architecture
-      cgo_enabled: 0          # Enable CGO (0 or 1)
-      
-      # Docker-specific settings
-      dockerfile: ./Dockerfile     # Custom Dockerfile path
-      base_image: python:3.11-slim # Base image
+build:
+  path: ./cmd/api         # Path to main file/directory
+  work_dir: .             # Working directory for build
+  
+  # Go-specific settings
+  go_version: "1.25"      # Go version
+  goos: linux             # Target OS
+  goarch: amd64           # Target architecture
+  cgo_enabled: 0          # Enable CGO (0 or 1)
+  
+  # Docker-specific settings
+  dockerfile: ./Dockerfile     # Custom Dockerfile path
+  base_image: python:3.11-slim # Base image
       
 ```
 
@@ -134,7 +116,7 @@ git remote add production ubuntu@server:api
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
       go_version: "1.25"
@@ -144,7 +126,7 @@ apps:
 
 ```yaml
 apps:
-  - name: worker
+  app-name: worker
     lang: python
     build:
       path: ./apps/worker
@@ -155,7 +137,7 @@ apps:
 
 ```yaml
 apps:
-  - name: frontend
+  app-name: frontend
     lang: nodejs
     build:
       path: ./apps/frontend
@@ -171,15 +153,15 @@ project:
   name: my-monorepo
 
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
   
-  - name: worker
+  app-name: worker
     build:
       path: ./cmd/worker
   
-  - name: ml-service
+  app-name: ml-service
     lang: python
     build:
       path: ./services/ml
@@ -197,16 +179,16 @@ Different settings per environment:
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     environments:
-      - name: production
+      app-name: production
         branch: main
         default_env_vars:
           DATABASE_URL: postgres://prod-db
           CACHE_TTL: 3600
           WORKERS: 4
       
-      - name: staging
+      app-name: staging
         branch: staging
         default_env_vars:
           DATABASE_URL: postgres://staging-db
@@ -229,7 +211,7 @@ Error: app 'api' missing required field: build.path
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api  # Required!
 ```
@@ -243,7 +225,7 @@ Don't repeat defaults:
 ✅ **Good:**
 ```yaml
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
 ```
@@ -251,7 +233,7 @@ apps:
 ❌ **Bad:**
 ```yaml
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
       go_version: "1.25"
@@ -272,7 +254,7 @@ Add comments for non-obvious settings:
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     build:
       cgo_enabled: 1  # Required for SQLite
 ```

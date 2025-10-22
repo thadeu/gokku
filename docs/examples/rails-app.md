@@ -24,12 +24,12 @@ project:
   name: my-rails-app
 
 apps:
-  - name: rails-app
+  app-name: rails-app
     lang: ruby
     build:
       path: .
     environments:
-      - name: production
+      app-name: production
         branch: main
         default_env_vars:
           RAILS_ENV: production

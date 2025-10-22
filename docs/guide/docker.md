@@ -18,7 +18,7 @@ All applications use Docker by default. Configure your app:
 
 ```yaml
 apps:
-  - name: my-app
+  my-app:
     lang: python
     build:
       path: ./app
@@ -33,7 +33,7 @@ If no Dockerfile exists, Gokku generates one based on your language:
 
 ```yaml
 apps:
-  - name: flask-app
+  flask-app:
     lang: python
     build:
       path: .
@@ -62,7 +62,7 @@ CMD ["python", "app.py"]
 
 ```yaml
 apps:
-  - name: node-app
+  node-app:
     lang: nodejs
     build:
       path: .
@@ -89,7 +89,7 @@ CMD ["node", "index.js"]
 
 ```yaml
 apps:
-  - name: go-app
+  go-app:
     build:
       path: .
 ```
@@ -120,7 +120,7 @@ Use your own Dockerfile:
 
 ```yaml
 apps:
-  - name: my-app
+  my-app:
     build:
       dockerfile: ./Dockerfile
 ```
@@ -188,7 +188,7 @@ docker:
 
 ```yaml
 apps:
-  - name: ml-service
+  ml-service:
     lang: python
     build:
       base_image: "python:3.11"  # Full image, not slim
@@ -201,7 +201,7 @@ docker:
   registry: "registry.example.com"
 
 apps:
-  - name: api
+  api:
     build:
       base_image: "registry.example.com/python:3.11-custom"
 ```
@@ -273,7 +273,7 @@ Configure how many images to keep:
 
 ```yaml
 apps:
-  - name: my-app
+  my-app:
     deployment:
       keep_images: 10  # Keep last 10 images
 ```
@@ -307,9 +307,9 @@ Each app gets assigned a port:
 
 ```yaml
 apps:
-  - name: api
+  api:
     environments:
-      - name: production
+      app-name: production
         default_env_vars:
           PORT: 8080  # Container port
 ```
@@ -425,7 +425,7 @@ Use managed database instead of volume:
 
 ```yaml
 environments:
-  - name: production
+  app-name: production
     default_env_vars:
       DATABASE_URL: postgres://external-db:5432/mydb
 ```
@@ -463,9 +463,9 @@ Containers can communicate via host network:
 
 ```yaml
 apps:
-  - name: api
+  api:
     environments:
-      - name: production
+      app-name: production
         default_env_vars:
           REDIS_URL: redis://172.17.0.1:6379
 ```
@@ -478,7 +478,7 @@ Connect to external services normally:
 
 ```yaml
 environments:
-  - name: production
+  app-name: production
     default_env_vars:
       DATABASE_URL: postgres://external-db.example.com:5432/db
 ```
@@ -565,7 +565,7 @@ docker:
   registry: "registry.example.com"
 
 apps:
-  - name: api
+  api:
     build:
       base_image: "registry.example.com/python:3.11"
 ```

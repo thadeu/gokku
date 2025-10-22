@@ -13,7 +13,7 @@ type Generic struct {
 	app *App
 }
 
-func (l *Generic) Build(app *App, releaseDir string) error {
+func (l *Generic) Build(appName string, app *App, releaseDir string) error {
 	fmt.Println("-----> Building generic application...")
 
 	// Check if custom Dockerfile is specified
@@ -42,7 +42,7 @@ func (l *Generic) Build(app *App, releaseDir string) error {
 	}
 
 	// Build Docker image
-	imageTag := fmt.Sprintf("%s:latest", app.Name)
+	imageTag := fmt.Sprintf("%s:latest", appName)
 
 	// Build Docker image with the determined Dockerfile path
 	var cmd *exec.Cmd
@@ -65,11 +65,11 @@ func (l *Generic) Build(app *App, releaseDir string) error {
 	return nil
 }
 
-func (l *Generic) Deploy(app *App, releaseDir string) error {
+func (l *Generic) Deploy(appName string, app *App, releaseDir string) error {
 	fmt.Println("-----> Deploying generic application...")
 
 	// Get environment file
-	envFile := filepath.Join("/opt/gokku/apps", app.Name, "shared", ".env")
+	envFile := filepath.Join("/opt/gokku/apps", appName, "shared", ".env")
 
 	networkMode := "bridge"
 
@@ -79,7 +79,7 @@ func (l *Generic) Deploy(app *App, releaseDir string) error {
 
 	// Deploy using Docker client
 	return DeployContainer(DeploymentConfig{
-		AppName:     app.Name,
+		AppName:     appName,
 		ImageTag:    "latest",
 		EnvFile:     envFile,
 		ReleaseDir:  releaseDir,
@@ -88,17 +88,17 @@ func (l *Generic) Deploy(app *App, releaseDir string) error {
 	})
 }
 
-func (l *Generic) Restart(app *App) error {
-	fmt.Printf("-----> Restarting %s...\n", app.Name)
+func (l *Generic) Restart(appName string, app *App) error {
+	fmt.Printf("-----> Restarting %s...\n", appName)
 
 	// Find active container
-	containerName := app.Name
+	containerName := appName
 	if !ContainerExists(containerName) {
-		containerName = app.Name + "-green"
+		containerName = appName + "-green"
 	}
 
 	if !ContainerExists(containerName) {
-		return fmt.Errorf("no active container found for %s", app.Name)
+		return fmt.Errorf("no active container found for %s", appName)
 	}
 
 	// Restart container
@@ -106,10 +106,10 @@ func (l *Generic) Restart(app *App) error {
 	return cmd.Run()
 }
 
-func (l *Generic) Cleanup(app *App) error {
-	fmt.Printf("-----> Cleaning up old releases for %s...\n", app.Name)
+func (l *Generic) Cleanup(appName string, app *App) error {
+	fmt.Printf("-----> Cleaning up old releases for %s...\n", appName)
 
-	appDir := filepath.Join("/opt/gokku/apps", app.Name)
+	appDir := filepath.Join("/opt/gokku/apps", appName)
 	releasesDir := filepath.Join(appDir, "releases")
 
 	// Read all release directories
@@ -147,7 +147,7 @@ func (l *Generic) DetectLanguage(releaseDir string) (string, error) {
 	return "generic", nil
 }
 
-func (l *Generic) EnsureDockerfile(releaseDir string, app *App) error {
+func (l *Generic) EnsureDockerfile(releaseDir string, appName string, app *App) error {
 	dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
 
 	// Check if Dockerfile already exists

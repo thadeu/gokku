@@ -9,12 +9,12 @@ import (
 )
 
 type Lang interface {
-	Build(app *App, releaseDir string) error
-	Deploy(app *App, releaseDir string) error
-	Restart(app *App) error
-	Cleanup(app *App) error
+	Build(appName string, app *App, releaseDir string) error
+	Deploy(appName string, app *App, releaseDir string) error
+	Restart(appName string, app *App) error
+	Cleanup(appName string, app *App) error
 	DetectLanguage(releaseDir string) (string, error)
-	EnsureDockerfile(releaseDir string, app *App) error
+	EnsureDockerfile(releaseDir string, appName string, app *App) error
 	GetDefaultConfig() *Build
 }
 

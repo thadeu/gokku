@@ -63,7 +63,7 @@ project:
   name: my-app
 
 apps:
-  - name: api
+  api:
     build:
       path: ./cmd/api
       binary_name: api

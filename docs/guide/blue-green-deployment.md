@@ -303,7 +303,7 @@ gokku config set REDIS_URL="redis://..." -a <app>-<env>
 ```yaml
 # gokku.yml
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
       binary_name: api

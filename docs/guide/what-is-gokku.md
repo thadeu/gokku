@@ -57,7 +57,7 @@ Minimal `gokku.yml`:
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
 ```
@@ -73,11 +73,11 @@ All apps run in Docker containers:
 
 ```yaml
 apps:
-  - name: api
+  app-name: api
     build:
       path: ./cmd/api
   
-  - name: worker
+  app-name: worker
     lang: python
     build:
       path: ./worker
