@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"infra/internal"
 	"infra/internal/handlers"
@@ -27,6 +28,7 @@ func main() {
 	contextCommands := map[string]bool{
 		"config": true, "run": true, "logs": true,
 		"status": true, "restart": true, "rollback": true,
+		"ps": true,
 	}
 
 	if contextCommands[command] {
@@ -67,14 +69,28 @@ func main() {
 		handlers.HandlePlugins(os.Args[2:])
 	case "services":
 		handlers.HandleServices(os.Args[2:])
+	case "ps":
+		handlers.HandlePS(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Printf("gokku version %s\n", version)
 	case "help", "--help", "-h":
 		printHelp()
 	default:
-		fmt.Printf("Unknown command: %s\n", command)
-		fmt.Println("Run 'gokku --help' for usage")
-		os.Exit(1)
+		// Check if it's a plugin command (format: plugin:command)
+		if strings.Contains(command, ":") {
+			// Pass the full command to plugin handler
+			handlers.HandlePlugins(os.Args[1:])
+		} else {
+			// Check if it's an installed plugin and show help
+			if handlers.IsPluginInstalled(command) {
+				// Show plugin help by default
+				handlers.HandlePlugins([]string{command + ":help"})
+			} else {
+				fmt.Printf("Unknown command: %s\n", command)
+				fmt.Println("Run 'gokku --help' for usage")
+				os.Exit(1)
+			}
+		}
 	}
 }
 
@@ -98,6 +114,7 @@ CLIENT COMMANDS (run from local machine):
   tool           Utility commands for scripts
   plugins        Manage plugins
   services       Manage services
+  ps             Process management (scale, list, restart, stop)
   version        Show version
   help           Show this help
 
@@ -130,65 +147,18 @@ Client Commands (always use -a with git remote):
   gokku deploy -a <git-remote>
   gokku rollback -a <git-remote>
 
+  gokku ps:scale web=4 worker=2 -a <git-remote>
+  gokku ps:list -a <git-remote>
+  gokku ps:restart -a <git-remote>
+  gokku ps:stop -a <git-remote>
 
 Server Commands (run on server only, use -a with app name):
-  gokku config set KEY=VALUE -a <app>
-  gokku config get KEY -a <app>
-  gokku config list -a <app>
-  gokku config unset KEY -a <app>
-
   gokku run <command>                                (run locally)
   gokku logs <app> <env> [-f]                        (view logs locally)
-  gokku status [app] [env]                           (check status locally)
+  gokku status [app]                                 (check status locally)
   gokku restart <app>                                (restart locally)
   gokku rollback <app> <env> [release-id]            (rollback locally)
 
-
-Examples:
-  # Setup server connection (client)
-  gokku server add prod ubuntu@ec2.compute.amazonaws.com
-
-  # Setup git remote (standard git)
-  git remote add api-production ubuntu@server:api
-
-  # Client usage - all commands use -a with git remote
-  gokku config set PORT=8080 -a api-production
-  gokku config list -a api-production
-  gokku logs -a api-production -f
-  gokku status -a api-production
-  gokku deploy -a api-production
-
-  # Plugin and service management
-  gokku plugins:add thadeu/gokku-postgres
-  gokku services:create postgres --name postgres-api
-  gokku services:link postgres-api -a api-production
-
-  # Server usage - run directly on server (no --remote needed)
-  gokku config set PORT=8080 --app api
-  gokku config list --app api --env production
-  gokku logs api production -f
-  gokku status
-  gokku restart api
-
-App Format:
-  Client Mode (-a with git remote):
-  -a, --app <git-remote-name>
-
-  The git remote name (e.g., "api-production", "worker-staging")
-  Gokku will run 'git remote get-url <name>' to extract:
-  - SSH host (user@ip or user@hostname)
-  - App name from path
-
-  Examples of git remotes:
-  - api-production → ubuntu@server:api
-  - worker-production    → ubuntu@server:/opt/gokku/repos/worker.git
-
   Server Mode (-a with app name):
-  -a, --app <app-name>
-
-  The app name directly (e.g., "api", "worker")
-  No git remote needed - uses app name directly
-
-Configuration:
-  Config file: ~/.gokku/config.yml`)
+  -a, --app <app-name>`)
 }

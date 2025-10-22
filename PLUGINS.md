@@ -11,12 +11,15 @@ gokku-<plugin-name>/
 ├── README.md
 ├── install
 ├── uninstall
-└── commands/
-    ├── name
-    ├── help
-    ├── info
-    ├── logs
-    └── [custom-commands]
+├── commands/
+│   ├── name
+│   ├── help
+│   ├── info
+│   ├── logs
+│   └── [custom-commands]
+└── hooks/
+    ├── scale-change
+    └── [other-hooks]
 ```
 
 ## Required Files
@@ -213,6 +216,33 @@ Gokku provides helper functions in `/opt/gokku/scripts/plugin-helpers.sh`:
 - `log_message(level, message)` - Log with timestamp
 - `command_exists(command)` - Check if command exists
 - `wait_for_container(container_name, max_attempts)` - Wait for container
+
+## Plugin Hooks
+
+Hooks allow plugins to react to Gokku events automatically. Hooks are optional but recommended for plugins that need to integrate with core Gokku functionality.
+
+### Available Hooks
+
+#### `hooks/scale-change`
+**Purpose**: React to application scaling events
+**Arguments**: `$1` = app name, `$2` = process type
+**When called**: After `gokku ps:scale` operations
+
+```bash
+#!/bin/bash
+APP_NAME="$1"
+PROCESS_TYPE="$2"
+
+# Your plugin logic here
+# Example: Update load balancer configuration
+echo "-----> Updating load balancer for $APP_NAME $PROCESS_TYPE"
+```
+
+### Hook Execution
+- Hooks are executed automatically by Gokku core
+- Hooks run in the plugin's directory context
+- Hook failures don't affect the main operation
+- All hooks are optional - plugins work without them
 
 ## Example: Nginx Plugin
 

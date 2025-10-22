@@ -10,6 +10,12 @@ import (
 	"infra/internal/plugins"
 )
 
+// IsPluginInstalled checks if a plugin is installed
+func IsPluginInstalled(pluginName string) bool {
+	pm := plugins.NewPluginManager()
+	return pm.PluginExists(pluginName)
+}
+
 // handlePlugins manages plugin-related commands
 func handlePlugins(args []string) {
 	if len(args) == 0 {
@@ -17,7 +23,16 @@ func handlePlugins(args []string) {
 		return
 	}
 
+	// Handle both "plugins add" and "plugins:add" formats
 	subcommand := args[0]
+
+	// Check if it's in the format "plugins:command"
+	if strings.Contains(subcommand, ":") {
+		parts := strings.Split(subcommand, ":")
+		if len(parts) == 2 && parts[0] == "plugins" {
+			subcommand = parts[1]
+		}
+	}
 
 	switch subcommand {
 	case "list", "ls":
@@ -188,29 +203,38 @@ func handlePluginCommand(args []string) {
 	pluginName := parts[0]
 	command := parts[1]
 
-	// Get service name from args
-	if len(args) < 2 {
-		fmt.Printf("Usage: gokku %s:%s <service>\n", pluginName, command)
+	pm := plugins.NewPluginManager()
+
+	// Check if plugin exists
+	if !pm.PluginExists(pluginName) {
+		fmt.Printf("Plugin '%s' not found\n", pluginName)
+		fmt.Printf("Install it with: gokku plugins:add %s\n", pluginName)
 		os.Exit(1)
 	}
 
-	serviceName := args[1]
-
-	// Execute plugin command
-	commandPath := filepath.Join("/opt/gokku/plugins", pluginName, "commands", command)
-
-	if _, err := os.Stat(commandPath); err != nil {
+	// Check if command exists
+	if !pm.CommandExists(pluginName, command) {
 		fmt.Printf("Command '%s' not found for plugin '%s'\n", command, pluginName)
 		os.Exit(1)
 	}
 
+	// Get the plugin directory from PluginManager
+	pluginDir := filepath.Join(pm.GetPluginsDir(), pluginName)
+	commandPath := filepath.Join(pluginDir, "commands", command)
+
+	// Build command arguments (pass all remaining args to the plugin command)
+	cmdArgs := []string{"bash", commandPath}
+	if len(args) > 1 {
+		cmdArgs = append(cmdArgs, args[1:]...)
+	}
+
 	// Execute the plugin command
-	cmd := exec.Command("bash", commandPath, serviceName)
+	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("Error executing command: %v\n", err)
+		// Don't print error if command already printed its own error
 		os.Exit(1)
 	}
 }
@@ -232,6 +256,7 @@ func showPluginHelp() {
 	fmt.Println("  gokku plugins:add nginx                              # Official plugin")
 	fmt.Println("  gokku plugins:add https://github.com/user/gokku-nginx  # GitHub plugin")
 	fmt.Println("  gokku plugins:add https://gitlab.com/user/gokku-redis  # GitLab plugin")
-	fmt.Println("  gokku postgres:info postgres-api")
+	fmt.Println("  gokku nginx:help nginx-lb")
+	fmt.Println("  gokku nginx:info nginx-lb")
 	fmt.Println("  gokku postgres:export postgres-api > backup.sql")
 }

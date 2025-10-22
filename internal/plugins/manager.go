@@ -17,10 +17,21 @@ type PluginManager struct {
 	pluginsDir string
 }
 
+// GetPluginsDir returns the plugins directory
+func (pm *PluginManager) GetPluginsDir() string {
+	return pm.pluginsDir
+}
+
 // NewPluginManager creates a new plugin manager
 func NewPluginManager() *PluginManager {
+	// For development, use local directory if /opt/gokku doesn't exist
+	pluginsDir := "/opt/gokku/plugins"
+	if _, err := os.Stat("/opt/gokku"); os.IsNotExist(err) {
+		pluginsDir = "dev-plugins"
+		os.MkdirAll(pluginsDir, 0755)
+	}
 	return &PluginManager{
-		pluginsDir: "/opt/gokku/plugins",
+		pluginsDir: pluginsDir,
 	}
 }
 
