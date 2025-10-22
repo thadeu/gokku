@@ -89,14 +89,12 @@ apps:
 
 **Build Type Defaults:**
 
-| Setting | systemd | docker |
-|---------|---------|--------|
-| `path` | (required) | (required) |
-| `work_dir` | `.` | `.` |
-| `go_version` | `1.25` | - |
-| `goos` | `linux` | - |
-| `goarch` | `amd64` | - |
-| `cgo_enabled` | `0` | - |
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `path` | (required) | Build path |
+| `work_dir` | `.` | Working directory |
+| `dockerfile` | `./Dockerfile` | Dockerfile path |
+| `base_image` | (language-specific) | Base Docker image |
 
 
 #### Deployment
@@ -105,16 +103,16 @@ Deployment settings:
 
 ```yaml
     deployment:
-      keep_releases: 5        # Number of releases to keep
-      keep_images: 5          # Number of Docker images to keep
-      restart_policy: always  # systemd restart policy
-      restart_delay: 5        # Delay between restarts (seconds)
+      keep_releases: 5              # Number of releases to keep
+      keep_images: 5                # Number of Docker images to keep
+      restart_policy: unless-stopped # Docker restart policy
+      restart_delay: 5              # Delay between restarts (seconds)
 ```
 
 **Defaults:**
 - `keep_releases`: `5`
 - `keep_images`: `5`
-- `restart_policy`: `always`
+- `restart_policy`: `unless-stopped`
 - `restart_delay`: `5`
 
 ### User Configuration
@@ -149,7 +147,6 @@ apps:
   - name: worker
     lang: python
     build:
-      type: docker
       path: ./apps/worker
       base_image: python:3.11-slim
 ```
@@ -175,21 +172,16 @@ project:
 
 apps:
   - name: api
-    lang: go
     build:
-      type: systemd
       path: ./cmd/api
   
   - name: worker
-    lang: go
     build:
-      type: systemd
       path: ./cmd/worker
   
   - name: ml-service
     lang: python
     build:
-      type: docker
       path: ./services/ml
       entrypoint: server.py
 ```
@@ -260,14 +252,9 @@ apps:
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
-      type: systemd
       path: ./cmd/api
       go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
 ```
 
 ### 2. Version Control

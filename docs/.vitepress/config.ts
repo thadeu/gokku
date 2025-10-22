@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: "Gokku",
   description: "Lightweight git-push deployment system for Go and multi-language applications",
   base: '/',
@@ -14,6 +15,7 @@ export default defineConfig({
     logo: '/logo.svg',
 
     nav: [
+      { text: '1.0.56', link: '/' },
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Examples', link: '/examples/' },
@@ -84,5 +86,5 @@ export default defineConfig({
       provider: 'local'
     }
   }
-})
+}))
 

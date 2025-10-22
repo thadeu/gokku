@@ -55,7 +55,6 @@ project:
 **Example:**
 ```yaml
 defaults:
-  build_type: docker
   lang: go
 ```
 
@@ -75,7 +74,6 @@ Array of application definitions.
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
 ```
@@ -104,7 +102,6 @@ apps:
 **Example (Go + Docker):**
 ```yaml
 build:
-  type: docker
   path: ./cmd/api
   binary_name: api
   go_version: "1.25"
@@ -114,7 +111,6 @@ build:
 **Example (Python + Docker):**
 ```yaml
 build:
-  type: docker
   path: ./services/ml
   entrypoint: server.py
   base_image: python:3.11-slim
@@ -232,7 +228,6 @@ apps:
   - name: app
     lang: python
     build:
-      type: docker
       path: .
 ```
 
@@ -246,16 +241,13 @@ project:
 
 # Global defaults
 defaults:
-  build_type: docker
   lang: go
 
 # Applications
 apps:
   # Go API with Docker
   - name: api
-    lang: go
     build:
-      type: docker
       path: ./cmd/api
       binary_name: api
       work_dir: .
@@ -286,7 +278,6 @@ apps:
   - name: ml-service
     lang: python
     build:
-      type: docker
       path: ./services/ml
       entrypoint: server.py
       base_image: python:3.11-slim
@@ -323,7 +314,7 @@ Gokku validates your configuration:
 
 ### Invalid Values
 
-- ❌ Invalid `build.type`: Must be `docker`
+- ❌ Missing required `build.path`
 - ❌ Invalid `restart_policy`: Must be `always`, `on-failure`, or `no`
 - ❌ Duplicate app names: Each app must have unique name
 

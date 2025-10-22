@@ -13,12 +13,19 @@ A **Docker-native** git-push deployment system for multi-language applications. 
 ## Key Features
 
 ✅ **Docker-Native** - All applications run in containers with blue-green deployment
+
 ✅ **Zero Hard-coding** - Everything configured via `gokku.yml`
+
 ✅ **Multi-Language** - Go, Python, Node.js, Ruby (extensible)
+
 ✅ **Blue-Green Deployments** - Zero-downtime deployments with automatic rollback
+
 ✅ **CLI Management** - Comprehensive command-line interface for all operations
+
 ✅ **Config-Driven** - Apps, environments, ports all in config
+
 ✅ **Auto Dockerfile** - Generates Dockerfile if not exists
+
 ✅ **Health Checks** - Built-in health monitoring and restart policies  
 
 ---
@@ -44,7 +51,6 @@ apps:
 
 This minimal config will use defaults:
 - `lang: go` (default language)
-- `build.type: docker` (default build type)
 - `environments: [production]` (default environment)
 - `branch: main` (default branch for production)
 - `deployment.keep_releases: 5` (default)
@@ -59,16 +65,11 @@ project:
 
 apps:
   - name: api-server
-    lang: go
     build:
-      type: docker
       path: ./cmd/api
       binary_name: api-server
       work_dir: .
       go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
     environments:
       - name: production
         branch: main
@@ -84,16 +85,11 @@ apps:
       restart_delay: 5
     
   - name: worker
-    lang: go
     build:
-      type: docker
       path: ./cmd/worker
       binary_name: worker
       work_dir: .
       go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
     environments:
       - name: production
         branch: main
@@ -105,7 +101,6 @@ apps:
   - name: ml-service
     lang: python
     build:
-      type: docker
       path: ./services/ml
       dockerfile: ./services/ml/Dockerfile  # optional
       entrypoint: main.py
@@ -142,12 +137,8 @@ All configuration fields are optional with sensible defaults:
 | Field | Default | Description |
 |-------|---------|-------------|
 | `lang` | `go` | Programming language |
-| `build.type` | `docker` | Build type (docker only) |
 | `build.work_dir` | `.` | Working directory for build |
 | `build.go_version` | `1.25` | Go version (for Go apps) |
-| `build.goos` | `linux` | Target OS |
-| `build.goarch` | `amd64` | Target architecture |
-| `build.cgo_enabled` | `0` | CGO enabled flag |
 | `build.entrypoint` | `main.py` (Python)<br>`index.js` (Node.js) | Application entrypoint |
 | `build.base_image` | `golang:1.25-alpine` (Go)<br>`python:3.11-slim` (Python)<br>`node:20-alpine` (Node.js) | Docker base image |
 
@@ -164,7 +155,7 @@ All configuration fields are optional with sensible defaults:
 |-------|---------|-------------|
 | `deployment.keep_releases` | `5` | Number of releases to keep |
 | `deployment.keep_images` | `5` | Number of Docker images to keep |
-| `deployment.restart_policy` | `always` | Systemd restart policy |
+| `deployment.restart_policy` | `always` | Docker restart policy |
 | `deployment.restart_delay` | `5` | Restart delay in seconds |
 
 ### Examples
@@ -178,13 +169,12 @@ apps:
       binary_name: api
 ```
 
-**Minimal Python app (Docker):**
+**Minimal Python app:**
 ```yaml
 apps:
   - name: ml-service
     lang: python
     build:
-      type: docker
       path: ./services/ml
 ```
 
@@ -192,14 +182,10 @@ apps:
 ```yaml
 apps:
   - name: custom-app
-    lang: go
     build:
-      type: systemd
       path: ./cmd/custom
       binary_name: custom
       go_version: "1.24"
-      goos: linux
-      goarch: arm64
     environments:
       - name: production
         branch: main
@@ -207,7 +193,7 @@ apps:
         branch: develop
     deployment:
       keep_releases: 10
-      restart_policy: on-failure
+      restart_policy: unless-stopped
       restart_delay: 10
 ```
 
@@ -242,7 +228,7 @@ Gokku now features **automatic setup** on first deploy. No manual configuration 
 3. **Config Reading**: Reads your `gokku.yml` from the repository
 4. **Infrastructure Creation**: Automatically creates:
    - Git repository structure
-   - Systemd services
+   - Docker containers
    - Environment files
    - Directory structure
 5. **Deploy**: Builds and deploys your application
@@ -369,9 +355,7 @@ All applications run in Docker containers with blue-green deployment for zero-do
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
-      type: docker  # All apps use Docker
       path: ./cmd/api
       binary_name: api
       go_version: "1.25"
@@ -382,7 +366,6 @@ apps:
   - name: ml-service
     lang: python
     build:
-      type: docker   # Python in container
       path: ./services/ml
       entrypoint: main.py
       base_image: "python:3.11-slim"
@@ -390,7 +373,6 @@ apps:
 
 ### Automatic Dockerfile Generation
 
-If `build.type: docker` and no Dockerfile exists, the system generates one automatically:
 
 **Go Apps:**
 ```dockerfile
@@ -430,7 +412,6 @@ apps:
   - name: ml-service
     lang: python
     build:
-      type: docker
       path: ./services/ml
       dockerfile: ./services/ml/Dockerfile  # Use this instead of auto-generation
       entrypoint: main.py
@@ -476,23 +457,18 @@ All applications use Docker containers, regardless of language:
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
-      type: docker  # Go in container
       path: ./cmd/api
       binary_name: api
     
   - name: worker
-    lang: go
     build:
-      type: docker  # Another Go container
       path: ./cmd/worker
       binary_name: worker
     
   - name: vad
     lang: python
     build:
-      type: docker   # Python in container
       path: ./services/vad
       entrypoint: main.py
 ```
@@ -555,7 +531,7 @@ git push api-production main
 
 The first push will:
 - Create the git repository
-- Set up systemd services
+- Set up Docker containers
 - Configure environment variables from `gokku.yml`
 - Build and deploy your application
 
@@ -615,7 +591,7 @@ build:
 deployment:
   keep_releases: number           # Number of releases to keep (default: 5)
   health_check_timeout: number    # Seconds to wait for health check
-  restart_policy: string          # Systemd restart policy (default: always)
+  restart_policy: string          # Docker restart policy (default: unless-stopped)
   restart_delay: number           # Seconds between restarts (default: 5)
 ```
 
@@ -739,7 +715,7 @@ git remote add production ubuntu@ec2:test-app
 git push production main
 
 # 7. Verify
-ssh ubuntu@ec2 "sudo systemctl status test-app-production"
+ssh ubuntu@ec2 "docker ps | grep test-app"
 ```
 
 ---

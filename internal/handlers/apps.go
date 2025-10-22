@@ -13,6 +13,19 @@ import (
 
 // handleApps manages applications on the server
 func handleApps(args []string) {
+	if len(args) < 1 {
+		fmt.Println("Usage: gokku apps <command> [options]")
+		fmt.Println("")
+		fmt.Println("Commands:")
+		fmt.Println("  list, ls              List all applications")
+		fmt.Println("  create <app>          Create application and setup deployment")
+		fmt.Println("  destroy, rm <app>     Destroy application")
+		fmt.Println("")
+		fmt.Println("Options:")
+		fmt.Println("  -a, --app <app>       Use specific app")
+		os.Exit(1)
+	}
+
 	subcommand := args[0]
 	switch subcommand {
 	case "list", "ls":
@@ -408,7 +421,7 @@ if git rev-parse --verify HEAD >/dev/null 2>&1; then
     echo "-----> Deploying $APP_NAME..."
 
     # Execute deployment using the centralized deploy command
-    gokku deploy "$APP_NAME"
+    gokku deploy -a "$APP_NAME"
 
     echo "-----> Deployment completed"
 else
@@ -604,7 +617,7 @@ if git rev-parse --verify HEAD >/dev/null 2>&1; then
     echo "-----> Deploying $APP_NAME..."
 
     # Execute deployment using the centralized deploy command
-    gokku deploy "$APP_NAME"
+    gokku deploy -a "$APP_NAME"
 
     echo "-----> Deployment completed"
 else
@@ -764,7 +777,7 @@ if git rev-parse --verify HEAD >/dev/null 2>&1; then
     echo "-----> Deploying $APP_NAME..."
 
     # Execute deployment using the centralized deploy command
-    gokku deploy "$APP_NAME"
+    gokku deploy -a "$APP_NAME"
 
     echo "-----> Deployment completed"
 else

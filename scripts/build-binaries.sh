@@ -25,19 +25,31 @@ for platform in "${platforms[@]}"; do
 
     binary_name="gokku-$os-$arch"
 
-    GOOS=$os GOARCH=$arch go build -o "bin/$binary_name" ./cmd/cli
+    # Build with optimizations to reduce binary size
+    GOMAXPROCS=1 GOOS=$os GOARCH=$arch go build -ldflags="-s -w" -o "bin/$binary_name" ./cmd/cli
 
     echo "✓ Built bin/$binary_name"
 done
 
 echo ""
-echo "Binaries created in bin/ directory:"
+echo "Creating .tar.gz archives..."
 
-ls -la bin/
+for platform in "${platforms[@]}"; do
+    IFS='/' read -r os arch <<< "$platform"
+    binary_name="gokku-$os-$arch"
+    archive_name="gokku-$os-$arch.tar.gz"
+
+    echo "Creating $archive_name..."
+    tar -czf "bin/$archive_name" -C bin "$binary_name"
+    rm -rf bin/$binary_name
+    echo "✓ Created bin/$archive_name"
+done
 
 echo ""
-echo "To compress binaries (optional):"
-echo "  cd bin/ && for f in gokku-*; do gzip \"\$f\"; done"
+echo "Archives created in bin/ directory:"
+
+ls -la bin/*.tar.gz
+
 echo ""
 echo "To create checksums:"
-echo "  cd bin/ && sha256sum gokku-* > SHA256SUMS"
+echo "  cd bin/ && sha256sum *.tar.gz > SHA256SUMS"

@@ -15,7 +15,7 @@ Real-world examples of Gokku deployments for different use cases.
 
 ### Go REST API
 
-Simple Go API with systemd deployment:
+Simple Go API with Docker deployment:
 
 ```yaml
 apps:
@@ -36,7 +36,6 @@ apps:
   - name: flask-app
     lang: python
     build:
-      type: docker
       path: ./app
       entrypoint: app.py
 ```
@@ -52,7 +51,6 @@ apps:
   - name: service
     lang: python
     build:
-      type: docker
       path: ./services/ml
       dockerfile: ./services/ml/Dockerfile
 ```
@@ -68,7 +66,6 @@ apps:
   - name: rails-app
     lang: ruby
     build:
-      type: docker
       path: .
     environments:
       - name: production
@@ -88,7 +85,6 @@ apps:
   - name: react-app
     lang: nodejs
     build:
-      type: docker
       path: .
     environments:
       - name: production
@@ -117,7 +113,6 @@ apps:
   - name: ml-service
     lang: python
     build:
-      type: docker
       path: ./services/ml
 ```
 
@@ -174,8 +169,8 @@ WebSocket and real-time apps:
 
 ### Deployment
 
-- **Systemd**: [Go Application](/examples/go-app)
-- **Docker**: [Docker Application](/examples/docker-app)
+- **Docker**: All applications use Docker
+- **Zero-Downtime**: [Blue-Green Deployment](/guide/blue-green-deployment)
 
 ## Community Examples
 

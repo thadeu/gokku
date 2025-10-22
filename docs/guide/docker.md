@@ -21,7 +21,6 @@ apps:
   - name: my-app
     lang: python
     build:
-      type: docker
       path: ./app
       entrypoint: main.py
 ```
@@ -37,7 +36,6 @@ apps:
   - name: flask-app
     lang: python
     build:
-      type: docker
       path: .
       entrypoint: app.py
 ```
@@ -67,7 +65,6 @@ apps:
   - name: node-app
     lang: nodejs
     build:
-      type: docker
       path: .
       entrypoint: index.js
 ```
@@ -93,9 +90,7 @@ CMD ["node", "index.js"]
 ```yaml
 apps:
   - name: go-app
-    lang: go
     build:
-      type: docker
       path: .
 ```
 
@@ -127,7 +122,6 @@ Use your own Dockerfile:
 apps:
   - name: my-app
     build:
-      type: docker
       dockerfile: ./Dockerfile
 ```
 
@@ -197,7 +191,6 @@ apps:
   - name: ml-service
     lang: python
     build:
-      type: docker
       base_image: "python:3.11"  # Full image, not slim
 ```
 
@@ -210,7 +203,6 @@ docker:
 apps:
   - name: api
     build:
-      type: docker
       base_image: "registry.example.com/python:3.11-custom"
 ```
 
@@ -244,17 +236,6 @@ COPY . .
 EXPOSE ${PORT:-8080}
 
 CMD ["python", "app.py"]
-```
-
-### With Custom Plugins
-
-```yaml
-apps:
-  - name: whisper
-    lang: python
-    build:
-      type: docker
-            url: https://github.com/thadeu/asdf-whispercpp.git
 ```
 
 `.tool-versions`:

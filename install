@@ -165,15 +165,16 @@ download_binary() {
 
     # Construct binary name based on OS and architecture
     local binary_name="gokku-$OS-$ARCH"
+    local archive_name="$binary_name.tar.gz"
 
     # Try multiple sources in order of preference
     local binary_urls=(
         # 1. GitHub Releases (latest)
-        "https://github.com/thadeu/gokku/releases/latest/download/$binary_name"
+        "https://github.com/thadeu/gokku/releases/latest/download/$archive_name"
         # 2. Specific version from releases (if VERSION is set)
-        "https://github.com/thadeu/gokku/releases/download/${VERSION}/$binary_name"
+        "https://github.com/thadeu/gokku/releases/download/${VERSION}/$archive_name"
         # 3. Fallback to main branch (for development)
-        "$REPO_URL/bin/$binary_name"
+        "$REPO_URL/bin/$archive_name"
     )
 
     local downloaded=false
@@ -181,28 +182,35 @@ download_binary() {
     for url in "${binary_urls[@]}"; do
         log "Trying to download from: $url"
 
-        if curl -fsSL "$url" -o "gokku" 2>/dev/null; then
-            log_success "Binary downloaded successfully from: $url"
+        if curl -fsSL "$url" -o "$archive_name" 2>/dev/null; then
+            log_success "Archive downloaded successfully from: $url"
             downloaded=true
             break
         fi
     done
 
     if [ "$downloaded" = false ]; then
-        log_error "Failed to download binary for $OS/$ARCH"
+        log_error "Failed to download archive for $OS/$ARCH"
         echo ""
-        echo "Available binaries should be at:"
+        echo "Available archives should be at:"
         echo "  https://github.com/thadeu/gokku/releases/latest"
         echo ""
         echo "Or check the main branch:"
         echo "  $REPO_URL/bin/"
         echo ""
-        echo "Please ensure the binary exists in the repository or releases."
+        echo "Please ensure the archive exists in the repository or releases."
         exit 1
     fi
 
-    # Make binary executable
-    chmod +x gokku
+    # Extract the archive
+    log "Extracting $archive_name..."
+    if ! tar -xzf "$archive_name"; then
+        log_error "Failed to extract $archive_name"
+        exit 1
+    fi
+
+    # Make binary executable (the extracted binary has the same name as the archive without .tar.gz)
+    chmod +x "$binary_name"
 
     log_success "Binary ready for installation"
 }
@@ -214,12 +222,15 @@ install_binary() {
     local temp_dir="/tmp/gokku-install"
     cd $temp_dir
 
+    # Get the binary name (same as archive name without .tar.gz)
+    local binary_name="gokku-$OS-$ARCH"
+
     # Try to install to /usr/local/bin
     if [ -w "$BIN_DIR" ]; then
-        mv gokku $BIN_DIR/
+        mv "$binary_name" $BIN_DIR/gokku
         chmod +x $BIN_DIR/gokku
     else
-        sudo mv gokku $BIN_DIR/
+        sudo mv "$binary_name" $BIN_DIR/gokku
         sudo chmod +x $BIN_DIR/gokku
     fi
 

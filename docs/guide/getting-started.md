@@ -48,9 +48,7 @@ project:
 
 apps:
   - name: api
-    lang: go
     build:
-      type: docker
       path: ./cmd/api
       binary_name: api
       go_version: "1.25"

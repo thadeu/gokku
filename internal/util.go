@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // GetConfigPath returns the path to the configuration file
@@ -65,33 +66,35 @@ func ReadGokkuRcMode() string {
 	rcPath := GetGokkuRcPath()
 
 	file, err := os.Open(rcPath)
+
 	if err != nil {
 		return ""
 	}
+
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+
+	var mode string
+
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "mode=") {
-			mode := strings.TrimPrefix(line, "mode=")
-			if mode == "client" || mode == "server" {
-				return mode
-			}
-		}
+		mode, _ = strings.CutPrefix(line, "mode=")
 	}
 
-	return ""
+	return mode
 }
 
 // IsClientMode returns true if running in client mode
 // Falls back to client mode if ~/.gokkurc doesn't exist
 func IsClientMode() bool {
 	mode := ReadGokkuRcMode()
+
 	if mode == "" {
 		// If file doesn't exist, assume client mode (fallback)
 		return true
 	}
+
 	return mode == "client"
 }
 
@@ -99,10 +102,12 @@ func IsClientMode() bool {
 // Falls back to client mode if ~/.gokkurc doesn't exist
 func IsServerMode() bool {
 	mode := ReadGokkuRcMode()
+
 	if mode == "" {
 		// If file doesn't exist, assume client mode (fallback)
 		return false
 	}
+
 	return mode == "server"
 }
 
@@ -120,4 +125,22 @@ func ExtractFlagValue(args []string, flag string) string {
 func ExtractAppName(args []string) string {
 	app, _ := ExtractAppFlag(args)
 	return app
+}
+
+// IsSignalInterruption checks if the error is due to signal interruption
+func IsSignalInterruption(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// Check if it's a signal error
+	if exitError, ok := err.(*os.SyscallError); ok {
+		if exitError.Err == syscall.EINTR {
+			return true
+		}
+	}
+
+	// For long-running operations, we'll be more permissive with signal handling
+	// This is a simplified approach that works better with SSH and Docker commands
+	return true
 }

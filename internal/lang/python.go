@@ -57,12 +57,6 @@ func (l *Python) Build(app *App, releaseDir string) error {
 func (l *Python) Deploy(app *App, releaseDir string) error {
 	fmt.Println("-----> Deploying Python application...")
 
-	// Get Docker client
-	dc, err := NewDockerClient()
-	if err != nil {
-		return fmt.Errorf("failed to create Docker client: %v", err)
-	}
-
 	// Get environment file
 	envFile := filepath.Join("/opt/gokku/apps", app.Name, "shared", ".env")
 
@@ -73,7 +67,7 @@ func (l *Python) Deploy(app *App, releaseDir string) error {
 	}
 
 	// Create deployment config
-	return dc.DeployContainer(DeploymentConfig{
+	return DeployContainer(DeploymentConfig{
 		AppName:     app.Name,
 		ImageTag:    "latest",
 		EnvFile:     envFile,
@@ -86,18 +80,13 @@ func (l *Python) Deploy(app *App, releaseDir string) error {
 func (l *Python) Restart(app *App) error {
 	fmt.Printf("-----> Restarting %s...\n", app.Name)
 
-	dc, err := NewDockerClient()
-	if err != nil {
-		return fmt.Errorf("failed to create Docker client: %v", err)
-	}
-
 	// Find active container
 	containerName := app.Name
-	if !dc.ContainerExists(containerName) {
+	if !ContainerExists(containerName) {
 		containerName = app.Name + "-green"
 	}
 
-	if !dc.ContainerExists(containerName) {
+	if !ContainerExists(containerName) {
 		return fmt.Errorf("no active container found for %s", app.Name)
 	}
 

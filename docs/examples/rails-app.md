@@ -27,7 +27,6 @@ apps:
   - name: rails-app
     lang: ruby
     build:
-      type: docker
       path: .
     environments:
       - name: production

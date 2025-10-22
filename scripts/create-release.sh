@@ -16,15 +16,15 @@ log() {
 }
 
 log_success() {
-    echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} ✓ $1"
+    echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $1"
 }
 
 log_error() {
-    echo -e "${RED}[$(date +'%H:%M:%S')]${NC} ✗ $1"
+    echo -e "${RED}[$(date +'%H:%M:%S')]${NC} $1"
 }
 
 log_warn() {
-    echo -e "${YELLOW}[$(date +'%H:%M:%S')]${NC} ⚠ $1"
+    echo -e "${YELLOW}[$(date +'%H:%M:%S')]${NC} $1"
 }
 
 # Extract version from main.go
@@ -64,6 +64,54 @@ validate_version() {
     fi
 
     log_success "Version format is valid: $version"
+}
+
+# Update version in docs config
+update_docs_version() {
+    local version="$1"
+    local docs_config="docs/.vitepress/config.ts"
+
+    if [ ! -f "$docs_config" ]; then
+        log_error "Docs config file not found: $docs_config"
+        exit 1
+    fi
+
+    # Check if the version is already correct
+    if grep -q "text: '$version'" "$docs_config"; then
+        log "Docs config already has correct version: $version"
+        return 0
+    fi
+
+    # Get current version in docs config
+    local current_version=$(grep -o "[0-9]\+\.[0-9]\+\.[0-9]\+" "$docs_config" | head -1)
+
+    # Replace {{VERSION}} with actual version, or update existing version
+    if sed -i.bak "s/{{VERSION}}/$version/g" "$docs_config"; then
+        # Also handle case where version is already set but different
+        if [ -n "$current_version" ] && [ "$current_version" != "$version" ]; then
+            sed -i.bak2 "s/$current_version/$version/g" "$docs_config"
+        fi
+        rm -f "$docs_config.bak" "$docs_config.bak2"  # Remove backup files
+        log_success "Updated version in docs config: $version"
+    else
+        log_error "Failed to update version in docs config"
+        exit 1
+    fi
+
+    # Check if there are changes after the update
+    if git diff --quiet "$docs_config"; then
+        log "No changes detected in docs config after update"
+        return 0
+    fi
+
+    # Commit the docs version update
+    git add "$docs_config"
+    if git commit -m "docs: update version to $version"; then
+        log_success "Committed docs version update"
+    else
+        log_error "Failed to commit docs version update"
+        exit 1
+    fi
 }
 
 # Main function
@@ -107,6 +155,9 @@ main() {
     # Validate version format
     validate_version "$version"
 
+    # Update version in docs config
+    update_docs_version "$version"
+
     # Create tag name
     local tag="v$version"
 
@@ -119,7 +170,6 @@ main() {
         if [ "$(git rev-parse "$tag")" = "$(git rev-parse HEAD)" ]; then
             log_warn "Tag '$tag' already points to current HEAD"
             if [ "$auto_yes" = true ]; then
-                log "Auto-pushing existing tag..."
                 git push origin "$tag"
                 log_success "Tag '$tag' pushed successfully!"
                 exit 0
@@ -163,13 +213,8 @@ curl -fsSL https://gokku-vm.com/install | bash"
     # Ask for confirmation before pushing (unless auto_yes is set)
     if [ "$auto_yes" = true ]; then
         log "Auto-pushing tag to origin..."
-        git push origin "$tag"
-        log_success "Tag '$tag' pushed successfully!"
-        log ""
-        log "GitHub Actions will now:"
-        log "  1. Build binaries for all platforms"
-        log "  2. Create GitHub Release with binaries"
-        log "  3. Make them available for download"
+        git push origin HEAD > /dev/null 2>&1
+        git push origin "$tag" > /dev/null 2>&1
         log ""
         log "Monitor progress at: https://github.com/thadeu/gokku/actions"
         log "Release will be available at: https://github.com/thadeu/gokku/releases/tag/$tag"
@@ -182,7 +227,8 @@ curl -fsSL https://gokku-vm.com/install | bash"
 
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             log "Pushing tag to origin..."
-            git push origin "$tag"
+            git push origin HEAD > /dev/null 2>&1
+            git push origin "$tag" > /dev/null 2>&1
             log_success "Tag '$tag' pushed successfully!"
             log ""
             log "GitHub Actions will now:"
@@ -208,8 +254,9 @@ show_help() {
     echo "This script:"
     echo "  1. Extracts version from cmd/cli/main.go"
     echo "  2. Validates version format (semantic versioning)"
-    echo "  3. Creates git tag (v<version>)"
-    echo "  4. Pushes tag to trigger GitHub Release"
+    echo "  3. Updates version in docs config and commits change"
+    echo "  4. Creates git tag (v<version>)"
+    echo "  5. Pushes tag to trigger GitHub Release"
     echo ""
     echo "Options:"
     echo "  -h, --help    Show this help"
@@ -234,6 +281,8 @@ case "${1:-}" in
         log "DRY RUN MODE - No changes will be made"
         echo ""
         log "Would extract version: $(extract_version)"
+        log "Would update docs config with version: $(extract_version)"
+        log "Would commit docs version update"
         log "Would create tag: v$(extract_version)"
         log "Would push to: origin"
         exit 0

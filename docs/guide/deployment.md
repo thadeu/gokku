@@ -44,7 +44,7 @@ git push production main
 The first push automatically creates:
 - Git repository
 - App directories
-- Systemd service (or Docker setup)
+- Docker containers
 - Environment file from `gokku.yml`
 
 Watch the deployment:
@@ -65,34 +65,17 @@ To ubuntu@server:api
 ### 5. Verify
 
 ```bash
-# Check service status
-ssh ubuntu@server "sudo systemctl status api-production"
+# Check container status
+ssh ubuntu@server "docker ps | grep api"
 
 # Check logs
-ssh ubuntu@server "sudo journalctl -u api-production -f"
+ssh ubuntu@server "docker logs -f api"
 
 # Test endpoint
 curl http://your-server:8080/health
 ```
 
 ## Deployment Flow
-
-### Systemd Apps
-
-```mermaid
-graph TD
-    A[git push] --> B[Git Hook Triggered]
-    B --> C[Extract Code to New Release]
-    C --> D{.tool-versions?}
-    D -->|Yes| E[Install Dependencies]
-    D -->|No| F[Use System Tools]
-    E --> G[Build Binary]
-    F --> G
-    G --> H[Update Symlink]
-    H --> I[Restart Service]
-    I --> J[Cleanup Old Releases]
-    J --> K[Deploy Complete]
-```
 
 ### Docker Apps
 
@@ -115,20 +98,6 @@ graph TD
 ```
 
 ## Directory Structure
-
-### Systemd Deployment
-
-```
-/opt/gokku/apps/api/production/
-├── releases/
-│   ├── 1/          # First deployment
-│   ├── 2/          # Second deployment
-│   ├── 3/          # Third deployment
-│   └── 4/          # Latest deployment
-├── current -> releases/4  # Symlink to active
-├── .env            # Environment variables
-└── deploy.log      # Deployment logs
-```
 
 ### Docker Deployment
 
@@ -180,13 +149,13 @@ releases/4/  (ready)
 current -> releases/4  (instant)
 
 # Restart picks up new code
-systemctl restart api-production
+docker restart api
 ```
 
 ### Downtime
 
-- **Systemd**: ~1-2 seconds during restart
-- **Docker**: ~2-5 seconds during container swap
+- **Standard Docker**: ~2-5 seconds during container swap
+- **Blue-Green (ZERO_DOWNTIME=1)**: Zero downtime with instant traffic switch
 
 ## Multiple Environments
 
@@ -376,9 +345,6 @@ ssh ubuntu@server "cat /opt/gokku/apps/api/production/deploy.log"
 ### View Service Logs
 
 ```bash
-# Systemd
-ssh ubuntu@server "sudo journalctl -u api-production -f"
-
 # Docker
 ssh ubuntu@server "docker logs -f api-production"
 ```
@@ -386,9 +352,6 @@ ssh ubuntu@server "docker logs -f api-production"
 ### Check Status
 
 ```bash
-# Systemd
-ssh ubuntu@server "sudo systemctl status api-production"
-
 # Docker
 ssh ubuntu@server "docker ps | grep api"
 ```

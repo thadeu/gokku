@@ -9,32 +9,29 @@
 It's inspired by [Dokku](https://dokku.com/) but focuses on:
 - Go-first design
 - Simpler configuration
-- Optional Docker (not required)
-- Native systemd support
+- Docker-native deployment
+- Zero-downtime deployments
 
 ## Core Philosophy
 
 1. **Git-Push Simplicity**: Deploy with `git push`, just like Heroku
 2. **Configuration as Code**: Everything in `gokku.yml`
 3. **Sensible Defaults**: Minimal config required
-4. **Runtime Flexibility**: Choose systemd, Docker, or native per app
+4. **Docker-Native**: All apps run in Docker containers with automatic management
 
 ## How It Works
 
 ```mermaid
 graph LR
     A[git push] --> B[Git Hook]
-    B --> C{Has .tool-versions?}
-    C -->|Yes| D[Install Dependencies]
-    C -->|No| E[Use defaults]
-    D --> F{Build Type?}
-    E --> F
-    F -->|systemd| G[Compile Binary]
-    F -->|docker| H[Build Image]
-    G --> I[Systemd Service]
-    H --> J[Docker Container]
-    I --> K[Live App]
-    J --> K
+    B --> C[Extract Code]
+    C --> D[Read gokku.yml]
+    D --> E[Build Docker Image]
+    E --> F{ZERO_DOWNTIME?}
+    F -->|Yes| G[Blue-Green Deploy]
+    F -->|No| H[Standard Deploy]
+    G --> I[Live App - Zero Downtime]
+    H --> I
 ```
 
 ## Key Features
@@ -49,10 +46,10 @@ That's it. Your app builds, deploys, and restarts automatically.
 
 ### 🔧 Multi-Language
 
-- **Go**: Native compilation with systemd
-- **Python**: Docker or native
-- **Node.js**: Docker or native
-- **Ruby, Rust, etc**: Via Docker
+- **Go**: Compiled in Docker with automatic Dockerfile generation
+- **Python**: Docker with automatic dependency detection
+- **Node.js**: Docker with npm/yarn support
+- **Ruby, Rust, etc**: Via custom Dockerfile
 
 ### ⚙️ Zero Config (Almost)
 
@@ -67,26 +64,26 @@ apps:
 
 Everything else has defaults:
 - Language: Go
-- Build type: systemd
 - Environment: production
 - Branch: main
 
-### 🐳 Docker Optional
+### 🐳 Docker Native
 
-Choose per app:
+All apps run in Docker containers:
 
 ```yaml
 apps:
   - name: api
     build:
-      type: systemd  # Fast Go binary
+      path: ./cmd/api
   
   - name: worker
+    lang: python
     build:
-      type: docker   # Python in container
+      path: ./worker
 ```
 
-4. Keeps versions per app
+Both deploy as Docker containers with automatic image management.
 
 ## Who Is It For?
 

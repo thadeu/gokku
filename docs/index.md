@@ -23,8 +23,8 @@ features:
     details: Native support for Go, Python, Node.js with automatic runtime detection.
   
   - icon: 🐳
-    title: Docker & Systemd
-    details: Choose between Docker containers or systemd services. Mix and match per application.
+    title: Docker Native
+    details: All applications run in Docker containers with automatic image management and zero-downtime deployments.
   
   - icon: ⚙️
     title: Zero Configuration
@@ -103,10 +103,10 @@ Perfect for:
 | Feature | Heroku | Dokku | Gokku |
 |---------|--------|-------|-------|
 | Cost | 💰 Paid | ✅ Free | ✅ Free |
-| Docker Required | ✅ Yes | ✅ Yes | ⚠️ Optional |
+| Docker Native | ✅ Yes | ✅ Yes | ✅ Yes |
 | Go-First | ❌ No | ❌ No | ✅ Yes |
 | Config File | ❌ No | ❌ No | ✅ Yes |
-| Systemd Option | ❌ No | ❌ No | ✅ Yes |
+| Zero-Downtime | ⚠️ Paid | ⚠️ Complex | ✅ Built-in |
 
 ## Community
 

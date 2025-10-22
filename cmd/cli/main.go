@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"infra/internal"
 	"infra/internal/handlers"
 )
 
-const version = "1.0.34"
+const version = "1.0.56"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -16,28 +17,50 @@ func main() {
 	}
 
 	command := os.Args[1]
+	args := os.Args[2:]
 
+	// Create execution context for commands that need it
+	var ctx *internal.ExecutionContext
+	var err error
+
+	// Commands that need context (use -a flag)
+	contextCommands := map[string]bool{
+		"config": true, "run": true, "logs": true,
+		"status": true, "restart": true, "rollback": true,
+	}
+
+	if contextCommands[command] {
+		// Extract app flag to create context
+		appName, _ := internal.ExtractAppFlag(args)
+		ctx, err = internal.NewExecutionContext(appName)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	// Execute command with panic recovery
 	switch command {
 	case "apps":
-		handlers.HandleApps(os.Args[2:])
+		handlers.HandleApps(args)
 	case "config":
-		handlers.HandleConfig(os.Args[2:])
+		handlers.HandleConfigWithContext(ctx, args)
 	case "run":
-		handlers.HandleRun(os.Args[2:])
+		handlers.HandleRunWithContext(ctx, args)
 	case "logs":
-		handlers.HandleLogs(os.Args[2:])
+		handlers.HandleLogsWithContext(ctx, args)
 	case "status":
-		handlers.HandleStatus(os.Args[2:])
+		handlers.HandleStatusWithContext(ctx, args)
 	case "restart":
-		handlers.HandleRestart(os.Args[2:])
+		handlers.HandleRestartWithContext(ctx, args)
 	case "deploy":
-		handlers.HandleDeploy(os.Args[2:])
+		handlers.HandleDeploy(args)
 	case "rollback":
-		handlers.HandleRollback(os.Args[2:])
+		handlers.HandleRollbackWithContext(ctx, args)
 	case "ssh":
-		handlers.HandleSSH(os.Args[2:])
+		handlers.HandleSSH(args)
 	case "server":
-		handlers.HandleServer(os.Args[2:])
+		handlers.HandleServer(args)
 	case "tool":
 		handlers.HandleTool(os.Args[2:])
 	case "plugins":
@@ -64,7 +87,7 @@ Usage:
 CLIENT COMMANDS (run from local machine):
   server         Manage server connections
   apps           List applications on remote server
-  config         Manage environment variables (use -a)
+  config         Manage environment variables (use -a with git remote)
   run            Run arbitrary commands (use -a)
   logs           View application logs (use -a)
   status         Check services status (use -a)
@@ -79,7 +102,7 @@ CLIENT COMMANDS (run from local machine):
   help           Show this help
 
 SERVER COMMANDS (run directly on server):
-  config         Manage environment variables locally (--app required)
+  config         Manage environment variables locally (use -a with app name)
   run            Run arbitrary commands locally
   logs           View application logs locally
   status         Check services status locally
@@ -92,27 +115,26 @@ Server Management:
   gokku server remove <name>               Remove a server
   gokku server set-default <name>          Set default server
 
-Client Commands (always use -a):
+Client Commands (always use -a with git remote):
+  gokku config set KEY=VALUE -a <git-remote>
+  gokku config get KEY -a <git-remote>
+  gokku config list -a <git-remote>
+  gokku config unset KEY -a <git-remote>
+
+  gokku run <command> -a <git-remote>
+
+  gokku logs -a <git-remote> [-f]
+  gokku status -a <git-remote>
+  gokku restart -a <git-remote>
+
+  gokku deploy -a <git-remote>
+  gokku rollback -a <git-remote>
+
+
+Server Commands (run on server only, use -a with app name):
   gokku config set KEY=VALUE -a <app>
   gokku config get KEY -a <app>
   gokku config list -a <app>
-  gokku config unset KEY -a <app>
-
-  gokku run <command> -a <app>
-
-  gokku logs -a <app> [-f]
-  gokku status -a <app>
-  gokku restart -a <app>
-
-  gokku deploy -a <app>
-  gokku rollback -a <app>
-
-
-Server Commands (run on server only):
-  gokku config set KEY=VALUE --app <app> [--env <env>]
-  gokku config set KEY=VALUE -a <app> [-e <env>]     (shorthand, env defaults to 'default')
-  gokku config get KEY -a <app>                      (uses 'default' env)
-  gokku config list -a <app> -e production           (explicit env)
   gokku config unset KEY -a <app>
 
   gokku run <command>                                (run locally)
@@ -129,7 +151,7 @@ Examples:
   # Setup git remote (standard git)
   git remote add api-production ubuntu@server:api
 
-  # Client usage - all commands use -a
+  # Client usage - all commands use -a with git remote
   gokku config set PORT=8080 -a api-production
   gokku config list -a api-production
   gokku logs -a api-production -f
@@ -149,9 +171,10 @@ Examples:
   gokku restart api
 
 App Format:
-  -a, --app <app-name>
+  Client Mode (-a with git remote):
+  -a, --app <git-remote-name>
 
-  The app name (e.g., "api-production", "vad-staging")
+  The git remote name (e.g., "api-production", "worker-staging")
   Gokku will run 'git remote get-url <name>' to extract:
   - SSH host (user@ip or user@hostname)
   - App name from path
@@ -160,9 +183,11 @@ App Format:
   - api-production → ubuntu@server:api
   - worker-production    → ubuntu@server:/opt/gokku/repos/worker.git
 
-  Environment is extracted from remote name suffix:
-  - api-production → app: api, env: production
-  - worker-production     → app: worker, env: production
+  Server Mode (-a with app name):
+  -a, --app <app-name>
+
+  The app name directly (e.g., "api", "worker")
+  No git remote needed - uses app name directly
 
 Configuration:
   Config file: ~/.gokku/config.yml`)
