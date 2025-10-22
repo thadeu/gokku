@@ -22,7 +22,6 @@ apps:             # Application definitions
   app-name:       # App name (key)
     lang:         # Programming language
     build:        # Build configuration
-    environments: # Deployment environments
     deployment:   # Deployment settings
 docker:           # Global Docker settings
 ```
@@ -145,37 +144,6 @@ build:
   image: python:3.11-slim
 ```
 
-
-### apps[].environments[]
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `name` | string | ✅ Yes | - | Environment name (e.g., `production`, `staging`) |
-| `branch` | string | ❌ No | Smart default¹ | Git branch for this environment |
-| `default_env_vars` | object | ❌ No | `{}` | Default environment variables |
-
-¹ **Branch Defaults:**
-- `production` → `main`
-- `staging` → `staging`
-- `develop` → `develop`
-- Other → Same as environment name
-
-**Example:**
-```yaml
-environments:
-  app-name: production
-    branch: main
-    default_env_vars:
-      LOG_LEVEL: info
-      WORKERS: 4
-  
-  app-name: staging
-    branch: staging
-    default_env_vars:
-      LOG_LEVEL: debug
-      WORKERS: 2
-```
-
 ### apps[].deployment
 
 | Field | Type | Required | Default | Description |
@@ -270,19 +238,6 @@ apps:
       goarch: amd64
       cgo_enabled: 0
     
-    environments:
-      app-name: production
-        branch: main
-        default_env_vars:
-          PORT: 8080
-          LOG_LEVEL: info
-      
-      app-name: staging
-        branch: staging
-        default_env_vars:
-          PORT: 8080
-          LOG_LEVEL: debug
-    
     deployment:
       keep_releases: 5
       restart_policy: always
@@ -295,12 +250,6 @@ apps:
       path: ./services/ml
       entrypoint: server.py
       image: python:3.11-slim
-    
-    environments:
-      app-name: production
-        branch: main
-        default_env_vars:
-          PORT: 8082
     
     deployment:
       keep_images: 5

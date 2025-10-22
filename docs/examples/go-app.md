@@ -122,19 +122,6 @@ apps:
       goos: linux
       goarch: amd64
       cgo_enabled: 0
-    
-    environments:
-      app-name: production
-        branch: main
-        default_env_vars:
-          GIN_MODE: release
-          LOG_LEVEL: info
-      
-      app-name: staging
-        branch: staging
-        default_env_vars:
-          GIN_MODE: debug
-          LOG_LEVEL: debug
 ```
 
 ### Setup Both Environments
@@ -228,11 +215,6 @@ apps:
       goos: linux
       goarch: amd64
       cgo_enabled: 0
-    
-    environments:
-      app-name: production
-        default_env_vars:
-          REDIS_URL: redis://localhost:6379
 ```
 
 ### main.go

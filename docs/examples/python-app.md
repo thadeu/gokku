@@ -396,19 +396,6 @@ apps:
     build:
       path: .
       entrypoint: app.py
-    
-    environments:
-      app-name: production
-        branch: main
-        default_env_vars:
-          FLASK_ENV: production
-          LOG_LEVEL: info
-      
-      app-name: staging
-        branch: staging
-        default_env_vars:
-          FLASK_ENV: development
-          LOG_LEVEL: debug
 ```
 
 ## Troubleshooting

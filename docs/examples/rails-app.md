@@ -25,15 +25,6 @@ apps:
     lang: ruby
     build:
       path: .
-    environments:
-      app-name: production
-        branch: main
-        default_env_vars:
-          RAILS_ENV: production
-          PORT: 3000
-          DATABASE_URL: postgres://user:pass@localhost:5432/rails_app
-          REDIS_URL: redis://localhost:6379
-          SECRET_KEY_BASE: "your-secret-key-here"
     deployment:
       post_deploy:
         - bundle exec rails db:migrate

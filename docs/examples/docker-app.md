@@ -207,19 +207,6 @@ import os
 db_url = os.getenv('DATABASE_URL')
 ```
 
-## Port Mapping
-
-Gokku automatically maps ports:
-
-```yaml
-apps:
-  my-app:
-    environments:
-      app-name: production
-        default_env_vars:
-          PORT: 8080  # Container port
-```
-
 External port is managed by Gokku (incremental: 8080, 8081, 8082...).
 
 ## Volumes (Persistent Data)

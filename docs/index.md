@@ -105,9 +105,16 @@ Perfect for:
 | Config File | ❌ No | ❌ No | ✅ Yes |
 | Zero-Downtime | ⚠️ Paid | ⚠️ Complex | ✅ Built-in |
 
+## Documentation
+
+- 📖 [Getting Started](/guide/getting-started)
+- 🔧 [Configuration](/guide/configuration)
+- 🚀 [Deployment](/guide/deployment)
+- 🔌 [Plugins](/guide/plugins)
+- 📚 [Reference](/reference/cli)
+
 ## Community
 
-- 📖 [Documentation](/)
 - 🐛 [Report Issues](https://github.com/thadeu/gokku/issues)
 - 💬 [Discussions](https://github.com/thadeu/gokku/discussions)
 

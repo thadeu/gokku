@@ -154,32 +154,6 @@ docker restart api
 - **Standard Docker**: ~2-5 seconds during container swap
 - **Blue-Green (ZERO_DOWNTIME=1)**: Zero downtime with instant traffic switch
 
-## Multiple Environments
-
-Deploy to different environments:
-
-### Setup
-
-```yaml
-apps:
-  app-name: api
-    environments:
-      app-name: production
-        branch: main
-      app-name: staging
-        branch: staging
-```
-
-Create both environments:
-
-```bash
-# Production
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api production"
-
-# Staging
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api staging"
-```
-
 Add remotes:
 
 ```bash

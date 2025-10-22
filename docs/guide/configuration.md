@@ -170,30 +170,6 @@ Each app gets:
 - Independent environments
 - Isolated deployments
 
-## Environment-Specific Configuration
-
-Different settings per environment:
-
-```yaml
-apps:
-  app-name: api
-    environments:
-      app-name: production
-        branch: main
-        default_env_vars:
-          DATABASE_URL: postgres://prod-db
-          CACHE_TTL: 3600
-          WORKERS: 4
-      
-      app-name: staging
-        branch: staging
-        default_env_vars:
-          DATABASE_URL: postgres://staging-db
-          CACHE_TTL: 60
-          WORKERS: 2
-```
-
-
 ## Validation
 
 Gokku validates your configuration on deployment. Common errors:

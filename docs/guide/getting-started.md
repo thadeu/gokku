@@ -146,6 +146,7 @@ Your app is live! 🎉
 ## Next Steps
 
 - [Configuration](/guide/configuration) - Customize your deployment
+- [Plugins](/guide/plugins) - Add databases, load balancers, and more
 - [Environments](/guide/environments) - Add staging environment
 - [Environment Variables](/guide/env-vars) - Configure your app
 - [Blue-Green Deployment](/guide/blue-green-deployment) - Zero-downtime deployments

@@ -85,32 +85,14 @@ apps:
   api:
     build:
       path: ./cmd/api
-    environments:
-      app-name: production
-        branch: main
-        default_env_vars:
-          PORT: 8080
-          WORKER_URL: http://localhost:8081
   
   app-name: worker
     build:
       path: ./cmd/worker
-    environments:
-      app-name: production
-        branch: main
-        default_env_vars:
-          PORT: 8081
-          REDIS_URL: redis://localhost:6379
   
   app-name: admin
     build:
       path: ./cmd/admin
-    environments:
-      app-name: production
-        branch: main
-        default_env_vars:
-          PORT: 8082
-          API_URL: http://localhost:8080
 ```
 
 ### Service Communication
@@ -314,20 +296,10 @@ apps:
   api:
     build:
       path: ./cmd/api
-    environments:
-      app-name: production
-        branch: main
-      app-name: staging
-        branch: staging
   
   app-name: worker
     build:
       path: ./cmd/worker
-    environments:
-      app-name: production
-        branch: main
-      app-name: staging
-        branch: staging
 ```
 
 ### Setup
@@ -424,18 +396,10 @@ apps:
   api-1:
     build:
       path: ./cmd/api
-    environments:
-      app-name: production
-        default_env_vars:
-          PORT: 8080
   
   api-2:
     build:
       path: ./cmd/api
-    environments:
-      app-name: production
-        default_env_vars:
-          PORT: 8081
 ```
 
 Use nginx for load balancing:

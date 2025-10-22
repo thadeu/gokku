@@ -67,11 +67,6 @@ apps:
     lang: ruby
     build:
       path: .
-    environments:
-      app-name: production
-        default_env_vars:
-          RAILS_ENV: production
-          PORT: 3000
 ```
 
 [View full example →](/examples/rails-app)
@@ -86,12 +81,6 @@ apps:
     lang: nodejs
     build:
       path: .
-    environments:
-      app-name: production
-        default_env_vars:
-          NODE_ENV: production
-          PORT: 3000
-          API_PORT: 3001
 ```
 
 [View full example →](/examples/react-app)

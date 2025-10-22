@@ -295,25 +295,6 @@ ssh ubuntu@server "docker image prune -a"
 
 ## Port Mapping
 
-Gokku uses fixed port mapping strategy.
-
-### How It Works
-
-Each app gets assigned a port:
-- First app: 8080
-- Second app: 8081
-- Third app: 8082
-- etc.
-
-```yaml
-apps:
-  api:
-    environments:
-      app-name: production
-        default_env_vars:
-          PORT: 8080  # Container port
-```
-
 Docker maps: `8080:8080`
 
 ### Custom Ports
@@ -419,17 +400,6 @@ ssh ubuntu@server "docker inspect --format='{{.State.Health.Status}}' api-blue"
 
 Gokku doesn't currently support Docker volumes in config. Workarounds:
 
-### Option 1: External Database
-
-Use managed database instead of volume:
-
-```yaml
-environments:
-  app-name: production
-    default_env_vars:
-      DATABASE_URL: postgres://external-db:5432/mydb
-```
-
 ### Option 2: Host Bind Mount (Manual)
 
 Modify the hook template (advanced users):
@@ -459,29 +429,7 @@ docker run -d \
 
 ### Container to Container
 
-Containers can communicate via host network:
-
-```yaml
-apps:
-  api:
-    environments:
-      app-name: production
-        default_env_vars:
-          REDIS_URL: redis://172.17.0.1:6379
-```
-
 Use Docker host IP (`172.17.0.1`) or `host.docker.internal`.
-
-### External Services
-
-Connect to external services normally:
-
-```yaml
-environments:
-  app-name: production
-    default_env_vars:
-      DATABASE_URL: postgres://external-db.example.com:5432/db
-```
 
 ## Blue-Green Deployment
 

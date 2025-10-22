@@ -29,16 +29,6 @@ apps:
     lang: nodejs
     build:
       path: .
-    environments:
-      app-name: production
-        branch: main
-        default_env_vars:
-          NODE_ENV: production
-          PORT: 3000
-          API_PORT: 3001
-          DATABASE_URL: mongodb://localhost:27017/react_app
-          REDIS_URL: redis://localhost:6379
-          JWT_SECRET: "your-jwt-secret-here"
     deployment:
       post_deploy:
         - npm run db:migrate
