@@ -10,3 +10,4 @@ env-manager
 *.bak
 *.tmp
 gokku-cli
+dev-plugins/
