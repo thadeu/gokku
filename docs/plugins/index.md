@@ -44,10 +44,10 @@ Gokku's plugin system allows you to extend functionality with additional service
 
 ```bash
 # Install from GitHub repository
-gokku plugins:add thadeu/gokku-postgres
+gokku plugins:add https://github.com/thadeu/gokku-mysql
 
 # Install built-in plugin
-gokku plugins:add postgres
+gokku plugins:add mysql
 ```
 
 ### Listing Plugins
@@ -57,14 +57,14 @@ gokku plugins:add postgres
 gokku plugins:list
 
 # Show plugin information
-gokku plugins:info postgres
+gokku plugins:info mysql
 ```
 
 ### Removing Plugins
 
 ```bash
 # Remove plugin (will also remove all services)
-gokku plugins:remove postgres
+gokku plugins:remove mysql
 ```
 
 ## Service Management
@@ -73,13 +73,10 @@ gokku plugins:remove postgres
 
 ```bash
 # Create service from plugin
-gokku services:create postgres --name db-primary
+gokku services:create mysql --name db-primary
 
 # Create with specific version
-gokku services:create postgres:15 --name db-staging
-
-# Create with custom configuration
-gokku services:create redis --name cache --config "maxmemory=1gb"
+gokku services:create mysql --name db-staging
 ```
 
 ### Linking Services to Apps

@@ -378,7 +378,7 @@ Once installed, users can:
 
 ```bash
 # Install plugin
-gokku plugins:add thadeu/gokku-nginx
+gokku plugins:add https://github.com/thadeu/gokku-nginx
 
 # Create service
 gokku services:create nginx --name nginx-lb

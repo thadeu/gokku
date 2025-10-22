@@ -36,7 +36,7 @@ export default withMermaid(defineConfig({
           text: 'Core Concepts',
           items: [
             { text: 'Configuration', link: '/guide/configuration' },
-            { text: 'Environments', link: '/guide/environments' },
+            { text: 'Plugins', link: '/plugins' },
             { text: 'Deployment', link: '/guide/deployment' }
           ]
         },
@@ -46,6 +46,20 @@ export default withMermaid(defineConfig({
             { text: 'Docker Support', link: '/guide/docker' },
             { text: 'Environment Variables', link: '/guide/env-vars' },
             { text: 'Rollback', link: '/guide/rollback' }
+          ]
+        }
+      ],
+      '/plugins/': [
+        {
+          text: 'Plugins',
+          items: [
+            { text: 'Overview', link: '/plugins/' },
+            { text: 'Cron', link: '/plugins/cron' },
+            { text: 'Let\'s Encrypt', link: '/plugins/letsencrypt' },
+            { text: 'Nginx', link: '/plugins/nginx' },
+            { text: 'PostgreSQL', link: '/plugins/postgresql' },
+            { text: 'Redis', link: '/plugins/redis' },
+            { text: 'Github ', link: '/plugins/github' },
           ]
         }
       ],
