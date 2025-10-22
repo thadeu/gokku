@@ -41,8 +41,7 @@ Most fields are optional with sensible defaults:
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
 ```
 
@@ -58,8 +57,7 @@ This minimal config will use defaults:
 ```yaml
 apps:
   api-server:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api-server
       work_dir: .
       go_version: "1.25"
@@ -78,8 +76,7 @@ apps:
       restart_delay: 5
     
   worker:
-    build:
-      path: ./cmd/worker
+    path: ./cmd/worker
       binary_name: worker
       work_dir: .
       go_version: "1.25"
@@ -93,8 +90,7 @@ apps:
     
   ml-service:
     lang: python
-    build:
-      path: ./services/ml
+    path: ./services/ml
       dockerfile: ./services/ml/Dockerfile  # optional
       entrypoint: main.py
       image: "python:3.11-slim"
@@ -130,26 +126,24 @@ All configuration fields are optional with sensible defaults:
 | Field | Default | Description |
 |-------|---------|-------------|
 | `lang` | `go` | Programming language |
-| `build.work_dir` | `.` | Working directory for build |
-| `build.go_version` | `1.25` | Go version (for Go apps) |
-| `build.entrypoint` | `main.py` (Python)<br>`index.js` (Node.js) | Application entrypoint |
-| `build.image` | ❌ No | Auto-detected | Docker base image or pre-built registry image |
+| `work_dir` | `.` | Working directory for build |
+| `go_version` | `1.25` | Go version (for Go apps) |
+| `entrypoint` | `main.py` (Python)<br>`index.js` (Node.js) | Application entrypoint |
+| `image` | ❌ No | Auto-detected | Docker base image or pre-built registry image |
 
 ### Image Configuration
 
-The `build.image` field supports two modes:
+The `image` field supports two modes:
 
 **Base Image (Local Build):**
 ```yaml
-build:
-  image: "python:3.11-slim"  # Base image for local build
-  path: ./app
+image: "python:3.11-slim"  # Base image for local build
+path: ./app
 ```
 
 **Pre-built Registry Image (Ultra-fast Deployment):**
 ```yaml
-build:
-  image: "ghcr.io/meu-org/api:latest"  # Pre-built image from registry
+image: "ghcr.io/meu-org/api:latest"  # Pre-built image from registry
 ```
 
 When using a registry image (ghcr.io, ECR, docker.io, etc.), Gokku will:
@@ -202,8 +196,7 @@ When `build.image` is not specified, Gokku automatically detects the version fro
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
 ```
 
@@ -212,16 +205,14 @@ apps:
 apps:
   ml-service:
     lang: python
-    build:
-      path: ./services/ml
+    path: ./services/ml
 ```
 
 **Custom everything:**
 ```yaml
 apps:
   custom-app:
-    build:
-      path: ./cmd/custom
+    path: ./cmd/custom
       binary_name: custom
       go_version: "1.24"
     environments:
@@ -390,8 +381,7 @@ All applications run in Docker containers with blue-green deployment for zero-do
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
       go_version: "1.25"
       goos: linux
@@ -400,8 +390,7 @@ apps:
     
   ml-service:
     lang: python
-    build:
-      path: ./services/ml
+    path: ./services/ml
       entrypoint: main.py
       image: "python:3.11-slim"
 ```
@@ -446,8 +435,7 @@ Specify your own Dockerfile in the build config:
 apps:
   ml-service:
     lang: python
-    build:
-      path: ./services/ml
+    path: ./services/ml
       dockerfile: ./services/ml/Dockerfile  # Use this instead of auto-generation
       entrypoint: main.py
 ```
@@ -492,19 +480,16 @@ All applications use Docker containers, regardless of language:
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
     
   worker:
-    build:
-      path: ./cmd/worker
+    path: ./cmd/worker
       binary_name: worker
     
   vad:
     lang: python
-    build:
-      path: ./services/vad
+    path: ./services/vad
       entrypoint: main.py
 ```
 
@@ -549,8 +534,7 @@ environments:
   - name: staging
     branch: staging
 
-build:
-  work_dir: .  # or apps/trunk for your structure
+work_dir: .  # or apps/trunk for your structure
 ```
 
 ### Step 2: Deploy (Auto-Setup)
@@ -600,10 +584,9 @@ environments:
 ### Build Section
 
 ```yaml
-build:
-  go_version_min: string    # Minimum Go version required
-  goos: string             # Target OS (default: linux)
-  goarch: string           # Target architecture (default: amd64)
+go_version_min: string    # Minimum Go version required
+goos: string             # Target OS (default: linux)
+goarch: string           # Target architecture (default: amd64)
   cgo_enabled: number      # CGO setting (default: 0)
   work_dir: string         # Build working directory (default: .)
 ```
@@ -712,8 +695,7 @@ git init
 cat > gokku.yml << EOF
 apps:
   test-app:
-    build:
-      path: ./main.go
+    path: ./main.go
       binary_name: test-app
 
 environments:

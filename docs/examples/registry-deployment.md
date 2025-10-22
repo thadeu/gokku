@@ -17,8 +17,7 @@ Gokku supports two deployment modes:
 # gokku.yml
 apps:
   app-name: api
-    build:
-      image: "ghcr.io/meu-org/api:latest"
+    image: "ghcr.io/meu-org/api:latest"
     deployment:
       keep_releases: 3
       restart_policy: always
@@ -29,8 +28,7 @@ apps:
 ```yaml
 apps:
   app-name: worker
-    build:
-      image: "123456789012.dkr.ecr.us-east-1.amazonaws.com/meu-org/worker:latest"
+    image: "123456789012.dkr.ecr.us-east-1.amazonaws.com/meu-org/worker:latest"
     deployment:
       keep_releases: 5
       restart_policy: always
@@ -41,8 +39,7 @@ apps:
 ```yaml
 apps:
   app-name: web
-    build:
-      image: "meu-org/web:latest"
+    image: "meu-org/web:latest"
     ports:
       - "80:8080"
     deployment:
@@ -110,14 +107,12 @@ You can mix both approaches in the same project:
 apps:
   # Pre-built image (fast deployment)
   app-name: api
-    build:
-      image: "ghcr.io/meu-org/api:latest"
+    image: "ghcr.io/meu-org/api:latest"
       
   # Local build (development/testing)
   app-name: worker
     lang: python
-    build:
-      image: "python:3.11-slim"  # Base image
+    image: "python:3.11-slim"  # Base image
       path: ./worker
 ```
 
@@ -186,14 +181,12 @@ docker:
 # Using custom company registry
 apps:
   app-name: internal-api
-    build:
-      image: "registry.company.com/meu-org/api:latest"
+    image: "registry.company.com/meu-org/api:latest"
 
 # Using Harbor registry
 apps:
   app-name: microservice
-    build:
-      image: "harbor.example.com/project/service:latest"
+    image: "harbor.example.com/project/service:latest"
 ```
 
 ## Troubleshooting

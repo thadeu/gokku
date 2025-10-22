@@ -29,24 +29,20 @@ my-project/
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
   
   worker:
-    build:
-      path: ./cmd/worker
+    path: ./cmd/worker
       binary_name: worker
   
   admin:
-    build:
-      path: ./cmd/admin
+    path: ./cmd/admin
       binary_name: admin
   
   ml-service:
     lang: python
-    build:
-      path: ./services/ml
+    path: ./services/ml
       entrypoint: server.py
 ```
 
@@ -83,16 +79,13 @@ git push ml-prod main
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
   
   app-name: worker
-    build:
-      path: ./cmd/worker
+    path: ./cmd/worker
   
   app-name: admin
-    build:
-      path: ./cmd/admin
+    path: ./cmd/admin
 ```
 
 ### Service Communication
@@ -146,21 +139,18 @@ Mix Go, Python, Node.js in one project:
 apps:
   # Go API
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
   
   # Python ML Service
   app-name: ml
     lang: python
-    build:
-      path: ./services/ml
+    path: ./services/ml
       entrypoint: server.py
   
   # Node.js Frontend
   app-name: frontend
     lang: nodejs
-    build:
-      path: ./frontend
+    path: ./frontend
       entrypoint: server.js
 ```
 
@@ -210,13 +200,11 @@ Each app can use different tool versions:
 ```yaml
 apps:
   api-v1:
-    build:
-      path: ./cmd/api-v1
+    path: ./cmd/api-v1
       go_version: "1.24"
       
   api-v2:
-    build:
-      path: ./cmd/api-v2
+    path: ./cmd/api-v2
       go_version: "1.25"
 ```
 
@@ -257,8 +245,7 @@ func main() {
 ```yaml
 apps:
   app-name: cron-worker
-    build:
-      path: ./cmd/cron-worker
+    path: ./cmd/cron-worker
 ```
 
 ### Queue Worker (Celery)
@@ -282,8 +269,7 @@ if __name__ == '__main__':
 apps:
   app-name: celery-worker
     lang: python
-    build:
-      path: ./services/worker
+    path: ./services/worker
       entrypoint: worker.py
 ```
 
@@ -294,12 +280,10 @@ Each app with both environments:
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
   
   app-name: worker
-    build:
-      path: ./cmd/worker
+    path: ./cmd/worker
 ```
 
 ### Setup
@@ -341,12 +325,10 @@ git push worker-prod main
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
   
   app-name: migrate
-    build:
-      path: ./cmd/migrate
+    path: ./cmd/migrate
 ```
 
 ```go
@@ -394,12 +376,10 @@ With multiple instances:
 ```yaml
 apps:
   api-1:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
   
   api-2:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
 ```
 
 Use nginx for load balancing:

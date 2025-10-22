@@ -9,8 +9,7 @@ The simplest `gokku.yml`:
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
 ```
 
 That's it! Everything else has sensible defaults.
@@ -22,8 +21,7 @@ Here's a complete example with all options:
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
       work_dir: .
       go_version: "1.25"
@@ -53,9 +51,8 @@ apps:
 #### Build Configuration
 
 ```yaml
-build:
-  path: ./cmd/api         # Path to main file/directory
-  work_dir: .             # Working directory for build
+path: ./cmd/api         # Path to main file/directory
+work_dir: .             # Working directory for build
   
   # Go-specific settings
   go_version: "1.25"      # Go version
@@ -117,8 +114,7 @@ git remote add production ubuntu@server:api
 ```yaml
 apps:
   app-name: api
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       go_version: "1.25"
 ```
 
@@ -128,8 +124,7 @@ apps:
 apps:
   app-name: worker
     lang: python
-    build:
-      path: ./apps/worker
+    path: ./apps/worker
       base_image: python:3.11-slim
 ```
 
@@ -139,8 +134,7 @@ apps:
 apps:
   app-name: frontend
     lang: nodejs
-    build:
-      path: ./apps/frontend
+    path: ./apps/frontend
       base_image: node:20-alpine
 ```
 
@@ -151,17 +145,14 @@ Deploy multiple apps from one repository:
 ```yaml
 apps:
   app-name: api
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
   
   app-name: worker
-    build:
-      path: ./cmd/worker
+    path: ./cmd/worker
   
   app-name: ml-service
     lang: python
-    build:
-      path: ./services/ml
+    path: ./services/ml
       entrypoint: server.py
 ```
 
@@ -185,8 +176,7 @@ Error: app 'api' missing required field: build.path
 ```yaml
 apps:
   app-name: api
-    build:
-      path: ./cmd/api  # Required!
+    path: ./cmd/api  # Required!
 ```
 
 ## Best Practices
@@ -199,16 +189,14 @@ Don't repeat defaults:
 ```yaml
 apps:
   app-name: api
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
 ```
 
 ❌ **Bad:**
 ```yaml
 apps:
   app-name: api
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       go_version: "1.25"
 ```
 
@@ -228,8 +216,7 @@ Add comments for non-obvious settings:
 ```yaml
 apps:
   app-name: api
-    build:
-      cgo_enabled: 1  # Required for SQLite
+    cgo_enabled: 1  # Required for SQLite
 ```
 
 ## Examples

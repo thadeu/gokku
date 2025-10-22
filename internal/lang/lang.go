@@ -15,7 +15,7 @@ type Lang interface {
 	Cleanup(appName string, app *App) error
 	DetectLanguage(releaseDir string) (string, error)
 	EnsureDockerfile(releaseDir string, appName string, app *App) error
-	GetDefaultConfig() *Build
+	GetDefaultConfig() *App
 }
 
 // DetectLanguage automatically detects the programming language based on project files

@@ -27,8 +27,7 @@ my-react-app/
 apps:
   app-name: react-app
     lang: nodejs
-    build:
-      path: .
+    path: .
     deployment:
       post_deploy:
         - npm run db:migrate

@@ -24,8 +24,7 @@ my-go-api/
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
       go_version: "1.25"
       goos: linux
@@ -115,8 +114,7 @@ func main() {
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
       go_version: "1.25"
       goos: linux
@@ -208,8 +206,7 @@ func main() {
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
       go_version: "1.25"
       goos: linux

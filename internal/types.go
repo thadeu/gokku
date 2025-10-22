@@ -22,12 +22,25 @@ type Config struct {
 
 // App represents an application configuration
 type App struct {
-	Lang         string         `yaml:"lang,omitempty"`
-	Build        *Build         `yaml:"build,omitempty"`
-	Deployment   *Deployment    `yaml:"deployment,omitempty"`
-	Network      *NetworkConfig `yaml:"network"`
-	Ports        []string       `yaml:"ports"`
-	Environments []Environment  `yaml:"environments,omitempty"`
+	Lang         string            `yaml:"lang,omitempty"`
+	Path         string            `yaml:"path,omitempty"`
+	WorkDir      string            `yaml:"work_dir,omitempty"`
+	BinaryName   string            `yaml:"binary_name,omitempty"`
+	GoVersion    string            `yaml:"go_version,omitempty"`
+	Goos         string            `yaml:"goos,omitempty"`
+	Goarch       string            `yaml:"goarch,omitempty"`
+	CgoEnabled   *bool             `yaml:"cgo_enabled,omitempty"`
+	Dockerfile   string            `yaml:"dockerfile,omitempty"`
+	Image        string            `yaml:"image,omitempty"`
+	Entrypoint   string            `yaml:"entrypoint,omitempty"`
+	Command      string            `yaml:"command,omitempty"`
+	Env          map[string]string `yaml:"env,omitempty"`
+	Volumes      []string          `yaml:"volumes,omitempty"`
+	Security     string            `yaml:"security,omitempty"`
+	Deployment   *Deployment       `yaml:"deployment,omitempty"`
+	Network      *NetworkConfig    `yaml:"network"`
+	Ports        []string          `yaml:"ports"`
+	Environments []Environment     `yaml:"environments,omitempty"`
 }
 
 // RemoteInfo contains information about remote connection
@@ -35,26 +48,6 @@ type RemoteInfo struct {
 	Host    string
 	BaseDir string
 	App     string
-}
-
-// Build represents build configuration
-type Build struct {
-	Type       string            `yaml:"type"` // "docker"
-	Path       string            `yaml:"path"`
-	BinaryName string            `yaml:"binary_name,omitempty"`
-	GoVersion  string            `yaml:"go_version,omitempty"`
-	Goos       string            `yaml:"goos,omitempty"`
-	Goarch     string            `yaml:"goarch,omitempty"`
-	CgoEnabled *bool             `yaml:"cgo_enabled,omitempty"`
-	Dockerfile string            `yaml:"dockerfile,omitempty"`
-	Image      string            `yaml:"image,omitempty"`
-	Workdir    string            `yaml:"workdir,omitempty"`
-	Entrypoint string            `yaml:"entrypoint,omitempty"`
-	Command    string            `yaml:"command,omitempty"`
-	Env        map[string]string `yaml:"env,omitempty"`
-	Ports      []string          `yaml:"ports,omitempty"`
-	Volumes    []string          `yaml:"volumes,omitempty"`
-	Security   string            `yaml:"security,omitempty"`
 }
 
 type NetworkConfig struct {
@@ -152,12 +145,9 @@ func (c *ServerConfig) Validate() error {
 			return fmt.Errorf("app name cannot be empty")
 		}
 
-		if app.Build == nil {
-			return fmt.Errorf("app '%s' missing build configuration", appName)
-		}
-
-		if app.Build.Type != "docker" {
-			return fmt.Errorf("app '%s' has invalid build type: %s (must be 'docker')", appName, app.Build.Type)
+		// Validate that either path or image is specified
+		if app.Path == "" && app.Image == "" {
+			return fmt.Errorf("app '%s' must specify either 'path' or 'image'", appName)
 		}
 	}
 

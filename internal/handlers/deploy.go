@@ -234,7 +234,7 @@ func executeDirectDeployment(appName string) error {
 	fmt.Println("-----> Building application...")
 
 	// Force rebuild without cache if this is a Docker build
-	if app.Build != nil && app.Build.Type == "docker" {
+	if app.Path != "" {
 		dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
 
 		if _, err := os.Stat(dockerfilePath); err == nil {
@@ -343,7 +343,7 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 		return nil
 	}
 
-	if app.Build == nil || app.Build.Workdir == "" {
+	if app.WorkDir == "" {
 		// No workdir specified, do full checkout
 		fmt.Println("-----> No workdir specified, extracting full repository...")
 		os.RemoveAll(releaseDir) // Clean temp files
@@ -359,7 +359,7 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 		return nil
 	}
 
-	workdir := strings.TrimPrefix(app.Build.Workdir, "./")
+	workdir := strings.TrimPrefix(app.WorkDir, "./")
 	workdir = strings.TrimPrefix(workdir, "/")
 
 	fmt.Printf("-----> Workdir configured: '%s'\n", workdir)

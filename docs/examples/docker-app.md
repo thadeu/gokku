@@ -10,8 +10,7 @@ Deploy any application using Docker with Gokku.
 apps:
   my-app:
     lang: python
-    build:
-      path: ./app
+    path: ./app
       dockerfile: ./app/Dockerfile
 ```
 
@@ -23,8 +22,7 @@ Gokku will use your existing Dockerfile.
 apps:
   my-app:
     lang: python
-    build:
-      path: ./app
+    path: ./app
       entrypoint: main.py
 ```
 
@@ -38,8 +36,7 @@ Gokku generates a Dockerfile automatically based on language.
 apps:
   python-app:
     lang: python
-    build:
-      path: .
+    path: .
       entrypoint: app.py
       base_image: python:3.11-slim
 ```
@@ -61,8 +58,7 @@ CMD ["python", "app.py"]
 apps:
   nodejs-app:
     lang: nodejs
-    build:
-      path: .
+    path: .
       entrypoint: index.js
       base_image: node:20-alpine
 ```
@@ -83,8 +79,7 @@ CMD ["node", "index.js"]
 ```yaml
 apps:
   go-app:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       base_image: golang:1.25-alpine
 ```
 
@@ -165,13 +160,11 @@ Gokku currently uses `docker run`, not `docker-compose`. For services requiring 
 apps:
   web:
     lang: python
-    build:
-      path: ./web
+    path: ./web
   
   worker:
     lang: python
-    build:
-      path: ./worker
+    path: ./worker
 ```
 
 ### Option 2: Single Container with Multiple Processes
@@ -218,8 +211,7 @@ Gokku supports Docker volumes through the `volumes` field in your `gokku.yml`:
 ```yaml
 apps:
   my-app:
-    build:
-      path: ./cmd/my-app
+    path: ./cmd/my-app
       volumes:
         - "/host/path:/container/path"           # Bind mount
         - "/usr/lib/data:/app/data"               # Shared data folder
@@ -233,22 +225,19 @@ Perfect for microservices that need to share data:
 ```yaml
 apps:
   recorder:
-    build:
-      path: ./cmd/recorder
+    path: ./cmd/recorder
       volumes:
         - "/usr/lib/recordings:/app/recordings"   # Write files here
         - "/var/log/recordings:/app/logs"
   
   processor:
-    build:
-      path: ./cmd/processor
+    path: ./cmd/processor
       volumes:
         - "/usr/lib/recordings:/app/recordings"   # Read files from here
         - "/var/log/recordings:/app/logs"
   
   webhook:
-    build:
-      path: ./cmd/webhook
+    path: ./cmd/webhook
       volumes:
         - "/usr/lib/recordings:/app/recordings"   # Access processed files
         - "/var/log/recordings:/app/logs"
@@ -337,8 +326,7 @@ docker:
 
 apps:
   my-app:
-    build:
-      base_image: registry.example.com/python:3.11
+    base_image: registry.example.com/python:3.11
 ```
 
 Login on server first:

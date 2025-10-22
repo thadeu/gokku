@@ -19,16 +19,16 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 	fmt.Println("-----> Building Go application...")
 
 	// Check if using pre-built image from registry
-	if app.Build != nil && app.Build.Image != "" && IsRegistryImage(app.Build.Image, GetCustomRegistries(appName)) {
+	if app.Image != "" && IsRegistryImage(app.Image, GetCustomRegistries(appName)) {
 		fmt.Println("-----> Using pre-built image from registry...")
 
 		// Pull the pre-built image
-		if err := PullRegistryImage(app.Build.Image); err != nil {
+		if err := PullRegistryImage(app.Image); err != nil {
 			return fmt.Errorf("failed to pull pre-built image: %v", err)
 		}
 
 		// Tag the image for the app
-		if err := TagImageForApp(app.Build.Image, appName); err != nil {
+		if err := TagImageForApp(app.Image, appName); err != nil {
 			return fmt.Errorf("failed to tag image: %v", err)
 		}
 
@@ -46,12 +46,12 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 
 	// Check if custom Dockerfile path is specified
 	var cmd *exec.Cmd
-	if app.Build != nil && app.Build.Dockerfile != "" {
+	if app.Dockerfile != "" {
 		// Use custom Dockerfile path
-		dockerfilePath := filepath.Join(releaseDir, app.Build.Dockerfile)
+		dockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
 		// Check if Dockerfile exists in workdir
-		if app.Build.Workdir != "" {
-			workdirDockerfilePath := filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile)
+		if app.WorkDir != "" {
+			workdirDockerfilePath := filepath.Join(releaseDir, app.WorkDir, app.Dockerfile)
 			if _, err := os.Stat(workdirDockerfilePath); err == nil {
 				dockerfilePath = workdirDockerfilePath
 			}
@@ -97,8 +97,8 @@ func (l *Golang) Deploy(appName string, app *App, releaseDir string) error {
 
 	// Create deployment config
 	volumes := []string{}
-	if app.Build != nil && len(app.Build.Volumes) > 0 {
-		volumes = app.Build.Volumes
+	if len(app.Volumes) > 0 {
+		volumes = app.Volumes
 	}
 
 	return DeployContainer(DeploymentConfig{
@@ -174,22 +174,22 @@ func (l *Golang) EnsureDockerfile(releaseDir string, appName string, app *App) e
 	fmt.Printf("-----> EnsureDockerfile called for app: %s\n", appName)
 
 	// Check if custom Dockerfile is specified
-	if app.Build != nil && app.Build.Dockerfile != "" {
-		customDockerfilePath := filepath.Join(releaseDir, app.Build.Dockerfile)
+	if app.Dockerfile != "" {
+		customDockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
 		fmt.Printf("-----> Custom Dockerfile path: %s\n", customDockerfilePath)
 		if _, err := os.Stat(customDockerfilePath); err == nil {
-			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Build.Dockerfile)
+			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Dockerfile)
 			return nil
 		}
 		// If custom Dockerfile not found, try relative to workdir
-		if app.Build.Workdir != "" {
-			workdirDockerfilePath := filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile)
+		if app.WorkDir != "" {
+			workdirDockerfilePath := filepath.Join(releaseDir, app.WorkDir, app.Dockerfile)
 			if _, err := os.Stat(workdirDockerfilePath); err == nil {
-				fmt.Printf("-----> Using custom Dockerfile in workdir: %s/%s\n", app.Build.Workdir, app.Build.Dockerfile)
+				fmt.Printf("-----> Using custom Dockerfile in workdir: %s/%s\n", app.WorkDir, app.Dockerfile)
 				return nil
 			}
 		}
-		return fmt.Errorf("custom Dockerfile not found: %s or %s", customDockerfilePath, filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile))
+		return fmt.Errorf("custom Dockerfile not found: %s or %s", customDockerfilePath, filepath.Join(releaseDir, app.WorkDir, app.Dockerfile))
 	}
 
 	// Check if default Dockerfile exists
@@ -204,30 +204,27 @@ func (l *Golang) EnsureDockerfile(releaseDir string, appName string, app *App) e
 
 	// Get build configuration
 	build := l.GetDefaultConfig()
-	if app.Build != nil {
-		// Merge with app-specific config
-		if app.Build.Image != "" {
-			build.Image = app.Build.Image
-		}
-		// Determine working directory
-		workDir := "."
-		if app.Build.Workdir != "" {
-			workDir = app.Build.Workdir
-		}
-		fmt.Printf("-----> Working directory from config: '%s'\n", app.Build.Workdir)
-		fmt.Printf("-----> Using workDir: '%s'\n", workDir)
-
-		// Build path is relative to work_dir
-		if app.Build.Path != "" {
-			// Since we COPY workdir ., the build path should be relative to workdir
-			build.Path = "./" + strings.TrimPrefix(app.Build.Path, "./")
-			fmt.Printf("-----> Configured path: '%s'\n", app.Build.Path)
-		} else {
-			// Default to working directory root
-			build.Path = "."
-		}
-		fmt.Printf("-----> Final build path: '%s'\n", build.Path)
+	if app.Image != "" {
+		build.Image = app.Image
 	}
+	// Determine working directory
+	workDir := "."
+	if app.WorkDir != "" {
+		workDir = app.WorkDir
+	}
+	fmt.Printf("-----> Working directory from config: '%s'\n", app.WorkDir)
+	fmt.Printf("-----> Using workDir: '%s'\n", workDir)
+
+	// Build path is relative to work_dir
+	if app.Path != "" {
+		// Since we COPY workdir ., the build path should be relative to workdir
+		build.Path = "./" + strings.TrimPrefix(app.Path, "./")
+		fmt.Printf("-----> Configured path: '%s'\n", app.Path)
+	} else {
+		// Default to working directory root
+		build.Path = "."
+	}
+	fmt.Printf("-----> Final build path: '%s'\n", build.Path)
 
 	// Generate Dockerfile content
 	dockerfileContent := l.generateDockerfile(build, appName, app)
@@ -236,16 +233,15 @@ func (l *Golang) EnsureDockerfile(releaseDir string, appName string, app *App) e
 	return os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644)
 }
 
-func (l *Golang) GetDefaultConfig() *Build {
-	return &Build{
-		Type:    "docker",
-		Image:   "", // No default image - must be specified
+func (l *Golang) GetDefaultConfig() *App {
+	return &App{
+		// Default configuration for Go apps
 		Path:    "",
-		Workdir: ".",
+		WorkDir: ".",
 	}
 }
 
-func (l *Golang) generateDockerfile(build *Build, appName string, app *App) string {
+func (l *Golang) generateDockerfile(build *App, appName string, app *App) string {
 	// Determine build path
 	buildPath := build.Path
 
@@ -267,8 +263,8 @@ func (l *Golang) generateDockerfile(build *Build, appName string, app *App) stri
 	// Get the workdir for COPY
 	workDir := "."
 
-	if app.Build != nil && app.Build.Workdir != "" {
-		workDir = app.Build.Workdir
+	if app.WorkDir != "" {
+		workDir = app.WorkDir
 	}
 
 	fmt.Printf("-----> Using workdir: %s\n", workDir)
@@ -387,23 +383,21 @@ func (l *Golang) getDockerBuildArgs(app *App) map[string]string {
 	cgoEnabled := "0"
 	goVersion := "1.25"
 
-	if app.Build != nil {
-		if app.Build.Goos != "" {
-			goos = app.Build.Goos
-			fmt.Printf("-----> Using configured GOOS: %s (overriding detected: %s)\n", goos, detectedGoos)
+	if app.Goos != "" {
+		goos = app.Goos
+		fmt.Printf("-----> Using configured GOOS: %s (overriding detected: %s)\n", goos, detectedGoos)
+	}
+	if app.Goarch != "" {
+		goarch = app.Goarch
+		fmt.Printf("-----> Using configured GOARCH: %s (overriding detected: %s)\n", goarch, detectedGoarch)
+	}
+	if app.CgoEnabled != nil {
+		if *app.CgoEnabled {
+			cgoEnabled = "1"
 		}
-		if app.Build.Goarch != "" {
-			goarch = app.Build.Goarch
-			fmt.Printf("-----> Using configured GOARCH: %s (overriding detected: %s)\n", goarch, detectedGoarch)
-		}
-		if app.Build.CgoEnabled != nil {
-			if *app.Build.CgoEnabled {
-				cgoEnabled = "1"
-			}
-		}
-		if app.Build.GoVersion != "" {
-			goVersion = app.Build.GoVersion
-		}
+	}
+	if app.GoVersion != "" {
+		goVersion = app.GoVersion
 	}
 
 	fmt.Printf("-----> Build args: GOOS=%s GOARCH=%s CGO_ENABLED=%s GO_VERSION=%s\n", goos, goarch, cgoEnabled, goVersion)

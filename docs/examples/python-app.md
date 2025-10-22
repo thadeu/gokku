@@ -20,8 +20,7 @@ my-flask-app/
 apps:
   flask-app:
     lang: python
-    build:
-      path: .
+    path: .
       entrypoint: app.py
 ```
 
@@ -90,8 +89,7 @@ if __name__ == '__main__':
 apps:
   flask-app:
     lang: python
-    build:
-      path: .
+    path: .
       entrypoint: app.py
 ```
 
@@ -120,8 +118,7 @@ Update `gokku.yml`:
 apps:
   flask-app:
     lang: python
-    build:
-      path: .
+    path: .
       dockerfile: ./Dockerfile
 ```
 
@@ -161,8 +158,7 @@ uvicorn[standard]==0.24.0
 apps:
   fastapi-app:
     lang: python
-    build:
-      path: .
+    path: .
       entrypoint: main.py
 ```
 
@@ -282,8 +278,7 @@ def predict(text: str):
 apps:
   ml-service:
     lang: python
-    build:
-      path: .
+    path: .
       entrypoint: server.py
       base_image: python:3.11
 ```
@@ -303,8 +298,7 @@ ffmpeg 8.0
 apps:
   audio-service:
     lang: python
-    build:
-      path: .
+    path: .
       entrypoint: server.py
 ```
 
@@ -359,14 +353,12 @@ def process_video(video_id):
 apps:
   web:
     lang: python
-    build:
-      path: .
+    path: .
       entrypoint: app.py
   
   worker:
     lang: python
-    build:
-      path: .
+    path: .
       entrypoint: worker.py
 ```
 
@@ -393,8 +385,7 @@ CMD ["celery", "-A", "worker", "worker", "--loglevel=info"]
 apps:
   flask-app:
     lang: python
-    build:
-      path: .
+    path: .
       entrypoint: app.py
 ```
 

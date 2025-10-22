@@ -20,8 +20,7 @@ All applications use Docker by default. Configure your app:
 apps:
   my-app:
     lang: python
-    build:
-      path: ./app
+    path: ./app
       entrypoint: main.py
 ```
 
@@ -35,8 +34,7 @@ If no Dockerfile exists, Gokku generates one based on your language:
 apps:
   flask-app:
     lang: python
-    build:
-      path: .
+    path: .
       entrypoint: app.py
 ```
 
@@ -64,8 +62,7 @@ CMD ["python", "app.py"]
 apps:
   node-app:
     lang: nodejs
-    build:
-      path: .
+    path: .
       entrypoint: index.js
 ```
 
@@ -90,8 +87,7 @@ CMD ["node", "index.js"]
 ```yaml
 apps:
   go-app:
-    build:
-      path: .
+    path: .
 ```
 
 Generated Dockerfile:
@@ -121,8 +117,7 @@ Use your own Dockerfile:
 ```yaml
 apps:
   my-app:
-    build:
-      dockerfile: ./Dockerfile
+    dockerfile: ./Dockerfile
 ```
 
 ### Example: Python with System Dependencies
@@ -190,8 +185,7 @@ docker:
 apps:
   ml-service:
     lang: python
-    build:
-      base_image: "python:3.11"  # Full image, not slim
+    base_image: "python:3.11"  # Full image, not slim
 ```
 
 ### From Private Registry
@@ -202,8 +196,7 @@ docker:
 
 apps:
   api:
-    build:
-      base_image: "registry.example.com/python:3.11-custom"
+    base_image: "registry.example.com/python:3.11-custom"
 ```
 
 Login on server first:
@@ -514,8 +507,7 @@ docker:
 
 apps:
   api:
-    build:
-      base_image: "registry.example.com/python:3.11"
+    base_image: "registry.example.com/python:3.11"
 ```
 
 Login on server:

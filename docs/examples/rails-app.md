@@ -23,8 +23,7 @@ my-rails-app/
 apps:
   app-name: rails-app
     lang: ruby
-    build:
-      path: .
+    path: .
     deployment:
       post_deploy:
         - bundle exec rails db:migrate

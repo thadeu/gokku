@@ -17,16 +17,16 @@ func (l *Nodejs) Build(appName string, app *App, releaseDir string) error {
 	fmt.Println("-----> Building Node.js application...")
 
 	// Check if using pre-built image from registry
-	if app.Build != nil && app.Build.Image != "" && IsRegistryImage(app.Build.Image, GetCustomRegistries(appName)) {
+	if app.Image != "" && IsRegistryImage(app.Image, GetCustomRegistries(appName)) {
 		fmt.Println("-----> Using pre-built image from registry...")
 
 		// Pull the pre-built image
-		if err := PullRegistryImage(app.Build.Image); err != nil {
+		if err := PullRegistryImage(app.Image); err != nil {
 			return fmt.Errorf("failed to pull pre-built image: %v", err)
 		}
 
 		// Tag the image for the app
-		if err := TagImageForApp(app.Build.Image, appName); err != nil {
+		if err := TagImageForApp(app.Image, appName); err != nil {
 			return fmt.Errorf("failed to tag image: %v", err)
 		}
 
@@ -44,12 +44,12 @@ func (l *Nodejs) Build(appName string, app *App, releaseDir string) error {
 
 	// Check if custom Dockerfile path is specified
 	var cmd *exec.Cmd
-	if app.Build != nil && app.Build.Dockerfile != "" {
+	if app.Dockerfile != "" {
 		// Use custom Dockerfile path
-		dockerfilePath := filepath.Join(releaseDir, app.Build.Dockerfile)
+		dockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
 		// Check if Dockerfile exists in workdir
-		if app.Build.Workdir != "" {
-			workdirDockerfilePath := filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile)
+		if app.WorkDir != "" {
+			workdirDockerfilePath := filepath.Join(releaseDir, app.WorkDir, app.Dockerfile)
 			if _, err := os.Stat(workdirDockerfilePath); err == nil {
 				dockerfilePath = workdirDockerfilePath
 			}
@@ -86,8 +86,8 @@ func (l *Nodejs) Deploy(appName string, app *App, releaseDir string) error {
 
 	// Create deployment config
 	volumes := []string{}
-	if app.Build != nil && len(app.Build.Volumes) > 0 {
-		volumes = app.Build.Volumes
+	if len(app.Volumes) > 0 {
+		volumes = app.Volumes
 	}
 
 	return DeployContainer(DeploymentConfig{
@@ -161,21 +161,21 @@ func (l *Nodejs) DetectLanguage(releaseDir string) (string, error) {
 
 func (l *Nodejs) EnsureDockerfile(releaseDir string, appName string, app *App) error {
 	// Check if custom Dockerfile is specified
-	if app.Build != nil && app.Build.Dockerfile != "" {
-		customDockerfilePath := filepath.Join(releaseDir, app.Build.Dockerfile)
+	if app.Dockerfile != "" {
+		customDockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
 		if _, err := os.Stat(customDockerfilePath); err == nil {
-			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Build.Dockerfile)
+			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Dockerfile)
 			return nil
 		}
 		// If custom Dockerfile not found, try relative to workdir
-		if app.Build.Workdir != "" {
-			workdirDockerfilePath := filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile)
+		if app.WorkDir != "" {
+			workdirDockerfilePath := filepath.Join(releaseDir, app.WorkDir, app.Dockerfile)
 			if _, err := os.Stat(workdirDockerfilePath); err == nil {
-				fmt.Printf("-----> Using custom Dockerfile in workdir: %s/%s\n", app.Build.Workdir, app.Build.Dockerfile)
+				fmt.Printf("-----> Using custom Dockerfile in workdir: %s/%s\n", app.WorkDir, app.Dockerfile)
 				return nil
 			}
 		}
-		return fmt.Errorf("custom Dockerfile not found: %s or %s", customDockerfilePath, filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile))
+		return fmt.Errorf("custom Dockerfile not found: %s or %s", customDockerfilePath, filepath.Join(releaseDir, app.WorkDir, app.Dockerfile))
 	}
 
 	// Check if default Dockerfile exists
@@ -189,14 +189,11 @@ func (l *Nodejs) EnsureDockerfile(releaseDir string, appName string, app *App) e
 
 	// Get build configuration
 	build := l.GetDefaultConfig()
-	if app.Build != nil {
-		// Merge with app-specific config
-		if app.Build.Image != "" {
-			build.Image = app.Build.Image
-		}
-		if app.Build.Entrypoint != "" {
-			build.Entrypoint = app.Build.Entrypoint
-		}
+	if app.Image != "" {
+		build.Image = app.Image
+	}
+	if app.Entrypoint != "" {
+		build.Entrypoint = app.Entrypoint
 	}
 
 	// Generate Dockerfile content
@@ -206,16 +203,15 @@ func (l *Nodejs) EnsureDockerfile(releaseDir string, appName string, app *App) e
 	return os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644)
 }
 
-func (l *Nodejs) GetDefaultConfig() *Build {
-	return &Build{
-		Type:       "docker",
-		Image:      "", // No default image - must be specified
+func (l *Nodejs) GetDefaultConfig() *App {
+	return &App{
+		// Default configuration for Node.js apps
 		Entrypoint: "index.js",
-		Workdir:    ".",
+		WorkDir:    ".",
 	}
 }
 
-func (l *Nodejs) generateDockerfile(build *Build, appName string, app *App) string {
+func (l *Nodejs) generateDockerfile(build *App, appName string, app *App) string {
 	// Determine entrypoint
 	entrypoint := build.Entrypoint
 	if entrypoint == "" {

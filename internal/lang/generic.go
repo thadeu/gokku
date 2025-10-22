@@ -18,19 +18,19 @@ func (l *Generic) Build(appName string, app *App, releaseDir string) error {
 
 	// Check if custom Dockerfile is specified
 	var dockerfilePath string
-	if app.Build != nil && app.Build.Dockerfile != "" {
-		dockerfilePath = filepath.Join(releaseDir, app.Build.Dockerfile)
+	if app.Dockerfile != "" {
+		dockerfilePath = filepath.Join(releaseDir, app.Dockerfile)
 		// Check if Dockerfile exists in workdir
-		if app.Build.Workdir != "" {
-			workdirDockerfilePath := filepath.Join(releaseDir, app.Build.Workdir, app.Build.Dockerfile)
+		if app.WorkDir != "" {
+			workdirDockerfilePath := filepath.Join(releaseDir, app.WorkDir, app.Dockerfile)
 			if _, err := os.Stat(workdirDockerfilePath); err == nil {
 				dockerfilePath = workdirDockerfilePath
-				fmt.Printf("-----> Using custom Dockerfile in workdir: %s/%s\n", app.Build.Workdir, app.Build.Dockerfile)
+				fmt.Printf("-----> Using custom Dockerfile in workdir: %s/%s\n", app.WorkDir, app.Dockerfile)
 			} else {
-				fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Build.Dockerfile)
+				fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Dockerfile)
 			}
 		} else {
-			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Build.Dockerfile)
+			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Dockerfile)
 		}
 	} else {
 		dockerfilePath = filepath.Join(releaseDir, "Dockerfile")
@@ -46,7 +46,7 @@ func (l *Generic) Build(appName string, app *App, releaseDir string) error {
 
 	// Build Docker image with the determined Dockerfile path
 	var cmd *exec.Cmd
-	if app.Build != nil && app.Build.Dockerfile != "" {
+	if app.Dockerfile != "" {
 		// Use custom Dockerfile path
 		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
 	} else {
@@ -79,8 +79,8 @@ func (l *Generic) Deploy(appName string, app *App, releaseDir string) error {
 
 	// Deploy using Docker client
 	volumes := []string{}
-	if app.Build != nil && len(app.Build.Volumes) > 0 {
-		volumes = app.Build.Volumes
+	if len(app.Volumes) > 0 {
+		volumes = app.Volumes
 	}
 
 	return DeployContainer(DeploymentConfig{
@@ -165,8 +165,8 @@ func (l *Generic) EnsureDockerfile(releaseDir string, appName string, app *App) 
 	return fmt.Errorf("no Dockerfile found and no language-specific strategy available")
 }
 
-func (l *Generic) GetDefaultConfig() *Build {
-	return &Build{
-		Type: "docker",
+func (l *Generic) GetDefaultConfig() *App {
+	return &App{
+		// Default configuration for generic apps
 	}
 }

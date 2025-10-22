@@ -3,22 +3,25 @@
 
 apps:
   speech-to-text:
-    build:
-      path: ./cmd/speech-to-text
-      binary_name: speech-to-text
-      work_dir: apps/trunk
-      go_version: "1.25"
+    work_dir: apps/trunk
+    path: ./cmd/speech-to-text
+    ports:
+      - "5064:5064"
+    network:
+      mode: host
+    volumes:
+      - "/usr/lib/recordings:/app/recordings"  # Write RTP files here
+      - "/var/log/recordings:/app/logs"         # Log files
     deployment:
       keep_releases: 5
       restart_policy: always
       restart_delay: 5
 
   voice-agent:
-    build:
-      path: ./cmd/voice-agent
-      binary_name: voice-agent
-      work_dir: apps/trunk
-      go_version: "1.25"
+    path: ./cmd/voice-agent
+    binary_name: voice-agent
+    work_dir: apps/trunk
+    go_version: "1.25"
     ports:
       - "5064:5064"
     network:
@@ -30,14 +33,13 @@ apps:
 
   vad:
     lang: python
-    build:
-      path: ./apps/vad
-      dockerfile: ./apps/vad/Dockerfile  # optional, will generate if not exists
-      entrypoint: main.py
-      image: "python:3.11-slim"  # Base image for local build
-      volumes:
-        - "/usr/lib/recordings:/app/recordings"  # Shared recordings folder
-        - "/var/log/recordings:/app/logs"         # Shared logs folder
+    path: ./apps/vad
+    dockerfile: ./apps/vad/Dockerfile  # optional, will generate if not exists
+    entrypoint: main.py
+    image: "python:3.11-slim"  # Base image for local build
+    volumes:
+      - "/usr/lib/recordings:/app/recordings"  # Shared recordings folder
+      - "/var/log/recordings:/app/logs"         # Shared logs folder
     deployment:
       keep_releases: 3
       keep_images: 5
@@ -46,8 +48,7 @@ apps:
 
   # Example of pre-built image from registry (ultra-fast deployment)
   api-prebuilt:
-    build:
-      image: "ghcr.io/meu-org/api:latest"  # Pre-built image from registry
+    image: "ghcr.io/meu-org/api:latest"  # Pre-built image from registry
     deployment:
       keep_releases: 3
       restart_policy: always
@@ -55,11 +56,10 @@ apps:
 
   # Example apps with shared volumes for RTP recording pipeline
   rtp-recorder:
-    build:
-      path: ./cmd/rtp-recorder
-      volumes:
-        - "/usr/lib/recordings:/app/recordings"  # Write RTP files here
-        - "/var/log/recordings:/app/logs"         # Log files
+    path: ./cmd/rtp-recorder
+    volumes:
+      - "/usr/lib/recordings:/app/recordings"  # Write RTP files here
+      - "/var/log/recordings:/app/logs"         # Log files
     deployment:
       keep_releases: 5
       restart_policy: always
@@ -67,23 +67,21 @@ apps:
 
   transcoder:
     lang: python
-    build:
-      path: ./apps/transcoder
-      image: "python:3.11-slim"
-      volumes:
-        - "/usr/lib/recordings:/app/recordings"  # Read RTP files from here
-        - "/var/log/recordings:/app/logs"         # Shared logs
+    path: ./apps/transcoder
+    image: "python:3.11-slim"
+    volumes:
+      - "/usr/lib/recordings:/app/recordings"  # Read RTP files from here
+      - "/var/log/recordings:/app/logs"         # Shared logs
     deployment:
       keep_releases: 3
       restart_policy: always
       restart_delay: 10
 
   webhook:
-    build:
-      path: ./cmd/webhook
-      volumes:
-        - "/usr/lib/recordings:/app/recordings"  # Access processed files
-        - "/var/log/recordings:/app/logs"         # Shared logs
+    path: ./cmd/webhook
+    volumes:
+      - "/usr/lib/recordings:/app/recordings"  # Access processed files
+      - "/var/log/recordings:/app/logs"         # Shared logs
     deployment:
       keep_releases: 5
       restart_policy: always

@@ -20,8 +20,7 @@ Simple Go API with Docker deployment:
 ```yaml
 apps:
   app-name: api
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
 ```
 
@@ -35,8 +34,7 @@ Python web app with Docker:
 apps:
   app-name: flask-app
     lang: python
-    build:
-      path: ./app
+    path: ./app
       entrypoint: app.py
 ```
 
@@ -50,8 +48,7 @@ Using custom Dockerfile:
 apps:
   app-name: service
     lang: python
-    build:
-      path: ./services/ml
+    path: ./services/ml
       dockerfile: ./services/ml/Dockerfile
 ```
 
@@ -65,8 +62,7 @@ Full-stack Rails app with Docker deployment:
 apps:
   app-name: rails-app
     lang: ruby
-    build:
-      path: .
+    path: .
 ```
 
 [View full example →](/examples/rails-app)
@@ -79,8 +75,7 @@ React frontend with Express API backend:
 apps:
   app-name: react-app
     lang: nodejs
-    build:
-      path: .
+    path: .
 ```
 
 [View full example →](/examples/react-app)
@@ -92,17 +87,14 @@ Deploy multiple services from one repository:
 ```yaml
 apps:
   app-name: api
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
   
   app-name: worker
-    build:
-      path: ./cmd/worker
+    path: ./cmd/worker
   
   app-name: ml-service
     lang: python
-    build:
-      path: ./services/ml
+    path: ./services/ml
 ```
 
 [View full example →](/examples/multi-app)

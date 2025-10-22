@@ -20,8 +20,7 @@ In your project root:
 ```yaml
 apps:
   app-name: api
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
 ```
 
 ### 2. Add Git Remote

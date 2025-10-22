@@ -56,8 +56,7 @@ Map of application definitions where the key is the application name.
 ```yaml
 apps:
   api:
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
 ```
 
 ### apps[].build
@@ -82,15 +81,13 @@ The `build.image` field supports two deployment modes:
 
 **Base Image (Local Build):**
 ```yaml
-build:
-  image: "python:3.11-slim"  # Base image for local build
-  path: ./app
+image: "python:3.11-slim"  # Base image for local build
+path: ./app
 ```
 
 **Pre-built Registry Image (Ultra-fast Deployment):**
 ```yaml
-build:
-  image: "ghcr.io/meu-org/api:latest"  # Pre-built image from registry
+image: "ghcr.io/meu-org/api:latest"  # Pre-built image from registry
 ```
 
 When using a registry image (ghcr.io, ECR, docker.io, etc.), Gokku will:
@@ -129,18 +126,16 @@ When `build.image` is not specified, Gokku automatically detects the version fro
 
 **Example (Go + Docker):**
 ```yaml
-build:
-  path: ./cmd/api
-  binary_name: api
+path: ./cmd/api
+binary_name: api
   go_version: "1.25"
   cgo_enabled: 0
 ```
 
 **Example (Python + Docker):**
 ```yaml
-build:
-  path: ./services/ml
-  entrypoint: server.py
+path: ./services/ml
+entrypoint: server.py
   image: python:3.11-slim
 ```
 
@@ -204,8 +199,7 @@ git remote add production ubuntu@server:api
 ```yaml
 apps:
   app-name: api
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
 ```
 
 ### Minimal Python App
@@ -214,8 +208,7 @@ apps:
 apps:
   app-name: app
     lang: python
-    build:
-      path: .
+    path: .
 ```
 
 ## Complete Example
@@ -229,8 +222,7 @@ defaults:
 apps:
   # Go API with Docker
   app-name: api
-    build:
-      path: ./cmd/api
+    path: ./cmd/api
       binary_name: api
       work_dir: .
       go_version: "1.25"
@@ -246,8 +238,7 @@ apps:
   # Python ML service with Docker
   app-name: ml-service
     lang: python
-    build:
-      path: ./services/ml
+    path: ./services/ml
       entrypoint: server.py
       image: python:3.11-slim
     
