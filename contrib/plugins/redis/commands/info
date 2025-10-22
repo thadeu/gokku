@@ -1,0 +1,55 @@
+#!/bin/bash
+SERVICE_NAME="$1"
+
+echo "Redis Service: $SERVICE_NAME"
+echo "============================="
+
+# Source helper functions
+source /opt/gokku/scripts/plugin-helpers.sh
+
+# Check if container exists
+if ! container_exists "$SERVICE_NAME"; then
+    echo "Status: NOT FOUND"
+    exit 0
+fi
+
+# Check if container is running
+if ! container_is_running "$SERVICE_NAME"; then
+    echo "Status: STOPPED"
+    exit 0
+fi
+
+# Get service information
+STATUS=$(get_container_status "$SERVICE_NAME")
+PORT=$(get_container_port "$SERVICE_NAME" 6379)
+UPTIME=$(get_container_uptime "$SERVICE_NAME")
+CONFIG_DIR=$(get_service_config "$SERVICE_NAME" | grep -o '"config_dir":"[^"]*"' | cut -d'"' -f4)
+DATA_VOLUME=$(get_service_config "$SERVICE_NAME" | grep -o '"data_volume":"[^"]*"' | cut -d'"' -f4)
+
+echo "Status: $STATUS"
+echo "Port: $PORT"
+echo "Uptime: $UPTIME"
+echo "Configuration: $CONFIG_DIR/redis.conf"
+echo "Data volume: $DATA_VOLUME"
+
+# Get Redis-specific information
+if container_is_running "$SERVICE_NAME"; then
+    echo ""
+    echo "Redis Information:"
+
+    # Get Redis version
+    REDIS_VERSION=$(docker exec "$SERVICE_NAME" redis-server --version 2>/dev/null | head -1 | cut -d' ' -f3 || echo "Unknown")
+    echo "Version: $REDIS_VERSION"
+
+    # Get memory usage
+    MEMORY_USAGE=$(docker exec "$SERVICE_NAME" redis-cli --no-auth-warning -a "$(get_service_config "$SERVICE_NAME" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)" INFO memory 2>/dev/null | grep used_memory_human | cut -d: -f2 | tr -d '\r' || echo "Unknown")
+    echo "Memory usage: $MEMORY_USAGE"
+
+    # Get connected clients
+    CONNECTED_CLIENTS=$(docker exec "$SERVICE_NAME" redis-cli --no-auth-warning -a "$(get_service_config "$SERVICE_NAME" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)" INFO clients 2>/dev/null | grep connected_clients | cut -d: -f2 | tr -d '\r' || echo "Unknown")
+    echo "Connected clients: $CONNECTED_CLIENTS"
+
+    # Get total commands processed
+    TOTAL_COMMANDS=$(docker exec "$SERVICE_NAME" redis-cli --no-auth-warning -a "$(get_service_config "$SERVICE_NAME" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)" INFO stats 2>/dev/null | grep total_commands_processed | cut -d: -f2 | tr -d '\r' || echo "Unknown")
+    echo "Total commands: $TOTAL_COMMANDS"
+fi

@@ -1,0 +1,89 @@
+#!/bin/bash
+SERVICE_NAME="$1"
+S3_BUCKET="$2"
+S3_KEY="$3"
+
+echo "-----> Restoring Redis RDB from S3 for $SERVICE_NAME"
+
+# Source helper functions
+source /opt/gokku/scripts/plugin-helpers.sh
+
+# Check if container exists
+if ! container_exists "$SERVICE_NAME"; then
+    echo "Service '$SERVICE_NAME' not found"
+    exit 1
+fi
+
+# Check if container is running
+if ! container_is_running "$SERVICE_NAME"; then
+    echo "Service '$SERVICE_NAME' is not running"
+    exit 1
+fi
+
+# Check if AWS CLI is available
+if ! command_exists aws; then
+    echo "AWS CLI not found. Please install AWS CLI first."
+    exit 1
+fi
+
+# Check if S3 parameters are provided
+if [ -z "$S3_BUCKET" ] || [ -z "$S3_KEY" ]; then
+    echo "Usage: gokku redis:restore-s3 <service> <s3-bucket> <s3-key>"
+    echo "Example: gokku redis:restore-s3 redis-cache my-backup-bucket redis-backups/redis-cache/redis-cache_backup_20240101_120000.rdb"
+    exit 1
+fi
+
+# Generate temp filename
+BACKUP_FILENAME=$(basename "$S3_KEY")
+TEMP_FILE="/tmp/restore_${BACKUP_FILENAME}"
+
+echo "-----> Downloading backup from S3: s3://$S3_BUCKET/$S3_KEY"
+
+# Download backup from S3
+if ! aws s3 cp "s3://$S3_BUCKET/$S3_KEY" "$TEMP_FILE"; then
+    echo "Failed to download backup from S3"
+    exit 1
+fi
+
+echo "-----> Backup downloaded successfully"
+
+# Get file size
+FILE_SIZE=$(du -h "$TEMP_FILE" | cut -f1)
+echo "       Backup size: $FILE_SIZE"
+
+echo "-----> Stopping Redis service for restore"
+
+# Stop Redis service
+docker stop "$SERVICE_NAME"
+
+# Backup current RDB file (if exists)
+docker exec "$SERVICE_NAME" sh -c "if [ -f /data/dump.rdb ]; then mv /data/dump.rdb /data/dump.rdb.backup.$(date +%s); fi" 2>/dev/null || true
+
+echo "-----> Copying backup file to container"
+
+# Copy backup file to container
+docker cp "$TEMP_FILE" "$SERVICE_NAME:/data/dump.rdb"
+
+# Set proper permissions
+docker exec "$SERVICE_NAME" chown redis:redis /data/dump.rdb
+
+echo "-----> Starting Redis service"
+
+# Start Redis service
+docker start "$SERVICE_NAME"
+
+# Wait for container to be ready
+wait_for_container "$SERVICE_NAME"
+
+echo "-----> Verifying restore"
+
+# Verify Redis is working and has data
+REDIS_PASSWORD=$(get_service_config "$SERVICE_NAME" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)
+KEY_COUNT=$(docker exec "$SERVICE_NAME" redis-cli --no-auth-warning -a "$REDIS_PASSWORD" DBSIZE 2>/dev/null || echo "0")
+
+echo "       Keys in database: $KEY_COUNT"
+
+# Clean up temp file
+rm -f "$TEMP_FILE"
+
+echo "-----> Redis restore from S3 completed successfully"

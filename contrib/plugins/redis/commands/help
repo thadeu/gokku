@@ -1,0 +1,25 @@
+#!/bin/bash
+cat << EOF
+Redis plugin for Gokku
+
+Commands:
+  gokku redis:info <service>        Show service information
+  gokku redis:logs <service>         Show service logs
+  gokku redis:start <service>        Start Redis service
+  gokku redis:stop <service>         Stop Redis service
+  gokku redis:restart <service>      Restart Redis service
+  gokku redis:config <service>       Show Redis configuration
+  gokku redis:cli <service>          Connect to Redis CLI
+  gokku redis:flushdb <service>      Flush current database
+  gokku redis:flushall <service>     Flush all databases
+  gokku redis:monitor <service>      Monitor Redis commands
+  gokku redis:backup-s3 <service> <bucket> [prefix]  Backup RDB to S3
+  gokku redis:restore-s3 <service> <bucket> <key>    Restore RDB from S3
+
+Examples:
+  gokku redis:info redis-cache
+  gokku redis:cli redis-cache
+  gokku redis:restart redis-cache
+  gokku redis:backup-s3 redis-cache my-backup-bucket
+  gokku redis:restore-s3 redis-cache my-backup-bucket redis-backups/redis-cache/backup.rdb
+EOF

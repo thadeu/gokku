@@ -1,0 +1,68 @@
+#!/bin/bash
+SERVICE_NAME="$1"
+
+echo "-----> Installing Redis service: $SERVICE_NAME"
+
+# Source helper functions
+source /opt/gokku/scripts/plugin-helpers.sh
+
+# Get next available port
+PORT=$(get_next_port 6379)
+
+# Create service directory
+SERVICE_DIR=$(create_service_dir "$SERVICE_NAME")
+mkdir -p "$SERVICE_DIR/data"
+
+# Generate Redis password
+REDIS_PASSWORD=$(generate_password)
+
+# Create Redis configuration
+cat > "$SERVICE_DIR/redis.conf" << EOF
+# Redis configuration for Gokku
+bind 0.0.0.0
+port 6379
+protected-mode yes
+requirepass $REDIS_PASSWORD
+
+# Persistence
+save 900 1
+save 300 10
+save 60 10000
+
+# Logging
+loglevel notice
+logfile ""
+
+# Data directory
+dir /data
+
+# Memory management
+maxmemory-policy allkeys-lru
+
+# Network
+timeout 0
+tcp-keepalive 300
+EOF
+
+# Create Redis container with persistent volume
+docker run -d \
+  --name "$SERVICE_NAME" \
+  -p "$PORT:6379" \
+  -v "$SERVICE_DIR/redis.conf:/usr/local/etc/redis/redis.conf:ro" \
+  -v "${SERVICE_NAME}_data:/data" \
+  --restart unless-stopped \
+  redis:alpine redis-server /usr/local/etc/redis/redis.conf
+
+# Wait for container to be ready
+wait_for_container "$SERVICE_NAME"
+
+# Update service configuration
+update_service_config "$SERVICE_NAME" "port" "$PORT"
+update_service_config "$SERVICE_NAME" "config_dir" "$SERVICE_DIR"
+update_service_config "$SERVICE_NAME" "password" "$REDIS_PASSWORD"
+update_service_config "$SERVICE_NAME" "data_volume" "${SERVICE_NAME}_data"
+
+echo "-----> Redis service installed on port $PORT"
+echo "       Configuration: $SERVICE_DIR/redis.conf"
+echo "       Password: $REDIS_PASSWORD"
+echo "       Data volume: ${SERVICE_NAME}_data"
