@@ -13,12 +13,19 @@ A **Docker-native** git-push deployment system for multi-language applications. 
 ## Key Features
 
 ✅ **Docker-Native** - All applications run in containers with blue-green deployment
+
 ✅ **Zero Hard-coding** - Everything configured via `gokku.yml`
+
 ✅ **Multi-Language** - Go, Python, Node.js, Ruby (extensible)
+
 ✅ **Blue-Green Deployments** - Zero-downtime deployments with automatic rollback
+
 ✅ **CLI Management** - Comprehensive command-line interface for all operations
+
 ✅ **Config-Driven** - Apps, environments, ports all in config
+
 ✅ **Auto Dockerfile** - Generates Dockerfile if not exists
+
 ✅ **Health Checks** - Built-in health monitoring and restart policies  
 
 ---
