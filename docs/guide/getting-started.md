@@ -46,11 +46,11 @@ In your project root, create `gokku.yml`:
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
-      go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
+    binary_name: api
+    go_version: "1.25"
+    goos: linux
+    goarch: amd64
+    cgo_enabled: 0
 ```
 
 ### Step 4: Create Application

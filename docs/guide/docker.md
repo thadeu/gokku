@@ -21,7 +21,7 @@ apps:
   my-app:
     lang: python
     path: ./app
-      entrypoint: main.py
+    entrypoint: main.py
 ```
 
 ## Automatic Dockerfile Generation
@@ -35,7 +35,7 @@ apps:
   flask-app:
     lang: python
     path: .
-      entrypoint: app.py
+    entrypoint: app.py
 ```
 
 Generated Dockerfile:
@@ -63,7 +63,7 @@ apps:
   node-app:
     lang: nodejs
     path: .
-      entrypoint: index.js
+    entrypoint: index.js
 ```
 
 Generated Dockerfile:

@@ -25,11 +25,11 @@ my-go-api/
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
-      go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
+    binary_name: api
+    go_version: "1.25"
+    goos: linux
+    goarch: amd64
+    cgo_enabled: 0
 ```
 
 ### main.go
@@ -115,11 +115,11 @@ func main() {
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
-      go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
+    binary_name: api
+    go_version: "1.25"
+    goos: linux
+    goarch: amd64
+    cgo_enabled: 0
 ```
 
 ### Setup Both Environments
@@ -207,11 +207,11 @@ func main() {
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
-      go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
+    binary_name: api
+    go_version: "1.25"
+    goos: linux
+    goarch: amd64
+    cgo_enabled: 0
 ```
 
 ### main.go

@@ -21,7 +21,7 @@ apps:
   flask-app:
     lang: python
     path: .
-      entrypoint: app.py
+    entrypoint: app.py
 ```
 
 ### app.py
@@ -90,7 +90,7 @@ apps:
   flask-app:
     lang: python
     path: .
-      entrypoint: app.py
+    entrypoint: app.py
 ```
 
 ### Custom Dockerfile
@@ -159,7 +159,7 @@ apps:
   fastapi-app:
     lang: python
     path: .
-      entrypoint: main.py
+    entrypoint: main.py
 ```
 
 ### Dockerfile
@@ -299,7 +299,7 @@ apps:
   audio-service:
     lang: python
     path: .
-      entrypoint: server.py
+    entrypoint: server.py
 ```
 
 Gokku will use the system ffmpeg installation!
@@ -354,12 +354,12 @@ apps:
   web:
     lang: python
     path: .
-      entrypoint: app.py
+    entrypoint: app.py
   
   worker:
     lang: python
     path: .
-      entrypoint: worker.py
+    entrypoint: worker.py
 ```
 
 ### Dockerfile for Worker
@@ -386,7 +386,7 @@ apps:
   flask-app:
     lang: python
     path: .
-      entrypoint: app.py
+    entrypoint: app.py
 ```
 
 ## Troubleshooting

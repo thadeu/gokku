@@ -223,12 +223,12 @@ apps:
   # Go API with Docker
   app-name: api
     path: ./cmd/api
-      binary_name: api
-      work_dir: .
-      go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
+    binary_name: api
+    work_dir: .
+    go_version: "1.25"
+    goos: linux
+    goarch: amd64
+    cgo_enabled: 0
     
     deployment:
       keep_releases: 5
@@ -239,8 +239,8 @@ apps:
   app-name: ml-service
     lang: python
     path: ./services/ml
-      entrypoint: server.py
-      image: python:3.11-slim
+    entrypoint: server.py
+    image: python:3.11-slim
     
     deployment:
       keep_images: 5
@@ -250,10 +250,6 @@ apps:
 # Docker settings
 docker:
   registry: ""
-  base_images:
-    go: "golang:1.25-alpine"
-    python: "python:3.11-slim"
-    nodejs: "node:20-alpine"
 ```
 
 ## Validation

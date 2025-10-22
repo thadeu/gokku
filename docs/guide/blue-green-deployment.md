@@ -305,7 +305,7 @@ gokku config set REDIS_URL="redis://..." -a <app>-<env>
 apps:
   app-name: api
     path: ./cmd/api
-      binary_name: api
+    binary_name: api
     deployment:
       keep_images: 5
       restart_policy: always

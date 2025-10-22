@@ -21,7 +21,7 @@ Simple Go API with Docker deployment:
 apps:
   app-name: api
     path: ./cmd/api
-      binary_name: api
+    binary_name: api
 ```
 
 [View full example →](/examples/go-app)
@@ -35,7 +35,7 @@ apps:
   app-name: flask-app
     lang: python
     path: ./app
-      entrypoint: app.py
+    entrypoint: app.py
 ```
 
 [View full example →](/examples/python-app)
@@ -49,7 +49,7 @@ apps:
   app-name: service
     lang: python
     path: ./services/ml
-      dockerfile: ./services/ml/Dockerfile
+    dockerfile: ./services/ml/Dockerfile
 ```
 
 [View full example →](/examples/docker-app)

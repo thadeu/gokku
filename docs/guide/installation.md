@@ -108,7 +108,7 @@ In your project root, create `gokku.yml`:
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
+    binary_name: api
 ```
 
 See [Configuration](/guide/configuration) for all options.

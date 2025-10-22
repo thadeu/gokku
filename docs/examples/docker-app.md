@@ -11,7 +11,7 @@ apps:
   my-app:
     lang: python
     path: ./app
-      dockerfile: ./app/Dockerfile
+    dockerfile: ./app/Dockerfile
 ```
 
 Gokku will use your existing Dockerfile.
@@ -23,7 +23,7 @@ apps:
   my-app:
     lang: python
     path: ./app
-      entrypoint: main.py
+    entrypoint: main.py
 ```
 
 Gokku generates a Dockerfile automatically based on language.

@@ -30,20 +30,20 @@ my-project/
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
+    binary_name: api
   
   worker:
     path: ./cmd/worker
-      binary_name: worker
+    binary_name: worker
   
   admin:
     path: ./cmd/admin
-      binary_name: admin
+    binary_name: admin
   
   ml-service:
     lang: python
     path: ./services/ml
-      entrypoint: server.py
+    entrypoint: server.py
 ```
 
 ### Setup All Apps
@@ -145,13 +145,13 @@ apps:
   app-name: ml
     lang: python
     path: ./services/ml
-      entrypoint: server.py
+    entrypoint: server.py
   
   # Node.js Frontend
   app-name: frontend
     lang: nodejs
     path: ./frontend
-      entrypoint: server.js
+    entrypoint: server.js
 ```
 
 ## Shared Dependencies
@@ -270,7 +270,7 @@ apps:
   app-name: celery-worker
     lang: python
     path: ./services/worker
-      entrypoint: worker.py
+    entrypoint: worker.py
 ```
 
 ## Staging + Production

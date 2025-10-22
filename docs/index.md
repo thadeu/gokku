@@ -62,7 +62,7 @@ Create a minimal `gokku.yml`:
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
+    binary_name: api
     ports:
       - 80:3000
 ```

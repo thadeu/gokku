@@ -22,12 +22,12 @@ Here's a complete example with all options:
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
-      work_dir: .
-      go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
+    binary_name: api
+    work_dir: .
+    go_version: "1.25"
+    goos: linux
+    goarch: amd64
+    cgo_enabled: 0
     deployment:
       keep_releases: 5
       restart_policy: always
@@ -152,7 +152,7 @@ apps:
   app-name: ml-service
     lang: python
     path: ./services/ml
-      entrypoint: server.py
+    entrypoint: server.py
 ```
 
 Each app gets:

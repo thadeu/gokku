@@ -42,7 +42,7 @@ Most fields are optional with sensible defaults:
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
+    binary_name: api
 ```
 
 This minimal config will use defaults:
@@ -58,9 +58,9 @@ This minimal config will use defaults:
 apps:
   api-server:
     path: ./cmd/api
-      binary_name: api-server
-      work_dir: .
-      go_version: "1.25"
+    binary_name: api-server
+    work_dir: .
+    go_version: "1.25"
     environments:
       - name: production
         branch: main
@@ -77,9 +77,9 @@ apps:
     
   worker:
     path: ./cmd/worker
-      binary_name: worker
-      work_dir: .
-      go_version: "1.25"
+    binary_name: worker
+    work_dir: .
+    go_version: "1.25"
     environments:
       - name: production
         branch: main
@@ -91,19 +91,9 @@ apps:
   ml-service:
     lang: python
     path: ./services/ml
-      dockerfile: ./services/ml/Dockerfile  # optional
-      entrypoint: main.py
-      image: "python:3.11-slim"
-    environments:
-      - name: production
-        branch: main
-        default_env_vars:
-          PORT: 8080
-    deployment:
-      keep_releases: 3
-      keep_images: 5
-      restart_policy: always
-      restart_delay: 10
+    dockerfile: ./services/ml/Dockerfile  # optional
+    entrypoint: main.py
+    image: "python:3.11-slim"
 
 port_strategy: manual  # or 'auto' for sequential ports
 
@@ -197,7 +187,7 @@ When `build.image` is not specified, Gokku automatically detects the version fro
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
+     binary_name: api
 ```
 
 **Minimal Python app:**
@@ -213,17 +203,8 @@ apps:
 apps:
   custom-app:
     path: ./cmd/custom
-      binary_name: custom
-      go_version: "1.24"
-    environments:
-      - name: production
-        branch: main
-      - name: staging
-        branch: develop
-    deployment:
-      keep_releases: 10
-      restart_policy: unless-stopped
-      restart_delay: 10
+    binary_name: custom
+    go_version: "1.24"
 ```
 
 ---
@@ -382,17 +363,17 @@ All applications run in Docker containers with blue-green deployment for zero-do
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
-      go_version: "1.25"
-      goos: linux
-      goarch: amd64
-      cgo_enabled: 0
+    binary_name: api
+    go_version: "1.25"
+    goos: linux
+    goarch: amd64
+    cgo_enabled: 0
     
   ml-service:
     lang: python
     path: ./services/ml
-      entrypoint: main.py
-      image: "python:3.11-slim"
+    entrypoint: main.py
+    image: "python:3.11-slim"
 ```
 
 ### Automatic Dockerfile Generation
@@ -437,7 +418,7 @@ apps:
     lang: python
     path: ./services/ml
       dockerfile: ./services/ml/Dockerfile  # Use this instead of auto-generation
-      entrypoint: main.py
+    entrypoint: main.py
 ```
 
 ### How Docker Deployment Works
@@ -481,16 +462,16 @@ All applications use Docker containers, regardless of language:
 apps:
   api:
     path: ./cmd/api
-      binary_name: api
+    binary_name: api
     
   worker:
     path: ./cmd/worker
-      binary_name: worker
+    binary_name: worker
     
   vad:
     lang: python
     path: ./services/vad
-      entrypoint: main.py
+    entrypoint: main.py
 ```
 
 ---
@@ -696,11 +677,7 @@ cat > gokku.yml << EOF
 apps:
   test-app:
     path: ./main.go
-      binary_name: test-app
-
-environments:
-  - name: production
-    branch: main
+    binary_name: test-app
 EOF
 
 # 5. Create simple Go app
