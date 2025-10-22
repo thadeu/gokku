@@ -1,0 +1,26 @@
+#!/bin/bash
+cat << EOF
+Cron plugin for Gokku
+
+Commands:
+  gokku cron:info <service>           Show service information
+  gokku cron:logs <service>           Show service logs
+  gokku cron:schedule <service> <name> <schedule> <command>  Schedule a new job
+  gokku cron:list <service>           List all scheduled jobs
+  gokku cron:remove <service> <name>  Remove a scheduled job
+  gokku cron:run <service> <name>     Run a job immediately
+  gokku cron:logs-job <service> <name>  Show logs for a specific job
+
+Examples:
+  gokku cron:schedule cron-scheduler backup-redis "0 22 * * *" "gokku redis:backup-s3 redis-cache my-bucket"
+  gokku cron:list cron-scheduler
+  gokku cron:remove cron-scheduler backup-redis
+  gokku cron:logs-job cron-scheduler backup-redis
+
+Schedule format (cron syntax):
+  minute hour day month weekday
+  *     *    *   *     *        (every minute)
+  0     22   *   *     *        (daily at 10pm)
+  0     */6  *   *     *        (every 6 hours)
+  30    2    *   *     0        (weekly on Sunday at 2:30am)
+EOF

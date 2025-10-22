@@ -1,0 +1,62 @@
+#!/bin/bash
+SERVICE_NAME="$1"
+JOB_NAME="$2"
+CRON_SCHEDULE="$3"
+JOB_COMMAND="$4"
+
+echo "-----> Scheduling job '$JOB_NAME' in $SERVICE_NAME"
+
+# Source helper functions
+source /opt/gokku/scripts/plugin-helpers.sh
+
+# Check if container exists
+if ! container_exists "$SERVICE_NAME"; then
+    echo "Service '$SERVICE_NAME' not found"
+    exit 1
+fi
+
+# Validate parameters
+if [ -z "$JOB_NAME" ] || [ -z "$CRON_SCHEDULE" ] || [ -z "$JOB_COMMAND" ]; then
+    echo "Usage: gokku cron:schedule <service> <job-name> <schedule> <command>"
+    echo "Example: gokku cron:schedule cron-scheduler backup-redis '0 22 * * *' 'gokku redis:backup-s3 redis-cache my-bucket'"
+    exit 1
+fi
+
+# Get service directories
+SERVICE_DIR=$(get_service_config "$SERVICE_NAME" | grep -o '"service_dir":"[^"]*"' | cut -d'"' -f4)
+JOBS_DIR=$(get_service_config "$SERVICE_NAME" | grep -o '"jobs_dir":"[^"]*"' | cut -d'"' -f4)
+CRONTAB_FILE="$SERVICE_DIR/crontabs/root"
+
+if [ ! -d "$JOBS_DIR" ]; then
+    echo "Jobs directory not found"
+    exit 1
+fi
+
+# Create job file
+JOB_FILE="$JOBS_DIR/${JOB_NAME}.job"
+cat > "$JOB_FILE" << EOF
+JOB_NAME="$JOB_NAME"
+JOB_COMMAND="$JOB_COMMAND"
+SERVICE_NAME="$SERVICE_NAME"
+EOF
+
+# Add to crontab
+CRON_ENTRY="$CRON_SCHEDULE /opt/run-job.sh $JOB_NAME \"$JOB_COMMAND\" $SERVICE_NAME"
+
+# Check if job already exists in crontab
+if grep -q "JOB_NAME=$JOB_NAME" "$CRONTAB_FILE" 2>/dev/null; then
+    echo "Job '$JOB_NAME' already exists. Updating..."
+    # Remove existing entry
+    grep -v "JOB_NAME=$JOB_NAME" "$CRONTAB_FILE" > "$CRONTAB_FILE.tmp" 2>/dev/null || true
+    mv "$CRONTAB_FILE.tmp" "$CRONTAB_FILE"
+fi
+
+# Add new entry
+echo "$CRON_ENTRY" >> "$CRONTAB_FILE"
+
+# Reload crontab in container
+docker exec "$SERVICE_NAME" crond -f -l 2 &
+
+echo "-----> Job '$JOB_NAME' scheduled successfully"
+echo "       Schedule: $CRON_SCHEDULE"
+echo "       Command: $JOB_COMMAND"

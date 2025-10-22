@@ -1,0 +1,71 @@
+ software
+#!/bin/bash
+SERVICE_NAME="$1"
+
+echo "Cron Service: $SERVICE_NAME"
+echo "============================="
+
+# Source helper functions
+source /opt/gokku/scripts/plugin-helpers.sh
+
+# Check if container exists
+if ! container_exists "$SERVICE_NAME"; then
+    echo "Status: NOT FOUND"
+    exit 0
+fi
+
+# Check if container is running
+if ! container_is_running "$SERVICE_NAME"; then
+    echo "Status: STOPPED"
+    exit 0
+fi
+
+# Get service information
+STATUS=$(get_container_status "$SERVICE_NAME")
+UPTIME=$(get_container_uptime "$SERVICE_NAME")
+SERVICE_DIR=$(get_service_config "$SERVICE_NAME" | grep -o '"service_dir":"[^"]*"' | cut -d'"' -f4)
+JOBS_DIR=$(get_service_config "$SERVICE_NAME" | grep -o '"jobs_dir":"[^"]*"' | cut -d'"' -f4)
+LOGS_DIR=$(get_service_config "$SERVICE_NAME" | grep -o '"logs_dir":"[^"]*"' | cut -d'"' -f4)
+
+echo "Status: $STATUS"
+echo "Uptime: $UPTIME"
+echo "Jobs directory: $JOBS_DIR"
+echo "Logs directory: $LOGS_DIR"
+
+# Count scheduled jobs
+JOB_COUNT=0
+if [ -d "$JOBS_DIR" ]; then
+    JOB_COUNT=$(find "$JOBS_DIR" -name "*.job" | wc -l)
+fi
+
+echo "Scheduled jobs: $JOB_COUNT"
+
+# Show recent job executions
+if [ -d "$LOGS_DIR" ]; then
+    echo ""
+    echo "Recent job executions:"
+    echo "---------------------"
+
+    # Get last 5 job executions
+    RECENT_JOBS=$(find "$LOGS_DIR" -name "*.log" -type f -printf "%T@ %p\n" | sort -nr | head -5 | cut -d' ' -f2-)
+
+    if [ -n "$RECENT_JOBS" ]; then
+        for log_file in $RECENT_JOBS; do
+            if [ -f "$log_file" ]; then
+                JOB_NAME=$(basename "$log_file" .log | sed 's/_[0-9]*_[0-9]*$//')
+                EXECUTION_TIME=$(basename "$log_file" .log | sed 's/.*_\([0-9]*_[0-9]*\)$/\1/' | tr '_' ' ')
+                EXIT_CODE=$(tail -1 "$log_file" | grep -o "Exit code: [0-9]*" | cut -d' ' -f3 || echo "unknown")
+
+                if [ "$EXIT_CODE" = "0" ]; then
+                    STATUS_ICON="✓"
+                else
+                    STATUS_ICON="✗"
+                fi
+
+                echo "  $STATUS_ICON $JOB_NAME ($EXECUTION_TIME) - Exit code: $EXIT_CODE"
+            fi
+        done
+    else
+        echo "  No job executions found"
+    fi
+fi
