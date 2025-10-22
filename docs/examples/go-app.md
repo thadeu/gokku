@@ -22,9 +22,6 @@ my-go-api/
 ### gokku.yml
 
 ```yaml
-project:
-  name: my-go-api
-
 apps:
   api:
     build:

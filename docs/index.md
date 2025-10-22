@@ -59,9 +59,6 @@ gokku version
 Create a minimal `gokku.yml`:
 
 ```yaml
-project:
-  name: my-app
-
 apps:
   api:
     build:

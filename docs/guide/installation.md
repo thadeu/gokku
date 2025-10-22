@@ -105,9 +105,6 @@ gokku --version
 In your project root, create `gokku.yml`:
 
 ```yaml
-project:
-  name: my-project
-
 apps:
   api:
     build:

@@ -24,9 +24,6 @@ my-react-app/
 ### gokku.yml
 
 ```yaml
-project:
-  name: my-react-app
-
 apps:
   app-name: react-app
     lang: nodejs

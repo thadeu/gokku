@@ -20,9 +20,6 @@ my-rails-app/
 ### gokku.yml
 
 ```yaml
-project:
-  name: my-rails-app
-
 apps:
   app-name: rails-app
     lang: ruby

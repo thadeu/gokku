@@ -253,11 +253,6 @@ apps:
 ## Complete Example
 
 ```yaml
-# Project settings
-project:
-  name: my-project
-  base_dir: /opt/gokku
-
 # Global defaults
 defaults:
   lang: go

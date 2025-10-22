@@ -43,9 +43,6 @@ gokku server add production ubuntu@your-server
 In your project root, create `gokku.yml`:
 
 ```yaml
-project:
-  name: my-app
-
 apps:
   api:
     build:

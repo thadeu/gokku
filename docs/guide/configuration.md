@@ -149,9 +149,6 @@ apps:
 Deploy multiple apps from one repository:
 
 ```yaml
-project:
-  name: my-monorepo
-
 apps:
   app-name: api
     build:

@@ -18,9 +18,6 @@ Gokku uses a **git-push deployment** workflow:
 In your project root:
 
 ```yaml
-project:
-  name: my-app
-
 apps:
   app-name: api
     build:
