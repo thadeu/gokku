@@ -1,0 +1,76 @@
+#!/bin/bash
+SERVICE_NAME="$1"
+VERSION="$2"
+
+echo "-----> Installing PostgreSQL service: $SERVICE_NAME"
+
+# Source helper functions
+source /opt/gokku/scripts/plugin-helpers.sh
+
+# Determine PostgreSQL image version
+if [ -z "$VERSION" ]; then
+    POSTGRES_IMAGE="postgres"
+    echo "-----> Using default PostgreSQL image: postgres (latest)"
+else
+    POSTGRES_IMAGE="postgres:$VERSION"
+    echo "-----> Using PostgreSQL image: $POSTGRES_IMAGE"
+fi
+
+# Get next available port
+PORT=$(get_next_port 5432)
+
+# Create service directory
+SERVICE_DIR=$(create_service_dir "$SERVICE_NAME")
+mkdir -p "$SERVICE_DIR/data"
+
+# Generate PostgreSQL credentials
+POSTGRES_PASSWORD=$(generate_password)
+POSTGRES_USER="postgres"
+POSTGRES_DB="postgres"
+
+# Create PostgreSQL container with persistent volume
+docker run -d \
+  --name "$SERVICE_NAME" \
+  -p "$PORT:5432" \
+  -e POSTGRES_USER="$POSTGRES_USER" \
+  -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+  -e POSTGRES_DB="$POSTGRES_DB" \
+  -v "${SERVICE_NAME}_data:/var/lib/postgresql/data" \
+  --restart unless-stopped \
+  "$POSTGRES_IMAGE"
+
+# Wait for container to be ready
+wait_for_container "$SERVICE_NAME"
+
+# Wait a bit more for PostgreSQL to be fully ready
+sleep 3
+
+# Update service configuration using JSON
+CONFIG_FILE="/opt/gokku/services/$SERVICE_NAME/config.json"
+cat > "$CONFIG_FILE" << EOF
+{
+  "name": "$SERVICE_NAME",
+  "plugin": "postgres",
+  "container_id": "$(docker inspect --format='{{.Id}}' $SERVICE_NAME)",
+  "running": true,
+  "linked_apps": [],
+  "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "config": {
+    "port": "$PORT",
+    "config_dir": "$SERVICE_DIR",
+    "password": "$POSTGRES_PASSWORD",
+    "user": "$POSTGRES_USER",
+    "database": "$POSTGRES_DB",
+    "data_volume": "${SERVICE_NAME}_data",
+    "version": "${VERSION:-latest}",
+    "image": "$POSTGRES_IMAGE"
+  }
+}
+EOF
+
+echo "-----> PostgreSQL service installed on port $PORT"
+echo "       User: $POSTGRES_USER"
+echo "       Password: $POSTGRES_PASSWORD"
+echo "       Database: $POSTGRES_DB"
+echo "       Data volume: ${SERVICE_NAME}_data"
+

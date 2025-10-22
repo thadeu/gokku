@@ -14,10 +14,14 @@ Redis plugin for Gokku that provides Redis database services with persistent sto
 
 ```bash
 # Install the plugin
-gokku plugins:add thadeu/gokku-redis
+gokku plugins:add redis
 
-# Create a Redis service
+# Create a Redis service (default version)
 gokku services:create redis --name redis-cache
+
+# Create with specific version
+gokku services:create redis:7 --name redis-cache
+gokku services:create redis:7-alpine --name redis-cache
 
 # Link to an application
 gokku services:link redis-cache -a myapp

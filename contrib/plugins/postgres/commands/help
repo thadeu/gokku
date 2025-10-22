@@ -1,0 +1,25 @@
+#!/bin/bash
+
+cat << EOF
+Gokku PostgreSQL plugin
+
+Usage:
+  gokku services:create postgres[:<version>] --name <service>
+
+Commands:
+  gokku postgres:info <service>           Show service information
+  gokku postgres:logs <service>           Show service logs
+  gokku postgres:psql <service>           Connect to PostgreSQL (psql)
+  gokku postgres:backup <service>         Backup database to file
+  gokku postgres:restore <service> <file> Restore database from file
+
+Examples:
+  gokku services:create postgres --name pg-0
+  gokku services:create postgres:14 --name pg-0
+  gokku services:link pg-0 -a api-prod
+  gokku postgres:info pg-0
+  gokku postgres:psql pg-0
+  gokku postgres:backup pg-0 > backup.sql
+  gokku postgres:restore pg-0 backup.sql
+EOF
+

@@ -1,10 +1,20 @@
 #!/bin/bash
 SERVICE_NAME="$1"
+VERSION="$2"
 
 echo "-----> Installing Redis service: $SERVICE_NAME"
 
 # Source helper functions
 source /opt/gokku/scripts/plugin-helpers.sh
+
+# Determine Redis image version
+if [ -z "$VERSION" ]; then
+    REDIS_IMAGE="redis:alpine"
+    echo "-----> Using default Redis image: redis:alpine"
+else
+    REDIS_IMAGE="redis:$VERSION"
+    echo "-----> Using Redis image: $REDIS_IMAGE"
+fi
 
 # Get next available port
 PORT=$(get_next_port 6379)
@@ -51,7 +61,7 @@ docker run -d \
   -v "$SERVICE_DIR/redis.conf:/usr/local/etc/redis/redis.conf:ro" \
   -v "${SERVICE_NAME}_data:/data" \
   --restart unless-stopped \
-  redis:alpine redis-server /usr/local/etc/redis/redis.conf
+  "$REDIS_IMAGE" redis-server /usr/local/etc/redis/redis.conf
 
 # Wait for container to be ready
 wait_for_container "$SERVICE_NAME"

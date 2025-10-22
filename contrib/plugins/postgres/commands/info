@@ -1,0 +1,59 @@
+#!/bin/bash
+SERVICE_NAME="$1"
+
+echo "PostgreSQL Service: $SERVICE_NAME"
+echo "============================="
+
+# Source helper functions
+source /opt/gokku/scripts/plugin-helpers.sh
+
+# Check if container exists
+if ! container_exists "$SERVICE_NAME"; then
+    echo "Status: NOT FOUND"
+    exit 0
+fi
+
+# Check if container is running
+if ! container_is_running "$SERVICE_NAME"; then
+    echo "Status: STOPPED"
+    exit 0
+fi
+
+# Get service information
+STATUS=$(get_container_status "$SERVICE_NAME")
+PORT=$(get_container_port "$SERVICE_NAME" 5432)
+UPTIME=$(get_container_uptime "$SERVICE_NAME")
+CONFIG_DIR=$(get_service_config "$SERVICE_NAME" | grep -o '"config_dir":"[^"]*"' | cut -d'"' -f4)
+DATA_VOLUME=$(get_service_config "$SERVICE_NAME" | grep -o '"data_volume":"[^"]*"' | cut -d'"' -f4)
+POSTGRES_USER=$(get_service_config "$SERVICE_NAME" | grep -o '"user":"[^"]*"' | cut -d'"' -f4)
+POSTGRES_DB=$(get_service_config "$SERVICE_NAME" | grep -o '"database":"[^"]*"' | cut -d'"' -f4)
+POSTGRES_IMAGE=$(get_service_config "$SERVICE_NAME" | grep -o '"image":"[^"]*"' | cut -d'"' -f4)
+
+echo "Status: $STATUS"
+echo "Port: $PORT"
+echo "Uptime: $UPTIME"
+echo "Image: ${POSTGRES_IMAGE:-postgres:latest}"
+echo "User: $POSTGRES_USER"
+echo "Database: $POSTGRES_DB"
+echo "Configuration: $CONFIG_DIR"
+echo "Data volume: $DATA_VOLUME"
+
+# Get PostgreSQL-specific information
+if container_is_running "$SERVICE_NAME"; then
+    echo ""
+    echo "PostgreSQL Information:"
+
+    # Get PostgreSQL version
+    PG_VERSION=$(docker exec "$SERVICE_NAME" psql --version 2>/dev/null | head -1 || echo "Unknown")
+    echo "Version: $PG_VERSION"
+
+    # Get database size
+    POSTGRES_PASSWORD=$(get_service_config "$SERVICE_NAME" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)
+    DB_SIZE=$(docker exec "$SERVICE_NAME" psql -U "$POSTGRES_USER" -c "SELECT pg_size_pretty(pg_database_size('$POSTGRES_DB'));" -t 2>/dev/null | tr -d ' ' || echo "Unknown")
+    echo "Database size: $DB_SIZE"
+
+    # Get number of connections
+    CONNECTIONS=$(docker exec "$SERVICE_NAME" psql -U "$POSTGRES_USER" -c "SELECT count(*) FROM pg_stat_activity;" -t 2>/dev/null | tr -d ' ' || echo "Unknown")
+    echo "Active connections: $CONNECTIONS"
+fi
+

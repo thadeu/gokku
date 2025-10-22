@@ -73,15 +73,16 @@ func handleServicesList() {
 // handleServicesCreate creates a new service
 func handleServicesCreate(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: gokku services:create <plugin> --name <service-name>")
+		fmt.Println("Usage: gokku services:create <plugin>[:<version>] --name <service-name>")
 		fmt.Println("")
 		fmt.Println("Examples:")
 		fmt.Println("  gokku services:create postgres --name postgres-api")
-		fmt.Println("  gokku services:create redis --name redis-cache")
+		fmt.Println("  gokku services:create postgres:14 --name postgres-api")
+		fmt.Println("  gokku services:create redis:7 --name redis-cache")
 		os.Exit(1)
 	}
 
-	pluginName := args[0]
+	pluginWithVersion := args[0]
 	serviceName := internal.ExtractFlagValue(args, "--name")
 
 	if serviceName == "" {
@@ -89,11 +90,23 @@ func handleServicesCreate(args []string) {
 		os.Exit(1)
 	}
 
+	// Split plugin and version by ':'
+	parts := strings.Split(pluginWithVersion, ":")
+	pluginName := parts[0]
+	version := ""
+	if len(parts) > 1 {
+		version = parts[1]
+	}
+
 	sm := services.NewServiceManager()
 
-	fmt.Printf("Creating service '%s' from plugin '%s'...\n", serviceName, pluginName)
+	if version != "" {
+		fmt.Printf("Creating service '%s' from plugin '%s:%s'...\n", serviceName, pluginName, version)
+	} else {
+		fmt.Printf("Creating service '%s' from plugin '%s'...\n", serviceName, pluginName)
+	}
 
-	if err := sm.CreateService(pluginName, serviceName); err != nil {
+	if err := sm.CreateService(pluginName, serviceName, version); err != nil {
 		fmt.Printf("Error creating service: %v\n", err)
 		os.Exit(1)
 	}
@@ -303,6 +316,8 @@ func showServicesHelp() {
 	fmt.Println("")
 	fmt.Println("Examples:")
 	fmt.Println("  gokku services:create postgres --name postgres-api")
+	fmt.Println("  gokku services:create postgres:14 --name postgres-api")
+	fmt.Println("  gokku services:create redis:7 --name redis-cache")
 	fmt.Println("  gokku services:link postgres-api -a api-production")
-	fmt.Println("  gokku postgres:export postgres-api > backup.sql")
+	fmt.Println("  gokku postgres:backup postgres-api > backup.sql")
 }

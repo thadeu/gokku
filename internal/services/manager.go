@@ -4,8 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
+
+	"infra/internal"
 )
 
 // ServiceManager manages services and their lifecycle
@@ -34,7 +38,7 @@ func NewServiceManager() *ServiceManager {
 }
 
 // CreateService creates a new service from a plugin
-func (sm *ServiceManager) CreateService(pluginName, serviceName string) error {
+func (sm *ServiceManager) CreateService(pluginName, serviceName, version string) error {
 	// Check if plugin exists
 	if !sm.pluginExists(pluginName) {
 		return fmt.Errorf("plugin '%s' not found", pluginName)
@@ -61,10 +65,28 @@ func (sm *ServiceManager) CreateService(pluginName, serviceName string) error {
 		Config:     make(map[string]string),
 	}
 
+	// Store version if provided
+	if version != "" {
+		service.Config["version"] = version
+	}
+
 	if err := sm.saveServiceConfig(serviceName, service); err != nil {
 		// Cleanup on error
 		os.RemoveAll(serviceDir)
 		return fmt.Errorf("failed to save service config: %v", err)
+	}
+
+	// Execute plugin install script
+	installScript := filepath.Join(sm.pluginsDir, pluginName, "install")
+	if _, err := os.Stat(installScript); err == nil {
+		cmd := exec.Command("bash", installScript, serviceName, version)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			// Cleanup on error
+			os.RemoveAll(serviceDir)
+			return fmt.Errorf("failed to execute install script: %v", err)
+		}
 	}
 
 	return nil
@@ -91,6 +113,11 @@ func (sm *ServiceManager) LinkService(serviceName, appName, env string) error {
 		}
 	}
 
+	// Add environment variables to app
+	if err := sm.addServiceEnvVars(serviceName, appName, service.Plugin); err != nil {
+		return fmt.Errorf("failed to add environment variables: %v", err)
+	}
+
 	return nil
 }
 
@@ -100,6 +127,11 @@ func (sm *ServiceManager) UnlinkService(serviceName, appName, env string) error 
 	service, err := sm.getServiceConfig(serviceName)
 	if err != nil {
 		return fmt.Errorf("service '%s' not found: %v", serviceName, err)
+	}
+
+	// Remove environment variables from app
+	if err := sm.removeServiceEnvVars(serviceName, appName, service.Plugin); err != nil {
+		return fmt.Errorf("failed to remove environment variables: %v", err)
 	}
 
 	// Remove app from linked apps
@@ -150,6 +182,23 @@ func (sm *ServiceManager) DestroyService(serviceName string) error {
 	// Check if service exists
 	if !sm.serviceExists(serviceName) {
 		return fmt.Errorf("service '%s' not found", serviceName)
+	}
+
+	// Get service config to know which plugin it belongs to
+	service, err := sm.getServiceConfig(serviceName)
+	if err != nil {
+		return fmt.Errorf("failed to get service config: %v", err)
+	}
+
+	// Execute plugin uninstall script
+	uninstallScript := filepath.Join(sm.pluginsDir, service.Plugin, "uninstall")
+	if _, err := os.Stat(uninstallScript); err == nil {
+		cmd := exec.Command("bash", uninstallScript, serviceName)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to execute uninstall script: %v", err)
+		}
 	}
 
 	// Remove service directory
@@ -222,4 +271,144 @@ func (sm *ServiceManager) isAppLinked(linkedApps []string, appName, env string) 
 		}
 	}
 	return false
+}
+
+// addServiceEnvVars adds service environment variables to an app
+func (sm *ServiceManager) addServiceEnvVars(serviceName, appName, pluginName string) error {
+	// Get service configuration
+	service, err := sm.getServiceConfig(serviceName)
+	if err != nil {
+		return err
+	}
+
+	// Get environment variables based on plugin type
+	envVars := sm.getServiceEnvVars(serviceName, service.Config, pluginName)
+	if len(envVars) == 0 {
+		return nil
+	}
+
+	// Get app env file path
+	envFile := filepath.Join("/opt/gokku/apps", appName, "shared", ".env")
+
+	// Load existing env vars
+	existingVars := internal.LoadEnvFile(envFile)
+
+	// Add service env vars
+	for key, value := range envVars {
+		existingVars[key] = value
+	}
+
+	// Save updated env vars
+	return internal.SaveEnvFile(envFile, existingVars)
+}
+
+// removeServiceEnvVars removes service environment variables from an app
+func (sm *ServiceManager) removeServiceEnvVars(serviceName, appName, pluginName string) error {
+	// Get environment variable keys based on plugin type
+	envKeys := sm.getServiceEnvKeys(pluginName)
+	if len(envKeys) == 0 {
+		return nil
+	}
+
+	// Get app env file path
+	envFile := filepath.Join("/opt/gokku/apps", appName, "shared", ".env")
+
+	// Load existing env vars
+	existingVars := internal.LoadEnvFile(envFile)
+
+	// Remove service env vars
+	for _, key := range envKeys {
+		delete(existingVars, key)
+	}
+
+	// Save updated env vars
+	return internal.SaveEnvFile(envFile, existingVars)
+}
+
+// getServiceEnvVars returns environment variables for a service based on plugin type
+func (sm *ServiceManager) getServiceEnvVars(serviceName string, config map[string]string, pluginName string) map[string]string {
+	envVars := make(map[string]string)
+
+	switch pluginName {
+	case "postgres":
+		host := "localhost"
+		port := config["port"]
+		user := config["user"]
+		password := config["password"]
+		database := config["database"]
+
+		if port == "" || user == "" || password == "" || database == "" {
+			return envVars
+		}
+
+		envVars["DATABASE_URL"] = fmt.Sprintf("postgres://%s:%s@%s:%s/%s", user, password, host, port, database)
+		envVars["POSTGRES_HOST"] = host
+		envVars["POSTGRES_PORT"] = port
+		envVars["POSTGRES_USER"] = user
+		envVars["POSTGRES_PASSWORD"] = password
+		envVars["POSTGRES_DB"] = database
+
+	case "redis":
+		host := "localhost"
+		port := config["port"]
+		password := config["password"]
+
+		if port == "" || password == "" {
+			return envVars
+		}
+
+		envVars["REDIS_URL"] = fmt.Sprintf("redis://:%s@%s:%s", password, host, port)
+		envVars["REDIS_HOST"] = host
+		envVars["REDIS_PORT"] = port
+		envVars["REDIS_PASSWORD"] = password
+	}
+
+	return envVars
+}
+
+// getServiceEnvKeys returns environment variable keys for a plugin type
+func (sm *ServiceManager) getServiceEnvKeys(pluginName string) []string {
+	switch pluginName {
+	case "postgres":
+		return []string{
+			"DATABASE_URL",
+			"POSTGRES_HOST",
+			"POSTGRES_PORT",
+			"POSTGRES_USER",
+			"POSTGRES_PASSWORD",
+			"POSTGRES_DB",
+		}
+	case "redis":
+		return []string{
+			"REDIS_URL",
+			"REDIS_HOST",
+			"REDIS_PORT",
+			"REDIS_PASSWORD",
+		}
+	default:
+		return []string{}
+	}
+}
+
+// getServiceContainerInfo gets container information from Docker
+func (sm *ServiceManager) getServiceContainerInfo(serviceName string) (map[string]string, error) {
+	info := make(map[string]string)
+
+	// Check if container exists
+	checkCmd := exec.Command("docker", "ps", "-aq", "-f", fmt.Sprintf("name=^%s$", serviceName))
+	output, err := checkCmd.Output()
+	if err != nil || len(strings.TrimSpace(string(output))) == 0 {
+		return info, fmt.Errorf("container not found")
+	}
+
+	// Check if container is running
+	runningCmd := exec.Command("docker", "ps", "-q", "-f", fmt.Sprintf("name=^%s$", serviceName))
+	runningOutput, err := runningCmd.Output()
+	if err != nil || len(strings.TrimSpace(string(runningOutput))) == 0 {
+		info["running"] = "false"
+		return info, nil
+	}
+
+	info["running"] = "true"
+	return info, nil
 }

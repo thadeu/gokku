@@ -1,0 +1,31 @@
+#!/bin/bash
+SERVICE_NAME="$1"
+
+echo "-----> Uninstalling PostgreSQL service: $SERVICE_NAME"
+
+# Source helper functions
+source /opt/gokku/scripts/plugin-helpers.sh
+
+# Check if container exists
+if container_exists "$SERVICE_NAME"; then
+    # Stop and remove container
+    docker stop "$SERVICE_NAME" 2>/dev/null || true
+    docker rm "$SERVICE_NAME" 2>/dev/null || true
+    echo "-----> Container removed"
+fi
+
+# Remove persistent volume
+if docker volume ls | grep -q "${SERVICE_NAME}_data"; then
+    docker volume rm "${SERVICE_NAME}_data" 2>/dev/null || true
+    echo "-----> Data volume removed"
+fi
+
+# Remove service directory
+SERVICE_DIR="/opt/gokku/services/$SERVICE_NAME"
+if [ -d "$SERVICE_DIR" ]; then
+    rm -rf "$SERVICE_DIR"
+    echo "-----> Service directory removed"
+fi
+
+echo "-----> PostgreSQL service uninstalled successfully"
+
