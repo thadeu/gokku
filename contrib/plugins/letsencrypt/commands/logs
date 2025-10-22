@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+SERVICE_NAME="$1"
+LINES="${2:-50}"
+
+if [ -z "$SERVICE_NAME" ]; then
+    echo "Usage: $0 <service-name> [lines]"
+    echo "Example: $0 ssl-proxy 100"
+    exit 1
+fi
+
+echo "-----> Showing logs for Let's Encrypt service: $SERVICE_NAME"
+
+# Check if service exists
+SERVICE_DIR="/opt/gokku/services/$SERVICE_NAME"
+if [ ! -d "$SERVICE_DIR" ]; then
+    echo "-----> Service '$SERVICE_NAME' not found"
+    exit 1
+fi
+
+# Check if logs directory exists
+LOGS_DIR="$SERVICE_DIR/logs"
+if [ ! -d "$LOGS_DIR" ]; then
+    echo "-----> No logs directory found"
+    echo "       Logs will be created when certificates are generated"
+    exit 0
+fi
+
+# Show recent logs
+echo "-----> Recent logs (last $LINES lines):"
+echo ""
+
+if [ -f "$LOGS_DIR/letsencrypt.log" ]; then
+    echo "-----> Let's Encrypt logs:"
+    tail -n "$LINES" "$LOGS_DIR/letsencrypt.log"
+    echo ""
+fi
+
+# Show renewal logs if they exist
+if [ -f "/var/log/gokku-letsencrypt-$SERVICE_NAME.log" ]; then
+    echo "-----> Renewal logs:"
+    tail -n "$LINES" "/var/log/gokku-letsencrypt-$SERVICE_NAME.log"
+    echo ""
+fi
+
+# Show all log files in the logs directory
+echo "-----> Available log files:"
+ls -la "$LOGS_DIR" 2>/dev/null | grep -v "^total" | awk '{print "       " $9 " (" $5 " bytes, " $6 " " $7 " " $8 ")"}'
+
+echo ""
+echo "-----> To view specific log file:"
+echo "       tail -f $LOGS_DIR/letsencrypt.log"
+echo "       tail -f /var/log/gokku-letsencrypt-$SERVICE_NAME.log"

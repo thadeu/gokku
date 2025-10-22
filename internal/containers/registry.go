@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -222,9 +223,29 @@ func GetNextAvailablePort() (int, error) {
 
 // isPortAvailable checks if a port is available
 func isPortAvailable(port int) bool {
-	// This is a simplified check - in production you might want to
-	// actually try to bind to the port or check against running containers
-	return true // For now, assume all ports are available
+	portPattern := fmt.Sprintf(":%d ", port)
+
+	// Try netstat with grep first
+	netstatCmd := exec.Command("sh", "-c", fmt.Sprintf("netstat -ln 2>/dev/null | grep -q '%s'", portPattern))
+
+	err := netstatCmd.Run()
+
+	if err == nil {
+		// grep found the port, so it's in use
+		return false
+	}
+
+	// Try ss with grep as fallback
+	ssCmd := exec.Command("sh", "-c", fmt.Sprintf("ss -ln 2>/dev/null | grep -q '%s'", portPattern))
+	err = ssCmd.Run()
+
+	if err == nil {
+		// grep found the port, so it's in use
+		return false
+	}
+
+	// If both commands fail or port is not found, consider it available
+	return true
 }
 
 // CreateContainerInfo creates a new ContainerInfo struct

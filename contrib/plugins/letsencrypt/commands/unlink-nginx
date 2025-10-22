@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+SERVICE_NAME="$1"
+
+if [ -z "$SERVICE_NAME" ]; then
+    echo "Usage: $0 <service-name>"
+    echo "Example: $0 ssl-proxy"
+    exit 1
+fi
+
+echo "-----> Unlinking Let's Encrypt service '$SERVICE_NAME' from nginx"
+
+# Check if service exists
+SERVICE_DIR="/opt/gokku/services/$SERVICE_NAME"
+if [ ! -d "$SERVICE_DIR" ]; then
+    echo "-----> Service '$SERVICE_NAME' not found"
+    exit 1
+fi
+
+# Check if nginx service is linked
+if [ ! -f "$SERVICE_DIR/nginx-service" ]; then
+    echo "-----> No nginx service linked to '$SERVICE_NAME'"
+    exit 0
+fi
+
+NGINX_SERVICE=$(cat "$SERVICE_DIR/nginx-service")
+echo "-----> Unlinking from nginx service: $NGINX_SERVICE"
+
+# Remove SSL configurations from nginx
+if [ -d "/opt/gokku/services/$NGINX_SERVICE/conf.d" ]; then
+    echo "-----> Removing SSL configurations from nginx..."
+
+    # Remove SSL config files created by this service
+    for domain_dir in "$SERVICE_DIR/certs"/*; do
+        if [ -d "$domain_dir" ]; then
+            domain=$(basename "$domain_dir")
+            ssl_config="/opt/gokku/services/$NGINX_SERVICE/conf.d/$domain-ssl.conf"
+            if [ -f "$ssl_config" ]; then
+                echo "       Removing SSL config: $ssl_config"
+                rm -f "$ssl_config"
+            fi
+        fi
+    done
+fi
+
+# Remove SSL certificate symlinks
+if [ -d "/opt/gokku/services/$NGINX_SERVICE/ssl" ]; then
+    echo "-----> Removing SSL certificate symlinks..."
+
+    for domain_dir in "$SERVICE_DIR/certs"/*; do
+        if [ -d "$domain_dir" ]; then
+            domain=$(basename "$domain_dir")
+            ssl_cert="/opt/gokku/services/$NGINX_SERVICE/ssl/$domain.crt"
+            ssl_key="/opt/gokku/services/$NGINX_SERVICE/ssl/$domain.key"
+
+            if [ -L "$ssl_cert" ]; then
+                echo "       Removing SSL certificate: $ssl_cert"
+                rm -f "$ssl_cert"
+            fi
+            if [ -L "$ssl_key" ]; then
+                echo "       Removing SSL key: $ssl_key"
+                rm -f "$ssl_key"
+            fi
+        fi
+    done
+fi
+
+# Update nginx service configuration
+if [ -f "/opt/gokku/services/$NGINX_SERVICE/service.conf" ]; then
+    echo "-----> Updating nginx service configuration..."
+    # Remove letsencrypt_service reference
+    jq 'del(.letsencrypt_service)' "/opt/gokku/services/$NGINX_SERVICE/service.conf" > "/opt/gokku/services/$NGINX_SERVICE/service.conf.tmp" && mv "/opt/gokku/services/$NGINX_SERVICE/service.conf.tmp" "/opt/gokku/services/$NGINX_SERVICE/service.conf"
+fi
+
+# Update Let's Encrypt service configuration
+if [ -f "$SERVICE_DIR/service.conf" ]; then
+    echo "-----> Updating Let's Encrypt service configuration..."
+    # Remove nginx_service reference
+    jq 'del(.nginx_service)' "$SERVICE_DIR/service.conf" > "$SERVICE_DIR/service.conf.tmp" && mv "$SERVICE_DIR/service.conf.tmp" "$SERVICE_DIR/service.conf"
+fi
+
+# Remove nginx service link
+rm -f "$SERVICE_DIR/nginx-service"
+
+# Test and reload nginx if running
+if container_exists "$NGINX_SERVICE" && container_is_running "$NGINX_SERVICE"; then
+    echo "-----> Testing nginx configuration..."
+    if docker exec "$NGINX_SERVICE" nginx -t; then
+        echo "-----> Reloading nginx..."
+        docker exec "$NGINX_SERVICE" nginx -s reload
+        echo "       Nginx reloaded successfully"
+    else
+        echo "-----> Nginx configuration test failed"
+        echo "       Please check nginx configuration manually"
+    fi
+else
+    echo "-----> Nginx service not running"
+    echo "       Configuration will be applied on next nginx start"
+fi
+
+echo "-----> Successfully unlinked Let's Encrypt service from nginx"
+echo "       Let's Encrypt service: $SERVICE_NAME"
+echo "       Nginx service: $NGINX_SERVICE"
+echo "       SSL configurations removed"
+echo ""
+echo "-----> Note: SSL certificates are still available in $SERVICE_DIR/certs/"
+echo "       You can re-link to nginx or another service later"

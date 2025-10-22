@@ -1,0 +1,110 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+SERVICE_NAME="$1"
+
+if [ -z "$SERVICE_NAME" ]; then
+    echo "Usage: $0 <service-name>"
+    echo "Example: $0 ssl-proxy"
+    exit 1
+fi
+
+echo "-----> Setting up auto-renewal cron job for Let's Encrypt service: $SERVICE_NAME"
+
+# Check if service exists
+SERVICE_DIR="/opt/gokku/services/$SERVICE_NAME"
+if [ ! -d "$SERVICE_DIR" ]; then
+    echo "-----> Service '$SERVICE_NAME' not found"
+    exit 1
+fi
+
+# Create renewal script
+RENEWAL_SCRIPT="$SERVICE_DIR/renew-certificates.sh"
+cat > "$RENEWAL_SCRIPT" << 'EOF'
+#!/bin/bash
+
+# Let's Encrypt certificate renewal script
+SERVICE_NAME="$1"
+SERVICE_DIR="/opt/gokku/services/$SERVICE_NAME"
+
+if [ -z "$SERVICE_NAME" ]; then
+    echo "Usage: $0 <service-name>"
+    exit 1
+fi
+
+echo "$(date): Starting certificate renewal for $SERVICE_NAME"
+
+# Check if service directory exists
+if [ ! -d "$SERVICE_DIR" ]; then
+    echo "$(date): Service directory not found: $SERVICE_DIR"
+    exit 1
+fi
+
+# Renew certificates using certbot
+docker run --rm \
+    -v "$SERVICE_DIR/certs:/etc/letsencrypt/certs" \
+    -v "$SERVICE_DIR/accounts:/etc/letsencrypt/accounts" \
+    -v "$SERVICE_DIR/logs:/var/log/letsencrypt" \
+    certbot/certbot renew \
+    --config-dir "/etc/letsencrypt/accounts" \
+    --cert-path "/etc/letsencrypt/certs" \
+    --non-interactive \
+    --quiet
+
+if [ $? -eq 0 ]; then
+    echo "$(date): Certificate renewal completed successfully"
+
+    # If nginx service is linked, reload nginx
+    if [ -f "$SERVICE_DIR/nginx-service" ]; then
+        NGINX_SERVICE=$(cat "$SERVICE_DIR/nginx-service")
+        echo "$(date): Reloading nginx service: $NGINX_SERVICE"
+
+        if container_exists "$NGINX_SERVICE" && container_is_running "$NGINX_SERVICE"; then
+            docker exec "$NGINX_SERVICE" nginx -s reload
+            echo "$(date): Nginx reloaded successfully"
+        else
+            echo "$(date): Nginx service not running, certificates will be available on next start"
+        fi
+    fi
+else
+    echo "$(date): Certificate renewal failed"
+    exit 1
+fi
+EOF
+
+chmod +x "$RENEWAL_SCRIPT"
+
+# Create cron job
+CRON_FILE="/etc/cron.d/gokku-letsencrypt-$SERVICE_NAME"
+cat > "$CRON_FILE" << EOF
+# Auto-renewal for Let's Encrypt service: $SERVICE_NAME
+# Runs every day at 2:30 AM
+30 2 * * * root $RENEWAL_SCRIPT $SERVICE_NAME >> /var/log/gokku-letsencrypt-$SERVICE_NAME.log 2>&1
+EOF
+
+# Set proper permissions
+chmod 644 "$CRON_FILE"
+
+echo "-----> Auto-renewal cron job created successfully"
+echo "       Cron file: $CRON_FILE"
+echo "       Renewal script: $RENEWAL_SCRIPT"
+echo "       Schedule: Daily at 2:30 AM"
+echo "       Log file: /var/log/gokku-letsencrypt-$SERVICE_NAME.log"
+
+# Test the renewal script
+echo "-----> Testing renewal script..."
+if "$RENEWAL_SCRIPT" "$SERVICE_NAME"; then
+    echo "-----> Renewal script test successful"
+else
+    echo "-----> Renewal script test failed"
+    echo "       Check the script and try again"
+fi
+
+echo ""
+echo "-----> Auto-renewal setup complete"
+echo "       Certificates will be automatically renewed every 90 days"
+echo "       Manual renewal: $RENEWAL_SCRIPT $SERVICE_NAME"

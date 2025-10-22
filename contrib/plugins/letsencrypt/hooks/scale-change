@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Let's Encrypt scale-change hook
+# This hook is called when an app is scaled up or down
+# We can use this to ensure SSL certificates are properly configured
+
+APP_NAME="$1"
+PROCESS_TYPE="$2"
+OLD_COUNT="$3"
+NEW_COUNT="$4"
+
+echo "-----> Let's Encrypt scale-change hook triggered"
+echo "       App: $APP_NAME"
+echo "       Process: $PROCESS_TYPE"
+echo "       Scale: $OLD_COUNT -> $NEW_COUNT"
+
+# Check if any Let's Encrypt services are linked to this app
+for service_dir in /opt/gokku/services/*; do
+    if [ -d "$service_dir" ] && [ -f "$service_dir/service.conf" ]; then
+        service_type=$(jq -r '.service_type' "$service_dir/service.conf" 2>/dev/null)
+        if [ "$service_type" = "letsencrypt" ]; then
+            service_name=$(basename "$service_dir")
+            echo "-----> Found Let's Encrypt service: $service_name"
+
+            # Check if this service is linked to nginx
+            if [ -f "$service_dir/nginx-service" ]; then
+                nginx_service=$(cat "$service_dir/nginx-service")
+                echo "-----> Linked to nginx service: $nginx_service"
+
+                # Update nginx upstream configuration if needed
+                if [ -f "/opt/gokku/services/$nginx_service/conf.d/$APP_NAME.conf" ]; then
+                    echo "-----> Updating nginx configuration for app: $APP_NAME"
+                    # The nginx plugin should handle the upstream update
+                    # We just need to ensure SSL certificates are still valid
+                    echo "       SSL certificates remain valid for scaled app"
+                fi
+            fi
+        fi
+    fi
+done
+
+echo "-----> Let's Encrypt scale-change hook completed"

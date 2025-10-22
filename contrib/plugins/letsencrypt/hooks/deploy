@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Let's Encrypt deploy hook
+# This hook is called when an app is deployed
+# We can use this to ensure SSL certificates are properly configured for new deployments
+
+APP_NAME="$1"
+APP_DIR="$2"
+
+echo "-----> Let's Encrypt deploy hook triggered"
+echo "       App: $APP_NAME"
+echo "       Directory: $APP_DIR"
+
+# Check if any Let's Encrypt services are configured
+for service_dir in /opt/gokku/services/*; do
+    if [ -d "$service_dir" ] && [ -f "$service_dir/service.conf" ]; then
+        service_type=$(jq -r '.service_type' "$service_dir/service.conf" 2>/dev/null)
+        if [ "$service_type" = "letsencrypt" ]; then
+            service_name=$(basename "$service_dir")
+            echo "-----> Found Let's Encrypt service: $service_name"
+
+            # Check if this service is linked to nginx
+            if [ -f "$service_dir/nginx-service" ]; then
+                nginx_service=$(cat "$service_dir/nginx-service")
+                echo "-----> Linked to nginx service: $nginx_service"
+
+                # Ensure SSL certificates are available for the nginx service
+                if [ -d "$service_dir/certs" ]; then
+                    echo "-----> Ensuring SSL certificates are linked to nginx..."
+
+                    # Link certificates to nginx ssl directory
+                    nginx_ssl_dir="/opt/gokku/services/$nginx_service/ssl"
+                    mkdir -p "$nginx_ssl_dir"
+
+                    for domain_dir in "$service_dir/certs"/*; do
+                        if [ -d "$domain_dir" ]; then
+                            domain=$(basename "$domain_dir")
+                            echo "-----> Linking certificates for domain: $domain"
+
+                            # Create symlinks for nginx
+                            ln -sf "$domain_dir/fullchain.pem" "$nginx_ssl_dir/$domain.crt"
+                            ln -sf "$domain_dir/privkey.pem" "$nginx_ssl_dir/$domain.key"
+                        fi
+                    done
+
+                    # Test nginx configuration
+                    if container_exists "$nginx_service" && container_is_running "$nginx_service"; then
+                        echo "-----> Testing nginx configuration..."
+                        if docker exec "$nginx_service" nginx -t; then
+                            echo "-----> Reloading nginx..."
+                            docker exec "$nginx_service" nginx -s reload
+                            echo "       Nginx reloaded successfully"
+                        else
+                            echo "-----> Nginx configuration test failed"
+                            echo "       Please check nginx configuration manually"
+                        fi
+                    fi
+                fi
+            fi
+        fi
+    fi
+done
+
+echo "-----> Let's Encrypt deploy hook completed"

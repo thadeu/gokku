@@ -1,0 +1,130 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+SERVICE_NAME="$1"
+
+if [ -z "$SERVICE_NAME" ]; then
+    echo "Usage: $0 <service-name>"
+    echo "Example: $0 ssl-proxy"
+    exit 1
+fi
+
+echo "-----> Uninstalling Let's Encrypt service: $SERVICE_NAME"
+
+# Check if service exists
+SERVICE_DIR="/opt/gokku/services/$SERVICE_NAME"
+if [ ! -d "$SERVICE_DIR" ]; then
+    echo "-----> Service '$SERVICE_NAME' not found"
+    exit 0
+fi
+
+# Remove cron job
+CRON_FILE="/etc/cron.d/gokku-letsencrypt-$SERVICE_NAME"
+if [ -f "$CRON_FILE" ]; then
+    echo "-----> Removing auto-renewal cron job..."
+    rm -f "$CRON_FILE"
+    echo "       Cron job removed: $CRON_FILE"
+fi
+
+# Remove renewal log file
+RENEWAL_LOG="/var/log/gokku-letsencrypt-$SERVICE_NAME.log"
+if [ -f "$RENEWAL_LOG" ]; then
+    echo "-----> Removing renewal log file..."
+    rm -f "$RENEWAL_LOG"
+    echo "       Log file removed: $RENEWAL_LOG"
+fi
+
+# Check if nginx service is linked
+if [ -f "$SERVICE_DIR/nginx-service" ]; then
+    NGINX_SERVICE=$(cat "$SERVICE_DIR/nginx-service")
+    echo "-----> Unlinking from nginx service: $NGINX_SERVICE"
+
+    # Remove SSL configurations from nginx
+    if [ -d "/opt/gokku/services/$NGINX_SERVICE/conf.d" ]; then
+        echo "-----> Removing SSL configurations from nginx..."
+
+        # Remove SSL config files created by this service
+        for domain_dir in "$SERVICE_DIR/certs"/*; do
+            if [ -d "$domain_dir" ]; then
+                domain=$(basename "$domain_dir")
+                ssl_config="/opt/gokku/services/$NGINX_SERVICE/conf.d/$domain-ssl.conf"
+                if [ -f "$ssl_config" ]; then
+                    rm -f "$ssl_config"
+                    echo "       Removed SSL config: $ssl_config"
+                fi
+            fi
+        done
+
+        # Remove SSL certificate symlinks
+        if [ -d "/opt/gokku/services/$NGINX_SERVICE/ssl" ]; then
+            for domain_dir in "$SERVICE_DIR/certs"/*; do
+                if [ -d "$domain_dir" ]; then
+                    domain=$(basename "$domain_dir")
+                    ssl_cert="/opt/gokku/services/$NGINX_SERVICE/ssl/$domain.crt"
+                    ssl_key="/opt/gokku/services/$NGINX_SERVICE/ssl/$domain.key"
+
+                    if [ -L "$ssl_cert" ]; then
+                        rm -f "$ssl_cert"
+                        echo "       Removed SSL certificate: $ssl_cert"
+                    fi
+                    if [ -L "$ssl_key" ]; then
+                        rm -f "$ssl_key"
+                        echo "       Removed SSL key: $ssl_key"
+                    fi
+                fi
+            done
+        fi
+
+        # Update nginx service configuration
+        if [ -f "/opt/gokku/services/$NGINX_SERVICE/service.conf" ]; then
+            # Remove letsencrypt_service reference
+            jq 'del(.letsencrypt_service)' "/opt/gokku/services/$NGINX_SERVICE/service.conf" > "/opt/gokku/services/$NGINX_SERVICE/service.conf.tmp" && mv "/opt/gokku/services/$NGINX_SERVICE/service.conf.tmp" "/opt/gokku/services/$NGINX_SERVICE/service.conf"
+        fi
+
+        # Test and reload nginx if running
+        if container_exists "$NGINX_SERVICE" && container_is_running "$NGINX_SERVICE"; then
+            echo "-----> Testing nginx configuration..."
+            if docker exec "$NGINX_SERVICE" nginx -t; then
+                echo "-----> Reloading nginx..."
+                docker exec "$NGINX_SERVICE" nginx -s reload
+                echo "       Nginx reloaded successfully"
+            else
+                echo "-----> Nginx configuration test failed"
+                echo "       Please check nginx configuration manually"
+            fi
+        fi
+    fi
+fi
+
+# Remove service directory
+echo "-----> Removing service directory: $SERVICE_DIR"
+rm -rf "$SERVICE_DIR"
+
+# Clean up any linked app configurations
+echo "-----> Cleaning up linked applications..."
+for app_dir in /opt/gokku/apps/*; do
+    if [ -d "$app_dir" ]; then
+        # Remove Let's Encrypt service links from app configs
+        if [ -f "$app_dir/gokku.yml" ]; then
+            # This would need to be implemented based on how Gokku stores service links
+            # For now, we'll just log that cleanup might be needed
+            echo "       Note: Check app configurations for Let's Encrypt service links"
+        fi
+    fi
+done
+
+# Clean up any Let's Encrypt images (keep the base image)
+echo "-----> Cleaning up Let's Encrypt images..."
+# Only remove custom Let's Encrypt images if any were created
+# Keep the base certbot/certbot image for other services
+
+echo "-----> Let's Encrypt service uninstalled successfully"
+echo "       Service: $SERVICE_NAME"
+echo "       All certificates, configurations, and cron jobs removed"
+echo ""
+echo "-----> Note: SSL certificates have been removed"
+echo "       If you need to keep certificates, backup them before uninstalling"

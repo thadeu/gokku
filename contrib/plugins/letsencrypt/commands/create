@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+DOMAIN="$1"
+EMAIL="$2"
+
+if [ -z "$DOMAIN" ]; then
+    echo "Usage: $0 <domain> [email]"
+    echo "Example: $0 example.com admin@example.com"
+    exit 1
+fi
+
+# Default email if not provided
+if [ -z "$EMAIL" ]; then
+    EMAIL="contact@$DOMAIN"
+fi
+
+echo "-----> Creating Let's Encrypt certificate for $DOMAIN"
+
+# Check if plugin is installed
+PLUGIN_DIR="/opt/gokku/plugins/letsencrypt"
+if [ ! -d "$PLUGIN_DIR" ]; then
+    echo "-----> Let's Encrypt plugin not installed"
+    echo "       Run 'gokku letsencrypt:install' first"
+    exit 1
+fi
+
+# Create certs directory if it doesn't exist
+mkdir -p "$PLUGIN_DIR/certs"
+mkdir -p "$PLUGIN_DIR/accounts"
+
+# Check if certificate already exists
+if [ -d "$PLUGIN_DIR/certs/$DOMAIN" ] && [ -f "$PLUGIN_DIR/certs/$DOMAIN/fullchain.pem" ]; then
+    echo "-----> Certificate for $DOMAIN already exists"
+    echo "       Certificate: $PLUGIN_DIR/certs/$DOMAIN/fullchain.pem"
+    echo "       Private key: $PLUGIN_DIR/certs/$DOMAIN/privkey.pem"
+    exit 0
+fi
+
+# Create certificate using certbot
+echo "-----> Requesting certificate from Let's Encrypt..."
+
+# Use standalone mode for initial certificate
+docker run --rm \
+    -v "$PLUGIN_DIR/certs:/etc/letsencrypt/live" \
+    -v "$PLUGIN_DIR/accounts:/etc/letsencrypt/accounts" \
+    -v "$PLUGIN_DIR/logs:/var/log/letsencrypt" \
+    -p 80:80 \
+    -p 443:443 \
+    certbot/certbot certonly \
+    --standalone \
+    --non-interactive \
+    --agree-tos \
+    --email "$EMAIL" \
+    --domains "$DOMAIN" \
+    --config-dir "/etc/letsencrypt/accounts" \
+    --work-dir "/etc/letsencrypt" \
+    --logs-dir "/var/log/letsencrypt"
+
+if [ $? -eq 0 ]; then
+    echo "-----> Certificate created successfully"
+    echo "       Domain: $DOMAIN"
+    echo "       Certificate: $PLUGIN_DIR/certs/$DOMAIN/fullchain.pem"
+    echo "       Private key: $PLUGIN_DIR/certs/$DOMAIN/privkey.pem"
+
+    # Update plugin configuration
+    if [ -f "$PLUGIN_DIR/plugin.conf" ]; then
+        # Add domain to plugin config
+        if command -v jq > /dev/null 2>&1; then
+            jq --arg domain "$DOMAIN" '.domains += [$domain]' "$PLUGIN_DIR/plugin.conf" > "$PLUGIN_DIR/plugin.conf.tmp" && mv "$PLUGIN_DIR/plugin.conf.tmp" "$PLUGIN_DIR/plugin.conf"
+        fi
+    fi
+
+    # If nginx services are linked, update nginx configs
+    if [ -f "$PLUGIN_DIR/nginx-services" ]; then
+        while read -r nginx_service; do
+            if [ -n "$nginx_service" ]; then
+                echo "-----> Updating nginx configuration for $nginx_service"
+                /opt/gokku/contrib/plugins/letsencrypt/commands/link-nginx "$nginx_service"
+            fi
+        done < "$PLUGIN_DIR/nginx-services"
+    fi
+
+    echo ""
+    echo "-----> Next steps:"
+    echo "       1. Link to nginx service: gokku letsencrypt:link-nginx <nginx-service>"
+    echo "       2. Setup auto-renewal: gokku letsencrypt:auto-renew"
+else
+    echo "-----> Failed to create certificate"
+    echo "       Check logs: $PLUGIN_DIR/logs/"
+    exit 1
+fi

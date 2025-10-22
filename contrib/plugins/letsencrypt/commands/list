@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+echo "-----> Listing Let's Encrypt certificates"
+
+# Check if plugin is installed
+PLUGIN_DIR="/opt/gokku/plugins/letsencrypt"
+if [ ! -d "$PLUGIN_DIR" ]; then
+    echo "-----> Let's Encrypt plugin not installed"
+    echo "       Run 'gokku letsencrypt:install' first"
+    exit 1
+fi
+
+CERTS_DIR="$PLUGIN_DIR/certs"
+if [ ! -d "$CERTS_DIR" ]; then
+    echo "-----> No certificates directory found"
+    echo "       Run 'gokku letsencrypt:create <domain>' to create certificates"
+    exit 0
+fi
+
+# List all certificates
+echo "-----> Certificates:"
+echo ""
+
+if [ "$(ls -A "$CERTS_DIR" 2>/dev/null)" ]; then
+    for domain_dir in "$CERTS_DIR"/*; do
+        if [ -d "$domain_dir" ]; then
+            domain=$(basename "$domain_dir")
+            echo "Domain: $domain"
+
+            # Check if certificate files exist
+            if [ -f "$domain_dir/fullchain.pem" ] && [ -f "$domain_dir/privkey.pem" ]; then
+                # Get certificate information
+                if command -v openssl >/dev/null 2>&1; then
+                    # Get certificate expiry
+                    expiry=$(openssl x509 -enddate -noout -in "$domain_dir/fullchain.pem" 2>/dev/null | cut -d= -f2)
+                    if [ -n "$expiry" ]; then
+                        echo "  Expires: $expiry"
+                    fi
+
+                    # Get certificate subject
+                    subject=$(openssl x509 -subject -noout -in "$domain_dir/fullchain.pem" 2>/dev/null | cut -d= -f2-)
+                    if [ -n "$subject" ]; then
+                        echo "  Subject: $subject"
+                    fi
+                fi
+
+                echo "  Certificate: $domain_dir/fullchain.pem"
+                echo "  Private key: $domain_dir/privkey.pem"
+
+                # Check if linked to nginx
+                if [ -f "$PLUGIN_DIR/nginx-services" ]; then
+                    echo "  Linked to nginx:"
+                    while read -r nginx_service; do
+                        if [ -n "$nginx_service" ]; then
+                            echo "    - $nginx_service"
+                        fi
+                    done < "$PLUGIN_DIR/nginx-services"
+                fi
+            else
+                echo "  Status: Incomplete (missing certificate files)"
+            fi
+
+            echo ""
+        fi
+    done
+else
+    echo "-----> No certificates found"
+    echo "       Run 'gokku letsencrypt:create <domain>' to create certificates"
+fi
+
+# Show plugin information
+if [ -f "$PLUGIN_DIR/plugin.conf" ]; then
+    echo "-----> Plugin Information:"
+    echo "       Plugin directory: $PLUGIN_DIR"
+    echo "       Certificates: $CERTS_DIR"
+
+    # Check auto-renewal
+    if [ -f "/etc/cron.d/gokku-letsencrypt" ]; then
+        echo "       Auto-renewal: Enabled"
+    else
+        echo "       Auto-renewal: Disabled"
+        echo "       Run 'gokku letsencrypt:auto-renew' to enable"
+    fi
+fi

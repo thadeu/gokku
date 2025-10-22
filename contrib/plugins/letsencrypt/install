@@ -1,0 +1,123 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+echo "-----> Installing Let's Encrypt plugin"
+
+# Create plugin directory
+PLUGIN_DIR="/opt/gokku/plugins/letsencrypt"
+mkdir -p "$PLUGIN_DIR/certs"
+mkdir -p "$PLUGIN_DIR/accounts"
+mkdir -p "$PLUGIN_DIR/logs"
+
+# Check if plugin is already installed
+if [ -f "$PLUGIN_DIR/plugin.conf" ]; then
+    echo "-----> Let's Encrypt plugin is already installed"
+    echo "       Plugin directory: $PLUGIN_DIR"
+    exit 0
+fi
+
+# Create plugin configuration
+cat > "$PLUGIN_DIR/plugin.conf" << EOF
+{
+    "plugin_name": "letsencrypt",
+    "plugin_type": "ssl",
+    "plugin_dir": "$PLUGIN_DIR",
+    "certs_dir": "$PLUGIN_DIR/certs",
+    "accounts_dir": "$PLUGIN_DIR/accounts",
+    "logs_dir": "$PLUGIN_DIR/logs",
+    "domains": [],
+    "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "status": "installed"
+}
+EOF
+
+# Create renewal script
+cat > "$PLUGIN_DIR/renew-certificates.sh" << 'EOF'
+#!/bin/bash
+
+# Let's Encrypt certificate renewal script
+PLUGIN_DIR="/opt/gokku/plugins/letsencrypt"
+
+echo "$(date): Starting certificate renewal for Let's Encrypt plugin"
+
+# Check if plugin directory exists
+if [ ! -d "$PLUGIN_DIR" ]; then
+    echo "$(date): Plugin directory not found: $PLUGIN_DIR"
+    exit 1
+fi
+
+# Renew certificates using certbot
+docker run --rm \
+    -v "$PLUGIN_DIR/certs:/etc/letsencrypt/live" \
+    -v "$PLUGIN_DIR/accounts:/etc/letsencrypt/accounts" \
+    -v "$PLUGIN_DIR/logs:/var/log/letsencrypt" \
+    certbot/certbot renew \
+    --config-dir "/etc/letsencrypt/accounts" \
+    --work-dir "/etc/letsencrypt" \
+    --logs-dir "/var/log/letsencrypt" \
+    --non-interactive \
+    --quiet
+
+if [ $? -eq 0 ]; then
+    echo "$(date): Certificate renewal completed successfully"
+
+    # Reload all linked nginx services
+    if [ -f "$PLUGIN_DIR/nginx-services" ]; then
+        while read -r nginx_service; do
+            if [ -n "$nginx_service" ]; then
+                echo "$(date): Reloading nginx service: $nginx_service"
+
+                if docker ps -q -f name="$nginx_service" > /dev/null 2>&1; then
+                    docker exec "$nginx_service" nginx -s reload 2>/dev/null && \
+                        echo "$(date): Nginx $nginx_service reloaded successfully" || \
+                        echo "$(date): Failed to reload nginx $nginx_service"
+                else
+                    echo "$(date): Nginx service $nginx_service not running"
+                fi
+            fi
+        done < "$PLUGIN_DIR/nginx-services"
+    fi
+else
+    echo "$(date): Certificate renewal failed"
+    exit 1
+fi
+EOF
+
+chmod +x "$PLUGIN_DIR/renew-certificates.sh"
+
+# Set proper permissions
+chmod -R 755 "$PLUGIN_DIR"
+
+# Pull certbot image
+echo "-----> Pulling certbot Docker image..."
+docker pull certbot/certbot:latest
+
+# Setup auto-renewal by default
+echo "-----> Setting up auto-renewal..."
+CRON_FILE="/etc/cron.d/gokku-letsencrypt"
+cat > "$CRON_FILE" << EOF
+# Auto-renewal for Let's Encrypt plugin
+# Runs every day at 2:30 AM
+30 2 * * * root $PLUGIN_DIR/renew-certificates.sh >> /var/log/gokku-letsencrypt.log 2>&1
+EOF
+
+chmod 644 "$CRON_FILE"
+
+echo "-----> Let's Encrypt plugin installed successfully"
+echo "       Plugin directory: $PLUGIN_DIR"
+echo "       Certificates: $PLUGIN_DIR/certs"
+echo "       Accounts: $PLUGIN_DIR/accounts"
+echo "       Logs: $PLUGIN_DIR/logs"
+echo "       Auto-renewal: Enabled (daily at 2:30 AM)"
+echo ""
+echo "-----> Next steps:"
+echo "       1. Create certificate: gokku letsencrypt:create <domain> [email]"
+echo "       2. Link to nginx: gokku letsencrypt:link-nginx <nginx-service>"
+echo ""
+echo "-----> Example usage:"
+echo "       gokku letsencrypt:create example.com contact@example.com"
+echo "       gokku letsencrypt:link-nginx nginx-lb"

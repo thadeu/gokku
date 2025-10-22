@@ -1,0 +1,129 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+SERVICE_NAME="$1"
+
+if [ -z "$SERVICE_NAME" ]; then
+    echo "Usage: $0 <service-name>"
+    echo "Example: $0 ssl-proxy"
+    exit 1
+fi
+
+echo "-----> Restarting Let's Encrypt service: $SERVICE_NAME"
+
+# Check if service exists
+SERVICE_DIR="/opt/gokku/services/$SERVICE_NAME"
+if [ ! -d "$SERVICE_DIR" ]; then
+    echo "-----> Service '$SERVICE_NAME' not found"
+    exit 1
+fi
+
+# Let's Encrypt service doesn't run as a persistent container
+# Instead, it uses certbot in a temporary container for operations
+# So "restart" means refreshing the service configuration and checking certificates
+
+echo "-----> Refreshing Let's Encrypt service configuration..."
+
+# Check service configuration
+if [ -f "$SERVICE_DIR/service.conf" ]; then
+    echo "-----> Service configuration: Valid"
+else
+    echo "-----> Service configuration: Missing"
+    echo "       Reinstalling service configuration..."
+
+    # Recreate service configuration
+    cat > "$SERVICE_DIR/service.conf" << EOF
+{
+    "service_name": "$SERVICE_NAME",
+    "service_type": "letsencrypt",
+    "config_dir": "$SERVICE_DIR",
+    "certs_dir": "$SERVICE_DIR/certs",
+    "accounts_dir": "$SERVICE_DIR/accounts",
+    "logs_dir": "$SERVICE_DIR/logs",
+    "domains": [],
+    "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "status": "running"
+}
+EOF
+fi
+
+# Check certificate directories
+mkdir -p "$SERVICE_DIR/certs"
+mkdir -p "$SERVICE_DIR/accounts"
+mkdir -p "$SERVICE_DIR/logs"
+
+# Check certificates
+echo "-----> Checking certificates..."
+if [ -d "$SERVICE_DIR/certs" ] && [ "$(ls -A "$SERVICE_DIR/certs" 2>/dev/null)" ]; then
+    cert_count=0
+    for domain_dir in "$SERVICE_DIR/certs"/*; do
+        if [ -d "$domain_dir" ]; then
+            domain=$(basename "$domain_dir")
+            cert_count=$((cert_count + 1))
+
+            if [ -f "$domain_dir/fullchain.pem" ] && [ -f "$domain_dir/privkey.pem" ]; then
+                echo "       $domain: Valid"
+            else
+                echo "       $domain: Incomplete"
+            fi
+        fi
+    done
+
+    if [ $cert_count -eq 0 ]; then
+        echo "       No certificates found"
+    fi
+else
+    echo "       No certificates found"
+fi
+
+# Check nginx integration
+if [ -f "$SERVICE_DIR/nginx-service" ]; then
+    nginx_service=$(cat "$SERVICE_DIR/nginx-service")
+    echo "-----> Nginx integration: Linked to $nginx_service"
+
+    # Check if nginx service is running
+    if container_exists "$nginx_service" && container_is_running "$nginx_service"; then
+        echo "       Nginx status: Running"
+
+        # Test nginx configuration
+        if docker exec "$nginx_service" nginx -t; then
+            echo "       Nginx configuration: Valid"
+        else
+            echo "       Nginx configuration: Invalid"
+            echo "       Please check nginx configuration manually"
+        fi
+    else
+        echo "       Nginx status: Not running"
+    fi
+else
+    echo "-----> Nginx integration: Not linked"
+fi
+
+# Check auto-renewal
+if [ -f "/etc/cron.d/gokku-letsencrypt-$SERVICE_NAME" ]; then
+    echo "-----> Auto-renewal: Enabled"
+else
+    echo "-----> Auto-renewal: Disabled"
+fi
+
+# Check renewal script
+if [ -f "$SERVICE_DIR/renew-certificates.sh" ]; then
+    echo "-----> Renewal script: Available"
+    chmod +x "$SERVICE_DIR/renew-certificates.sh"
+else
+    echo "-----> Renewal script: Missing"
+    echo "       Run 'gokku letsencrypt:auto-renew $SERVICE_NAME' to recreate"
+fi
+
+echo "-----> Let's Encrypt service restarted successfully"
+echo "       Service: $SERVICE_NAME"
+echo "       Status: Running"
+echo ""
+echo "-----> Next steps:"
+echo "       1. Check certificates: gokku letsencrypt:list $SERVICE_NAME"
+echo "       2. Check status: gokku letsencrypt:status $SERVICE_NAME"
+echo "       3. Setup auto-renewal: gokku letsencrypt:auto-renew $SERVICE_NAME"

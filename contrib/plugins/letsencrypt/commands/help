@@ -1,0 +1,55 @@
+#!/bin/bash
+cat << EOF
+Let's Encrypt plugin for Gokku
+
+Plugin Management:
+  gokku letsencrypt:install                               Install Let's Encrypt plugin (auto-renewal enabled)
+  gokku letsencrypt:uninstall                             Uninstall Let's Encrypt plugin
+  gokku letsencrypt:status                                Show plugin status
+
+Certificate Management:
+  gokku letsencrypt:create <domain> [email]               Create SSL certificate for domain
+  gokku letsencrypt:renew                                 Renew all certificates
+  gokku letsencrypt:list                                  List all certificates
+  gokku letsencrypt:info <domain>                         Show certificate information
+  gokku letsencrypt:logs                                  Show certificate logs
+
+Nginx Integration:
+  gokku letsencrypt:link-nginx <nginx-service>            Link to nginx service for auto-config
+  gokku letsencrypt:unlink-nginx <nginx-service>          Unlink from nginx service
+
+Automation:
+  gokku letsencrypt:auto-renew                            Setup auto-renewal
+  gokku letsencrypt:remove-auto-renew                     Remove auto-renewal
+
+Examples:
+  # Install plugin (once, auto-renewal included)
+  gokku letsencrypt:install
+
+  # Create certificates
+  gokku letsencrypt:create example.com contact@example.com
+  gokku letsencrypt:create api.example.com
+
+  # Link to nginx
+  gokku letsencrypt:link-nginx nginx-lb
+
+  # Check certificates
+  gokku letsencrypt:list
+  gokku letsencrypt:info example.com
+
+Configuration:
+  Plugin directory: /opt/gokku/plugins/letsencrypt/
+  Certificates: /opt/gokku/plugins/letsencrypt/certs/
+  Nginx SSL: /opt/gokku/services/<nginx-service>/ssl/
+  Auto-renewal: /etc/cron.d/gokku-letsencrypt
+
+Features:
+  - Global plugin architecture (install once, use everywhere)
+  - Automatic certificate generation
+  - Nginx integration with auto-configuration
+  - Auto-renewal enabled by default (daily at 2:30 AM)
+  - Persistent certificate storage
+  - Multiple domain support
+
+For more information, visit: https://github.com/thadeu/gokku-letsencrypt
+EOF

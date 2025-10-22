@@ -1,0 +1,94 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+echo "-----> Uninstalling Let's Encrypt plugin"
+
+# Check if plugin exists
+PLUGIN_DIR="/opt/gokku/plugins/letsencrypt"
+if [ ! -d "$PLUGIN_DIR" ]; then
+    echo "-----> Let's Encrypt plugin not found"
+    exit 0
+fi
+
+# Remove cron job
+CRON_FILE="/etc/cron.d/gokku-letsencrypt"
+if [ -f "$CRON_FILE" ]; then
+    echo "-----> Removing auto-renewal cron job..."
+    rm -f "$CRON_FILE"
+    echo "       Cron job removed: $CRON_FILE"
+fi
+
+# Remove renewal log file
+RENEWAL_LOG="/var/log/gokku-letsencrypt.log"
+if [ -f "$RENEWAL_LOG" ]; then
+    echo "-----> Removing renewal log file..."
+    rm -f "$RENEWAL_LOG"
+    echo "       Log file removed: $RENEWAL_LOG"
+fi
+
+# Unlink from nginx services
+if [ -f "$PLUGIN_DIR/nginx-services" ]; then
+    echo "-----> Unlinking from nginx services..."
+
+    while read -r nginx_service; do
+        if [ -n "$nginx_service" ] && [ -d "/opt/gokku/services/$nginx_service" ]; then
+            echo "       Unlinking from nginx service: $nginx_service"
+
+            # Remove SSL configurations
+            if [ -d "/opt/gokku/services/$nginx_service/conf.d" ]; then
+                for domain_dir in "$PLUGIN_DIR/certs"/*; do
+                    if [ -d "$domain_dir" ]; then
+                        domain=$(basename "$domain_dir")
+                        ssl_config="/opt/gokku/services/$nginx_service/conf.d/$domain-ssl.conf"
+                        if [ -f "$ssl_config" ]; then
+                            rm -f "$ssl_config"
+                            echo "         Removed SSL config: $ssl_config"
+                        fi
+                    fi
+                done
+            fi
+
+            # Remove SSL certificate symlinks
+            if [ -d "/opt/gokku/services/$nginx_service/ssl" ]; then
+                for domain_dir in "$PLUGIN_DIR/certs"/*; do
+                    if [ -d "$domain_dir" ]; then
+                        domain=$(basename "$domain_dir")
+                        ssl_cert="/opt/gokku/services/$nginx_service/ssl/$domain.crt"
+                        ssl_key="/opt/gokku/services/$nginx_service/ssl/$domain.key"
+
+                        if [ -L "$ssl_cert" ]; then
+                            rm -f "$ssl_cert"
+                        fi
+                        if [ -L "$ssl_key" ]; then
+                            rm -f "$ssl_key"
+                        fi
+                    fi
+                done
+            fi
+
+            # Test and reload nginx
+            if container_exists "$nginx_service" && container_is_running "$nginx_service"; then
+                echo "         Testing nginx configuration..."
+                if docker exec "$nginx_service" nginx -t 2>/dev/null; then
+                    docker exec "$nginx_service" nginx -s reload 2>/dev/null
+                    echo "         Nginx reloaded successfully"
+                fi
+            fi
+        fi
+    done < "$PLUGIN_DIR/nginx-services"
+fi
+
+# Remove plugin directory
+echo "-----> Removing plugin directory: $PLUGIN_DIR"
+rm -rf "$PLUGIN_DIR"
+
+echo "-----> Let's Encrypt plugin uninstalled successfully"
+echo "       All certificates, configurations, and cron jobs removed"
+echo ""
+echo "-----> Note: SSL certificates have been removed"
+echo "       If you need to keep certificates, backup them before uninstalling"
+

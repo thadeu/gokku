@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+SERVICE_NAME="$1"
+
+if [ -z "$SERVICE_NAME" ]; then
+    echo "Usage: $0 <service-name>"
+    echo "Example: $0 ssl-proxy"
+    exit 1
+fi
+
+echo "-----> Removing auto-renewal for Let's Encrypt service: $SERVICE_NAME"
+
+# Check if service exists
+SERVICE_DIR="/opt/gokku/services/$SERVICE_NAME"
+if [ ! -d "$SERVICE_DIR" ]; then
+    echo "-----> Service '$SERVICE_NAME' not found"
+    exit 1
+fi
+
+# Remove cron job
+CRON_FILE="/etc/cron.d/gokku-letsencrypt-$SERVICE_NAME"
+if [ -f "$CRON_FILE" ]; then
+    echo "-----> Removing cron job: $CRON_FILE"
+    rm -f "$CRON_FILE"
+    echo "       Cron job removed successfully"
+else
+    echo "-----> No cron job found for service '$SERVICE_NAME'"
+fi
+
+# Remove renewal log file
+RENEWAL_LOG="/var/log/gokku-letsencrypt-$SERVICE_NAME.log"
+if [ -f "$RENEWAL_LOG" ]; then
+    echo "-----> Removing renewal log file: $RENEWAL_LOG"
+    rm -f "$RENEWAL_LOG"
+    echo "       Log file removed successfully"
+else
+    echo "-----> No renewal log file found"
+fi
+
+# Remove renewal script
+RENEWAL_SCRIPT="$SERVICE_DIR/renew-certificates.sh"
+if [ -f "$RENEWAL_SCRIPT" ]; then
+    echo "-----> Removing renewal script: $RENEWAL_SCRIPT"
+    rm -f "$RENEWAL_SCRIPT"
+    echo "       Renewal script removed successfully"
+else
+    echo "-----> No renewal script found"
+fi
+
+echo "-----> Auto-renewal removed successfully"
+echo "       Service: $SERVICE_NAME"
+echo "       Auto-renewal: Disabled"
+echo ""
+echo "-----> Note: Certificates will not be automatically renewed"
+echo "       Manual renewal: gokku letsencrypt:renew $SERVICE_NAME"

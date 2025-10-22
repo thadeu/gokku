@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+SERVICE_NAME="$1"
+
+if [ -z "$SERVICE_NAME" ]; then
+    echo "Usage: $0 <service-name>"
+    echo "Example: $0 ssl-proxy"
+    exit 1
+fi
+
+echo "-----> Renewing certificates for Let's Encrypt service: $SERVICE_NAME"
+
+# Check if service exists
+SERVICE_DIR="/opt/gokku/services/$SERVICE_NAME"
+if [ ! -d "$SERVICE_DIR" ]; then
+    echo "-----> Service '$SERVICE_NAME' not found"
+    exit 1
+fi
+
+# Check if certificates exist
+CERTS_DIR="$SERVICE_DIR/certs"
+if [ ! -d "$CERTS_DIR" ] || [ -z "$(ls -A "$CERTS_DIR" 2>/dev/null)" ]; then
+    echo "-----> No certificates found for service '$SERVICE_NAME'"
+    echo "       Run 'gokku letsencrypt:create $SERVICE_NAME <domain>' to create certificates"
+    exit 1
+fi
+
+# Renew certificates using certbot
+echo "-----> Starting certificate renewal process..."
+
+docker run --rm \
+    -v "$SERVICE_DIR/certs:/etc/letsencrypt/certs" \
+    -v "$SERVICE_DIR/accounts:/etc/letsencrypt/accounts" \
+    -v "$SERVICE_DIR/logs:/var/log/letsencrypt" \
+    certbot/certbot renew \
+    --config-dir "/etc/letsencrypt/accounts" \
+    --cert-path "/etc/letsencrypt/certs" \
+    --non-interactive \
+    --quiet
+
+RENEWAL_EXIT_CODE=$?
+
+if [ $RENEWAL_EXIT_CODE -eq 0 ]; then
+    echo "-----> Certificate renewal completed successfully"
+
+    # If nginx service is linked, reload nginx
+    if [ -f "$SERVICE_DIR/nginx-service" ]; then
+        NGINX_SERVICE=$(cat "$SERVICE_DIR/nginx-service")
+        echo "-----> Reloading nginx service: $NGINX_SERVICE"
+
+        if container_exists "$NGINX_SERVICE" && container_is_running "$NGINX_SERVICE"; then
+            if docker exec "$NGINX_SERVICE" nginx -t; then
+                docker exec "$NGINX_SERVICE" nginx -s reload
+                echo "-----> Nginx reloaded successfully"
+            else
+                echo "-----> Nginx configuration test failed"
+                echo "       Please check nginx configuration manually"
+            fi
+        else
+            echo "-----> Nginx service not running"
+            echo "       Certificates will be available on next nginx start"
+        fi
+    fi
+
+    # Show updated certificate information
+    echo ""
+    echo "-----> Updated certificate information:"
+    for domain_dir in "$CERTS_DIR"/*; do
+        if [ -d "$domain_dir" ]; then
+            domain=$(basename "$domain_dir")
+            if [ -f "$domain_dir/fullchain.pem" ]; then
+                if command -v openssl >/dev/null 2>&1; then
+                    expiry=$(openssl x509 -enddate -noout -in "$domain_dir/fullchain.pem" 2>/dev/null | cut -d= -f2)
+                    if [ -n "$expiry" ]; then
+                        echo "       $domain: Expires $expiry"
+                    fi
+                else
+                    echo "       $domain: Certificate renewed"
+                fi
+            fi
+        fi
+    done
+
+    echo ""
+    echo "-----> Certificate renewal completed successfully"
+    echo "       All certificates have been renewed"
+
+else
+    echo "-----> Certificate renewal failed"
+    echo "       Check logs: $SERVICE_DIR/logs/"
+    echo "       Manual renewal may be required"
+    exit 1
+fi

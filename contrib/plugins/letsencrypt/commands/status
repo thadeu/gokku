@@ -1,0 +1,137 @@
+#!/bin/bash
+
+# Source Gokku helper functions
+if [ -f "/opt/gokku/scripts/plugin-helpers.sh" ]; then
+    source /opt/gokku/scripts/plugin-helpers.sh
+fi
+
+SERVICE_NAME="$1"
+
+if [ -z "$SERVICE_NAME" ]; then
+    echo "Usage: $0 <service-name>"
+    echo "Example: $0 ssl-proxy"
+    exit 1
+fi
+
+echo "-----> Let's Encrypt service status: $SERVICE_NAME"
+
+# Check if service exists
+SERVICE_DIR="/opt/gokku/services/$SERVICE_NAME"
+if [ ! -d "$SERVICE_DIR" ]; then
+    echo "-----> Service '$SERVICE_NAME' not found"
+    exit 1
+fi
+
+# Show service information
+echo "-----> Service Information:"
+echo "       Service: $SERVICE_NAME"
+echo "       Directory: $SERVICE_DIR"
+echo "       Status: Installed"
+
+# Check certificates
+CERTS_DIR="$SERVICE_DIR/certs"
+if [ -d "$CERTS_DIR" ] && [ "$(ls -A "$CERTS_DIR" 2>/dev/null)" ]; then
+    echo "-----> Certificates:"
+    cert_count=0
+    for domain_dir in "$CERTS_DIR"/*; do
+        if [ -d "$domain_dir" ]; then
+            domain=$(basename "$domain_dir")
+            cert_count=$((cert_count + 1))
+
+            if [ -f "$domain_dir/fullchain.pem" ] && [ -f "$domain_dir/privkey.pem" ]; then
+                echo "       $domain: Valid"
+
+                # Check expiry if openssl is available
+                if command -v openssl >/dev/null 2>&1; then
+                    expiry=$(openssl x509 -enddate -noout -in "$domain_dir/fullchain.pem" 2>/dev/null | cut -d= -f2)
+                    if [ -n "$expiry" ]; then
+                        echo "         Expires: $expiry"
+
+                        # Calculate days until expiry
+                        expiry_timestamp=$(date -d "$expiry" +%s 2>/dev/null || date -j -f "%b %d %H:%M:%S %Y %Z" "$expiry" +%s 2>/dev/null)
+                        if [ -n "$expiry_timestamp" ]; then
+                            current_timestamp=$(date +%s)
+                            days_until_expiry=$(( (expiry_timestamp - current_timestamp) / 86400 ))
+
+                            if [ $days_until_expiry -gt 0 ]; then
+                                echo "         Days until expiry: $days_until_expiry"
+
+                                if [ $days_until_expiry -lt 30 ]; then
+                                    echo "         WARNING: Certificate expires in less than 30 days!"
+                                fi
+                            else
+                                echo "         WARNING: Certificate has expired!"
+                            fi
+                        fi
+                    fi
+                fi
+            else
+                echo "       $domain: Incomplete (missing files)"
+            fi
+        fi
+    done
+
+    if [ $cert_count -eq 0 ]; then
+        echo "       No certificates found"
+        echo "       Run 'gokku letsencrypt:create $SERVICE_NAME <domain>' to create certificates"
+    fi
+else
+    echo "-----> Certificates: None"
+    echo "       Run 'gokku letsencrypt:create $SERVICE_NAME <domain>' to create certificates"
+fi
+
+# Check nginx integration
+if [ -f "$SERVICE_DIR/nginx-service" ]; then
+    nginx_service=$(cat "$SERVICE_DIR/nginx-service")
+    echo "-----> Nginx Integration:"
+    echo "       Linked to: $nginx_service"
+
+    # Check if nginx service exists and is running
+    if container_exists "$nginx_service"; then
+        if container_is_running "$nginx_service"; then
+            echo "       Nginx status: Running"
+        else
+            echo "       Nginx status: Stopped"
+        fi
+    else
+        echo "       Nginx status: Not found"
+    fi
+else
+    echo "-----> Nginx Integration: Not linked"
+    echo "       Run 'gokku letsencrypt:link-nginx $SERVICE_NAME <nginx-service>' to link"
+fi
+
+# Check auto-renewal
+if [ -f "/etc/cron.d/gokku-letsencrypt-$SERVICE_NAME" ]; then
+    echo "-----> Auto-renewal: Enabled"
+    echo "       Cron job: /etc/cron.d/gokku-letsencrypt-$SERVICE_NAME"
+
+    # Check if renewal script exists
+    if [ -f "$SERVICE_DIR/renew-certificates.sh" ]; then
+        echo "       Renewal script: Available"
+    else
+        echo "       Renewal script: Missing"
+    fi
+else
+    echo "-----> Auto-renewal: Disabled"
+    echo "       Run 'gokku letsencrypt:auto-renew $SERVICE_NAME' to enable"
+fi
+
+# Check service configuration
+if [ -f "$SERVICE_DIR/service.conf" ]; then
+    echo "-----> Configuration: Available"
+    echo "       Config file: $SERVICE_DIR/service.conf"
+else
+    echo "-----> Configuration: Missing"
+fi
+
+# Check logs
+if [ -d "$SERVICE_DIR/logs" ] && [ "$(ls -A "$SERVICE_DIR/logs" 2>/dev/null)" ]; then
+    echo "-----> Logs: Available"
+    echo "       Log directory: $SERVICE_DIR/logs"
+else
+    echo "-----> Logs: None"
+fi
+
+echo ""
+echo "-----> Service status complete"
