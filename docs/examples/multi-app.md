@@ -49,12 +49,6 @@ apps:
 ### Setup All Apps
 
 ```bash
-# On server
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api production"
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh worker production"
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh admin production"
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh ml-service production"
-
 # On local machine
 git remote add api-prod ubuntu@server:api
 git remote add worker-prod ubuntu@server:worker
@@ -284,18 +278,6 @@ apps:
   
   worker:
     path: ./cmd/worker
-```
-
-### Setup
-
-```bash
-# Production
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api production"
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh worker production"
-
-# Staging
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh api staging"
-ssh ubuntu@server "cd /opt/gokku && ./deploy-server-setup.sh worker staging"
 ```
 
 ### Deploy
