@@ -547,29 +547,9 @@ gokku config list -a api-production
 
 ```yaml
 apps:
-  app-name:                # App name (must be unique)
+  app-name: 
     build_path: string     # Path to main package (relative to work_dir)
     binary_name: string    # Output binary name (defaults to app name)
-```
-
-### Environments Section
-
-```yaml
-environments:
-  - name: string                  # Environment name
-    branch: string                # Git branch for this environment
-    default_env_vars:             # Default variables (optional)
-      KEY: value
-```
-
-### Build Section
-
-```yaml
-go_version_min: string    # Minimum Go version required
-goos: string             # Target OS (default: linux)
-goarch: string           # Target architecture (default: amd64)
-  cgo_enabled: number      # CGO setting (default: 0)
-  work_dir: string         # Build working directory (default: .)
 ```
 
 ### Deployment Section

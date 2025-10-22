@@ -32,7 +32,7 @@ Python web app with Docker:
 
 ```yaml
 apps:
-  app-name: flask-app
+  flask-app:
     lang: python
     path: ./app
     entrypoint: app.py
@@ -46,7 +46,7 @@ Using custom Dockerfile:
 
 ```yaml
 apps:
-  app-name: service
+  service:
     lang: python
     path: ./services/ml
     dockerfile: ./services/ml/Dockerfile
@@ -60,7 +60,7 @@ Full-stack Rails app with Docker deployment:
 
 ```yaml
 apps:
-  app-name: rails-app
+  rails-app:
     lang: ruby
     path: .
 ```
@@ -73,7 +73,7 @@ React frontend with Express API backend:
 
 ```yaml
 apps:
-  app-name: react-app
+  react-app:
     lang: nodejs
     path: .
 ```
@@ -89,10 +89,10 @@ apps:
   api:
     path: ./cmd/api
   
-  app-name: worker
+  worker:
     path: ./cmd/worker
   
-  app-name: ml-service
+  ml-service:
     lang: python
     path: ./services/ml
 ```

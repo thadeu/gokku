@@ -75,10 +75,10 @@ apps:
   api:
     path: ./cmd/api
   
-  app-name: worker
+  worker:
     path: ./cmd/worker
   
-  app-name: admin
+  admin:
     path: ./cmd/admin
 ```
 
@@ -136,13 +136,13 @@ apps:
     path: ./cmd/api
   
   # Python ML Service
-  app-name: ml
+   ml:
     lang: python
     path: ./services/ml
     entrypoint: server.py
   
   # Node.js Frontend
-  app-name: frontend
+  frontend:
     lang: nodejs
     path: ./frontend
     entrypoint: server.js
@@ -238,7 +238,7 @@ func main() {
 
 ```yaml
 apps:
-  app-name: cron-worker
+  cron-worker:
     path: ./cmd/cron-worker
 ```
 

@@ -146,10 +146,10 @@ apps:
   api:
     path: ./cmd/api
   
-  app-name: worker
+  worker:
     path: ./cmd/worker
   
-  app-name: ml-service
+  ml-service:
     path: ./services/ml
     entrypoint: server.py
 ```

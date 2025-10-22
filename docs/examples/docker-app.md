@@ -271,17 +271,6 @@ docker run -d \
   postgres:15
 ```
 
-Then connect from your app:
-
-```yaml
-apps:
-  my-app:
-    environments:
-      app-name: production
-        default_env_vars:
-          DATABASE_URL: postgres://postgres:secret@172.17.0.1:5432/mydb
-```
-
 ## Health Checks
 
 Add health check to your Dockerfile:

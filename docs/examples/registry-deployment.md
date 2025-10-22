@@ -27,7 +27,7 @@ apps:
 
 ```yaml
 apps:
-  app-name: worker
+  worker:
     image: "123456789012.dkr.ecr.us-east-1.amazonaws.com/meu-org/worker:latest"
     deployment:
       keep_releases: 5
@@ -38,7 +38,7 @@ apps:
 
 ```yaml
 apps:
-  app-name: web
+  web:
     image: "meu-org/web:latest"
     ports:
       - "80:8080"
@@ -65,12 +65,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      app-name: Build Docker image
+      - name: Build Docker image
         run: |
           docker build -t ghcr.io/meu-org/api:${{ github.sha }} .
           docker push ghcr.io/meu-org/api:${{ github.sha }}
           
-      app-name: Deploy to Gokku
+      - name: Deploy to Gokku
         run: |
           # Update gokku.yml with new image tag
           sed -i "s|ghcr.io/meu-org/api:latest|ghcr.io/meu-org/api:${{ github.sha }}|" gokku.yml
@@ -110,7 +110,7 @@ apps:
     image: "ghcr.io/meu-org/api:latest"
       
   # Local build (development/testing)
-  app-name: worker
+  worker:
     lang: python
     image: "python:3.11-slim"  # Base image
       path: ./worker

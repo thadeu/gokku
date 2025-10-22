@@ -75,7 +75,7 @@ apps:
   api:
     path: ./cmd/api
   
-  app-name: worker
+  worker:
     lang: python
     path: ./worker
 ```

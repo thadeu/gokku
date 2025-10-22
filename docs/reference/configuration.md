@@ -19,9 +19,12 @@ my-project/
 ```yaml
 defaults:         # Default values for all apps
 apps:             # Application definitions
-  app-name:       # App name (key)
+  app-name:
     lang:         # Programming language
     build:        # Build configuration
+    ports:        # Ports to expose
+    network:      # Network settings
+    volumes:      # Volumes to mount
     deployment:   # Deployment settings
 docker:           # Global Docker settings
 ```
@@ -206,7 +209,7 @@ apps:
 
 ```yaml
 apps:
-  app-name: app
+  app:
     lang: python
     path: .
 ```
@@ -236,7 +239,7 @@ apps:
       restart_delay: 5
   
   # Python ML service with Docker
-  app-name: ml-service
+  ml-service:
     lang: python
     path: ./services/ml
     entrypoint: server.py
