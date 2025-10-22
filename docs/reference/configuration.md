@@ -92,7 +92,53 @@ apps:
 | `cgo_enabled` | int | ❌ No | `0` | Enable CGO: `0` or `1` (Go only) |
 | `dockerfile` | string | ❌ No | - | Custom Dockerfile path (Docker only) |
 | `entrypoint` | string | ❌ No | Language-specific | Entrypoint file (non-Go) |
-| `base_image` | string | ❌ No | From `docker.base_images` | Base Docker image |
+| `image` | string | ❌ No | Auto-detected | Docker base image or pre-built registry image |
+
+### Image Configuration
+
+The `build.image` field supports two deployment modes:
+
+**Base Image (Local Build):**
+```yaml
+build:
+  image: "python:3.11-slim"  # Base image for local build
+  path: ./app
+```
+
+**Pre-built Registry Image (Ultra-fast Deployment):**
+```yaml
+build:
+  image: "ghcr.io/meu-org/api:latest"  # Pre-built image from registry
+```
+
+When using a registry image (ghcr.io, ECR, docker.io, etc.), Gokku will:
+1. Pull the pre-built image from the registry
+2. Tag it for the application  
+3. Deploy directly (no build step required)
+
+This enables ultra-fast deployments and integrates perfectly with CI/CD pipelines.
+
+### Automatic Version Detection
+
+When `build.image` is not specified, Gokku automatically detects the version from project files:
+
+**Ruby:**
+- `.ruby-version` file (e.g., `3.2.0`)
+- `Gemfile` (e.g., `ruby '3.1.0'`)
+- Fallback: `ruby:latest`
+
+**Go:**
+- `go.mod` file (e.g., `go 1.21`)
+- Fallback: `golang:latest-alpine`
+
+**Node.js:**
+- `.nvmrc` file (e.g., `18.17.0`)
+- `package.json` engines field (e.g., `"node": ">=18.0.0"`)
+- Fallback: `node:latest`
+
+**Python:**
+- Always uses `python:latest` as fallback
+
 
 **Entrypoint Defaults:**
 - Python: `main.py`
@@ -113,7 +159,7 @@ build:
 build:
   path: ./services/ml
   entrypoint: server.py
-  base_image: python:3.11-slim
+  image: python:3.11-slim
 ```
 
 
@@ -177,25 +223,15 @@ deployment:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `registry` | string | ❌ No | `""` | Docker registry URL |
-| `base_images` | object | ❌ No | See below | Default base images per language |
-
-**base_images defaults:**
-```yaml
-base_images:
-  go: "golang:1.25-alpine"
-  python: "python:3.11-slim"
-  nodejs: "node:20-alpine"
-  ruby: "ruby:3.2-slim"
-```
+| `registry` | array | ❌ No | `[]` | List of custom Docker registries |
 
 **Example:**
 ```yaml
 docker:
-  registry: "registry.example.com"
-  base_images:
-    go: "golang:1.25-alpine"
-    python: "python:3.12-slim"
+  registry:
+    - "self-ghrc.io"  # Your own GitHub Container Registry
+    - "registry.company.com"  # Company private registry
+    - "harbor.example.com"  # Harbor registry
 ```
 
 ### User Configuration
@@ -280,7 +316,7 @@ apps:
     build:
       path: ./services/ml
       entrypoint: server.py
-      base_image: python:3.11-slim
+      image: python:3.11-slim
     
     environments:
       - name: production

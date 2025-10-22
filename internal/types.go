@@ -54,7 +54,7 @@ type Build struct {
 	Goarch     string            `yaml:"goarch,omitempty"`
 	CgoEnabled *bool             `yaml:"cgo_enabled,omitempty"`
 	Dockerfile string            `yaml:"dockerfile,omitempty"`
-	BaseImage  string            `yaml:"base_image,omitempty"`
+	Image      string            `yaml:"image,omitempty"`
 	Workdir    string            `yaml:"workdir,omitempty"`
 	Entrypoint string            `yaml:"entrypoint,omitempty"`
 	Command    string            `yaml:"command,omitempty"`
@@ -91,8 +91,7 @@ type Defaults struct {
 
 // Docker represents Docker-related configurations
 type Docker struct {
-	Registry   string            `yaml:"registry,omitempty"`
-	BaseImages map[string]string `yaml:"base_images,omitempty"`
+	Registry []string `yaml:"registry,omitempty"`
 }
 
 // LoadServerConfig loads the server configuration from gokku.yml

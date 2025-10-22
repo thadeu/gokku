@@ -104,7 +104,7 @@ apps:
       path: ./services/ml
       dockerfile: ./services/ml/Dockerfile  # optional
       entrypoint: main.py
-      base_image: "python:3.11-slim"
+      image: "python:3.11-slim"
     environments:
       - name: production
         branch: main
@@ -140,7 +140,52 @@ All configuration fields are optional with sensible defaults:
 | `build.work_dir` | `.` | Working directory for build |
 | `build.go_version` | `1.25` | Go version (for Go apps) |
 | `build.entrypoint` | `main.py` (Python)<br>`index.js` (Node.js) | Application entrypoint |
-| `build.base_image` | `golang:1.25-alpine` (Go)<br>`python:3.11-slim` (Python)<br>`node:20-alpine` (Node.js) | Docker base image |
+| `build.image` | ❌ No | Auto-detected | Docker base image or pre-built registry image |
+
+### Image Configuration
+
+The `build.image` field supports two modes:
+
+**Base Image (Local Build):**
+```yaml
+build:
+  image: "python:3.11-slim"  # Base image for local build
+  path: ./app
+```
+
+**Pre-built Registry Image (Ultra-fast Deployment):**
+```yaml
+build:
+  image: "ghcr.io/meu-org/api:latest"  # Pre-built image from registry
+```
+
+When using a registry image (ghcr.io, ECR, docker.io, etc.), Gokku will:
+1. Pull the pre-built image from the registry
+2. Tag it for the application
+3. Deploy directly (no build step required)
+
+This enables ultra-fast deployments and integrates perfectly with CI/CD pipelines.
+
+### Automatic Version Detection
+
+When `build.image` is not specified, Gokku automatically detects the version from project files:
+
+**Ruby:**
+- `.ruby-version` file (e.g., `3.2.0`)
+- `Gemfile` (e.g., `ruby '3.1.0'`)
+- Fallback: `ruby:latest`
+
+**Go:**
+- `go.mod` file (e.g., `go 1.21`)
+- Fallback: `golang:latest-alpine`
+
+**Node.js:**
+- `.nvmrc` file (e.g., `18.17.0`)
+- `package.json` engines field (e.g., `"node": ">=18.0.0"`)
+- Fallback: `node:latest`
+
+**Python:**
+- Always uses `python:latest` as fallback
 
 ### Environment Configuration
 
@@ -368,7 +413,7 @@ apps:
     build:
       path: ./services/ml
       entrypoint: main.py
-      base_image: "python:3.11-slim"
+      image: "python:3.11-slim"
 ```
 
 ### Automatic Dockerfile Generation

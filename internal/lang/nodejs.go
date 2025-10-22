@@ -16,6 +16,24 @@ type Nodejs struct {
 func (l *Nodejs) Build(app *App, releaseDir string) error {
 	fmt.Println("-----> Building Node.js application...")
 
+	// Check if using pre-built image from registry
+	if app.Build != nil && app.Build.Image != "" && IsRegistryImage(app.Build.Image, GetCustomRegistries(app.Name)) {
+		fmt.Println("-----> Using pre-built image from registry...")
+
+		// Pull the pre-built image
+		if err := PullRegistryImage(app.Build.Image); err != nil {
+			return fmt.Errorf("failed to pull pre-built image: %v", err)
+		}
+
+		// Tag the image for the app
+		if err := TagImageForApp(app.Build.Image, app.Name); err != nil {
+			return fmt.Errorf("failed to tag image: %v", err)
+		}
+
+		fmt.Println("-----> Pre-built image ready for deployment!")
+		return nil
+	}
+
 	// Ensure Dockerfile exists
 	if err := l.EnsureDockerfile(releaseDir, app); err != nil {
 		return fmt.Errorf("failed to ensure Dockerfile: %v", err)
@@ -167,8 +185,8 @@ func (l *Nodejs) EnsureDockerfile(releaseDir string, app *App) error {
 	build := l.GetDefaultConfig()
 	if app.Build != nil {
 		// Merge with app-specific config
-		if app.Build.BaseImage != "" {
-			build.BaseImage = app.Build.BaseImage
+		if app.Build.Image != "" {
+			build.Image = app.Build.Image
 		}
 		if app.Build.Entrypoint != "" {
 			build.Entrypoint = app.Build.Entrypoint
@@ -185,7 +203,7 @@ func (l *Nodejs) EnsureDockerfile(releaseDir string, app *App) error {
 func (l *Nodejs) GetDefaultConfig() *Build {
 	return &Build{
 		Type:       "docker",
-		BaseImage:  "node:20-alpine",
+		Image:      "", // No default image - must be specified
 		Entrypoint: "index.js",
 		Workdir:    ".",
 	}
@@ -199,9 +217,11 @@ func (l *Nodejs) generateDockerfile(build *Build, app *App) string {
 	}
 
 	// Determine base image
-	baseImage := build.BaseImage
+	baseImage := build.Image
 	if baseImage == "" {
-		baseImage = "node:20-alpine"
+		// Try to detect Node.js version from project files
+		baseImage = DetectNodeVersion(".")
+		fmt.Printf("-----> Detected Node.js version: %s\n", baseImage)
 	}
 
 	return fmt.Sprintf(`# Generated Dockerfile for Node.js application

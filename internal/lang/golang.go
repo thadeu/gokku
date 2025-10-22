@@ -18,6 +18,24 @@ type Golang struct {
 func (l *Golang) Build(app *App, releaseDir string) error {
 	fmt.Println("-----> Building Go application...")
 
+	// Check if using pre-built image from registry
+	if app.Build != nil && app.Build.Image != "" && IsRegistryImage(app.Build.Image, GetCustomRegistries(app.Name)) {
+		fmt.Println("-----> Using pre-built image from registry...")
+
+		// Pull the pre-built image
+		if err := PullRegistryImage(app.Build.Image); err != nil {
+			return fmt.Errorf("failed to pull pre-built image: %v", err)
+		}
+
+		// Tag the image for the app
+		if err := TagImageForApp(app.Build.Image, app.Name); err != nil {
+			return fmt.Errorf("failed to tag image: %v", err)
+		}
+
+		fmt.Println("-----> Pre-built image ready for deployment!")
+		return nil
+	}
+
 	// Ensure Dockerfile exists
 	if err := l.EnsureDockerfile(releaseDir, app); err != nil {
 		return fmt.Errorf("failed to ensure Dockerfile: %v", err)
@@ -182,8 +200,8 @@ func (l *Golang) EnsureDockerfile(releaseDir string, app *App) error {
 	build := l.GetDefaultConfig()
 	if app.Build != nil {
 		// Merge with app-specific config
-		if app.Build.BaseImage != "" {
-			build.BaseImage = app.Build.BaseImage
+		if app.Build.Image != "" {
+			build.Image = app.Build.Image
 		}
 		// Determine working directory
 		workDir := "."
@@ -214,10 +232,10 @@ func (l *Golang) EnsureDockerfile(releaseDir string, app *App) error {
 
 func (l *Golang) GetDefaultConfig() *Build {
 	return &Build{
-		Type:      "docker",
-		BaseImage: "golang:1.25-alpine",
-		Path:      "",
-		Workdir:   ".",
+		Type:    "docker",
+		Image:   "", // No default image - must be specified
+		Path:    "",
+		Workdir: ".",
 	}
 }
 
@@ -232,10 +250,12 @@ func (l *Golang) generateDockerfile(build *Build, app *App) string {
 	fmt.Printf("-----> Dockerfile build path: %s\n", buildPath)
 
 	// Determine base image
-	baseImage := build.BaseImage
+	baseImage := build.Image
 
 	if baseImage == "" {
-		baseImage = "golang:1.25-alpine"
+		// Try to detect Go version from go.mod
+		baseImage = DetectGoVersion(".")
+		fmt.Printf("-----> Detected Go version: %s\n", baseImage)
 	}
 
 	// Get the workdir for COPY
