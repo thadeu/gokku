@@ -22,6 +22,8 @@ func handlePlugins(args []string) {
 	switch subcommand {
 	case "list", "ls":
 		handlePluginsList()
+	case "list-official":
+		handlePluginsListOfficial()
 	case "add":
 		handlePluginsAdd(args[1:])
 	case "remove":
@@ -53,46 +55,98 @@ func handlePluginsList() {
 	}
 }
 
-// handlePluginsAdd adds a new plugin from GitHub
+// handlePluginsListOfficial lists available official plugins
+func handlePluginsListOfficial() {
+	contribDir := filepath.Join("contrib", "plugins")
+
+	if _, err := os.Stat(contribDir); os.IsNotExist(err) {
+		fmt.Println("No official plugins available")
+		return
+	}
+
+	entries, err := os.ReadDir(contribDir)
+	if err != nil {
+		fmt.Printf("Error reading contrib/plugins directory: %v\n", err)
+		return
+	}
+
+	if len(entries) == 0 {
+		fmt.Println("No official plugins available")
+		return
+	}
+
+	fmt.Println("Available official plugins:")
+	fmt.Println("")
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			fmt.Printf("  %s\n", entry.Name())
+		}
+	}
+
+	fmt.Println("")
+	fmt.Println("Install with: gokku plugins:add <plugin-name>")
+	fmt.Println("Example: gokku plugins:add nginx")
+}
+
+// handlePluginsAdd adds a new plugin from local contrib or Git repository
 func handlePluginsAdd(args []string) {
 	if len(args) < 1 {
-		fmt.Println("Usage: gokku plugins:add <owner/repo>")
+		fmt.Println("Usage: gokku plugins:add <plugin-name>|<git-url>")
 		fmt.Println("")
 		fmt.Println("Examples:")
-		fmt.Println("  gokku plugins:add thadeu/gokku-postgres")
-		fmt.Println("  gokku plugins:add thadeu/gokku-redis")
+		fmt.Println("  gokku plugins:add nginx                              # Official plugin from contrib/plugins")
+		fmt.Println("  gokku plugins:add https://github.com/thadeu/gokku-nginx  # Plugin from GitHub")
+		fmt.Println("  gokku plugins:add https://gitlab.com/user/gokku-redis   # Plugin from GitLab")
 		os.Exit(1)
 	}
 
-	repo := args[0]
-
-	// Parse owner/repo
-	parts := strings.Split(repo, "/")
-	if len(parts) != 2 {
-		fmt.Printf("Invalid repository format: %s\n", repo)
-		fmt.Println("Expected format: owner/repo")
-		os.Exit(1)
-	}
-
-	owner := parts[0]
-	repoName := parts[1]
-
-	// Extract plugin name from repo (remove gokku- prefix if present)
-	pluginName := strings.TrimPrefix(repoName, "gokku-")
-
-	fmt.Printf("Adding plugin '%s' from %s/%s...\n", pluginName, owner, repoName)
+	pluginArg := args[0]
 
 	pm := plugins.NewPluginManager()
 
-	// Download plugin from GitHub
-	if err := pm.DownloadPlugin(owner, repoName, pluginName); err != nil {
-		fmt.Printf("Error downloading plugin: %v\n", err)
-		os.Exit(1)
+	// Check if it's a URL
+	if pm.IsValidGitURL(pluginArg) {
+		// Extract plugin name from URL
+		pluginName := pm.ExtractPluginNameFromURL(pluginArg)
+
+		fmt.Printf("Adding plugin '%s' from %s...\n", pluginName, pluginArg)
+
+		if err := pm.InstallPluginFromGit(pluginArg, pluginName); err != nil {
+			fmt.Printf("Error installing plugin from Git: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Plugin '%s' installed successfully\n", pluginName)
+		fmt.Printf("Plugin is now available. Create a service with:\n")
+		fmt.Printf("  gokku services:create %s --name <service-name>\n", pluginName)
+		return
 	}
 
-	fmt.Printf("Plugin '%s' downloaded successfully\n", pluginName)
-	fmt.Printf("Plugin is now available. Create a service with:\n")
-	fmt.Printf("  gokku services:create %s --name <service-name>\n", pluginName)
+	// If not a URL, try to find in local contrib/plugins directory
+	localPluginPath := filepath.Join("contrib", "plugins", pluginArg)
+	if _, err := os.Stat(localPluginPath); err == nil {
+		fmt.Printf("Adding official plugin '%s' from contrib/plugins...\n", pluginArg)
+
+		if err := pm.InstallLocalPlugin(pluginArg, localPluginPath); err != nil {
+			fmt.Printf("Error installing local plugin: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Plugin '%s' installed successfully\n", pluginArg)
+		fmt.Printf("Plugin is now available. Create a service with:\n")
+		fmt.Printf("  gokku services:create %s --name <service-name>\n", pluginArg)
+		return
+	}
+
+	// If not found locally and not a URL, show error
+	fmt.Printf("Plugin '%s' not found in contrib/plugins and is not a valid Git URL\n", pluginArg)
+	fmt.Println("")
+	fmt.Println("Available options:")
+	fmt.Println("  - Use official plugin name (e.g., 'nginx')")
+	fmt.Println("  - Use Git URL (e.g., 'https://github.com/user/gokku-plugin')")
+	fmt.Println("  - List official plugins: gokku plugins:list-official")
+	os.Exit(1)
 }
 
 // handlePluginsRemove removes a plugin
@@ -166,14 +220,18 @@ func showPluginHelp() {
 	fmt.Println("Plugin management commands:")
 	fmt.Println("")
 	fmt.Println("  gokku plugins:list                    List all installed plugins")
-	fmt.Println("  gokku plugins:add <owner/repo>       Add plugin from GitHub")
+	fmt.Println("  gokku plugins:list-official           List available official plugins")
+	fmt.Println("  gokku plugins:add <plugin-name>       Add official plugin")
+	fmt.Println("  gokku plugins:add <git-url>           Add plugin from Git repository")
 	fmt.Println("  gokku plugins:remove <plugin>         Remove plugin")
 	fmt.Println("")
 	fmt.Println("Plugin commands:")
 	fmt.Println("  gokku <plugin>:<command> <service>   Execute plugin command")
 	fmt.Println("")
 	fmt.Println("Examples:")
-	fmt.Println("  gokku plugins:add thadeu/gokku-postgres")
+	fmt.Println("  gokku plugins:add nginx                              # Official plugin")
+	fmt.Println("  gokku plugins:add https://github.com/user/gokku-nginx  # GitHub plugin")
+	fmt.Println("  gokku plugins:add https://gitlab.com/user/gokku-redis  # GitLab plugin")
 	fmt.Println("  gokku postgres:info postgres-api")
 	fmt.Println("  gokku postgres:export postgres-api > backup.sql")
 }

@@ -1,0 +1,27 @@
+#!/bin/bash
+cat << EOF
+Nginx plugin for Gokku
+
+Commands:
+  gokku nginx:info <service>      Show service information
+  gokku nginx:logs <service>       Show service logs
+  gokku nginx:reload <service>     Reload nginx configuration
+  gokku nginx:status <service>     Show nginx status
+  gokku nginx:test <service>       Test nginx configuration
+  gokku nginx:config <service>      Show nginx configuration
+  gokku nginx:restart <service>    Restart nginx service
+
+Examples:
+  gokku nginx:info nginx-lb
+  gokku nginx:reload nginx-lb
+  gokku nginx:test nginx-lb
+  gokku nginx:config nginx-lb
+
+Configuration:
+  Service directory: /opt/gokku/services/<service>/
+  Main config: /opt/gokku/services/<service>/nginx.conf
+  Site configs: /opt/gokku/services/<service>/conf.d/
+  SSL certificates: /opt/gokku/services/<service>/ssl/
+
+For more information, visit: https://github.com/thadeu/gokku-nginx
+EOF

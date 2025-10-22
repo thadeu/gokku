@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -234,4 +235,171 @@ func (pm *PluginManager) pluginExists(pluginName string) bool {
 	pluginPath := filepath.Join(pm.pluginsDir, pluginName)
 	_, err := os.Stat(pluginPath)
 	return !os.IsNotExist(err)
+}
+
+// IsValidGitURL checks if the string is a valid Git URL
+func (pm *PluginManager) IsValidGitURL(url string) bool {
+	// Check for common Git URL patterns
+	patterns := []string{
+		"https://github.com/",
+		"https://gitlab.com/",
+		"https://bitbucket.org/",
+		"git@github.com:",
+		"git@gitlab.com:",
+		"git@bitbucket.org:",
+		"git://",
+		"ssh://",
+	}
+
+	for _, pattern := range patterns {
+		if strings.HasPrefix(url, pattern) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// ExtractPluginNameFromURL extracts plugin name from Git URL
+func (pm *PluginManager) ExtractPluginNameFromURL(url string) string {
+	// Extract repository name from URL
+	// https://github.com/user/gokku-nginx -> nginx
+	// https://gitlab.com/user/gokku-postgres -> postgres
+
+	parts := strings.Split(url, "/")
+	if len(parts) == 0 {
+		return "unknown"
+	}
+
+	repoName := parts[len(parts)-1]
+
+	// Remove .git suffix if present
+	repoName = strings.TrimSuffix(repoName, ".git")
+
+	// Remove gokku- prefix if present
+	pluginName := strings.TrimPrefix(repoName, "gokku-")
+
+	return pluginName
+}
+
+// InstallPluginFromGit installs a plugin from Git repository
+func (pm *PluginManager) InstallPluginFromGit(gitURL, pluginName string) error {
+	// Check if plugin already exists
+	if pm.pluginExists(pluginName) {
+		return fmt.Errorf("plugin '%s' already exists", pluginName)
+	}
+
+	// Create plugin directory
+	pluginDir := filepath.Join(pm.pluginsDir, pluginName)
+	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+		return fmt.Errorf("failed to create plugin directory: %v", err)
+	}
+
+	// Clone repository
+	if err := pm.cloneRepository(gitURL, pluginDir); err != nil {
+		// Cleanup on error
+		os.RemoveAll(pluginDir)
+		return fmt.Errorf("failed to clone repository: %v", err)
+	}
+
+	// Make scripts executable
+	if err := pm.makeScriptsExecutable(pluginDir); err != nil {
+		return fmt.Errorf("failed to make scripts executable: %v", err)
+	}
+
+	return nil
+}
+
+// cloneRepository clones a Git repository
+func (pm *PluginManager) cloneRepository(gitURL, targetDir string) error {
+	// Use git clone command
+	cmd := exec.Command("git", "clone", "--depth", "1", gitURL, targetDir)
+
+	// Capture output for better error messages
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git clone failed: %v\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// InstallLocalPlugin installs a plugin from local contrib/plugins directory
+func (pm *PluginManager) InstallLocalPlugin(pluginName, localPath string) error {
+	// Check if plugin already exists
+	if pm.pluginExists(pluginName) {
+		return fmt.Errorf("plugin '%s' already exists", pluginName)
+	}
+
+	// Create plugin directory
+	pluginDir := filepath.Join(pm.pluginsDir, pluginName)
+	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+		return fmt.Errorf("failed to create plugin directory: %v", err)
+	}
+
+	// Copy plugin files from local directory
+	if err := pm.copyLocalPlugin(localPath, pluginDir); err != nil {
+		// Cleanup on error
+		os.RemoveAll(pluginDir)
+		return fmt.Errorf("failed to copy local plugin: %v", err)
+	}
+
+	// Make scripts executable
+	if err := pm.makeScriptsExecutable(pluginDir); err != nil {
+		return fmt.Errorf("failed to make scripts executable: %v", err)
+	}
+
+	return nil
+}
+
+// copyLocalPlugin copies plugin files from local directory
+func (pm *PluginManager) copyLocalPlugin(srcDir, dstDir string) error {
+	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Calculate relative path
+		relPath, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return err
+		}
+
+		// Skip the root directory
+		if relPath == "." {
+			return nil
+		}
+
+		dstPath := filepath.Join(dstDir, relPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(dstPath, info.Mode())
+		}
+
+		// Create parent directories
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			return err
+		}
+
+		// Copy file
+		srcFile, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer srcFile.Close()
+
+		dstFile, err := os.Create(dstPath)
+		if err != nil {
+			return err
+		}
+		defer dstFile.Close()
+
+		_, err = io.Copy(dstFile, srcFile)
+		if err != nil {
+			return err
+		}
+
+		// Set file permissions
+		return os.Chmod(dstPath, info.Mode())
+	})
 }
