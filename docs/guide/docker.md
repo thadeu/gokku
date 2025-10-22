@@ -90,7 +90,6 @@ CMD ["node", "index.js"]
 ```yaml
 apps:
   - name: go-app
-    lang: go
     build:
       path: .
 ```

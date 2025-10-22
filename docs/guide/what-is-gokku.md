@@ -74,7 +74,6 @@ All apps run in Docker containers:
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
   

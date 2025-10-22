@@ -27,7 +27,6 @@ project:
 
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
       binary_name: api
@@ -119,7 +118,6 @@ func main() {
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
       binary_name: api
@@ -226,7 +224,6 @@ func main() {
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
       binary_name: api

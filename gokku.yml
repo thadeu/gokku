@@ -7,7 +7,6 @@ project:
 
 apps:
   - name: speech-to-text
-    lang: go
     build:
       path: ./cmd/speech-to-text
       binary_name: speech-to-text
@@ -22,7 +21,6 @@ apps:
       restart_delay: 5
 
   - name: voice-agent
-    lang: go
     build:
       path: ./cmd/voice-agent
       binary_name: voice-agent

@@ -20,7 +20,6 @@ Simple Go API with Docker deployment:
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
       binary_name: api

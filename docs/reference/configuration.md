@@ -74,7 +74,6 @@ Array of application definitions.
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
 ```
@@ -248,7 +247,6 @@ defaults:
 apps:
   # Go API with Docker
   - name: api
-    lang: go
     build:
       path: ./cmd/api
       binary_name: api

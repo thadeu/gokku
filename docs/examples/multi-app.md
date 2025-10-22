@@ -167,7 +167,6 @@ Mix Go, Python, Node.js in one project:
 apps:
   # Go API
   - name: api
-    lang: go
     build:
       path: ./cmd/api
   

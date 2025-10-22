@@ -58,7 +58,6 @@ project:
 
 apps:
   - name: api-server
-    lang: go
     build:
       path: ./cmd/api
       binary_name: api-server
@@ -79,7 +78,6 @@ apps:
       restart_delay: 5
     
   - name: worker
-    lang: go
     build:
       path: ./cmd/worker
       binary_name: worker
@@ -177,7 +175,6 @@ apps:
 ```yaml
 apps:
   - name: custom-app
-    lang: go
     build:
       path: ./cmd/custom
       binary_name: custom
@@ -351,7 +348,6 @@ All applications run in Docker containers with blue-green deployment for zero-do
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
       binary_name: api
@@ -454,13 +450,11 @@ All applications use Docker containers, regardless of language:
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
       binary_name: api
     
   - name: worker
-    lang: go
     build:
       path: ./cmd/worker
       binary_name: worker

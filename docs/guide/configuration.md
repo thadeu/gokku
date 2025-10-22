@@ -172,12 +172,10 @@ project:
 
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
   
   - name: worker
-    lang: go
     build:
       path: ./cmd/worker
   
@@ -254,7 +252,6 @@ apps:
 ```yaml
 apps:
   - name: api
-    lang: go
     build:
       path: ./cmd/api
       go_version: "1.25"
