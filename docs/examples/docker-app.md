@@ -211,17 +211,64 @@ External port is managed by Gokku (incremental: 8080, 8081, 8082...).
 
 ## Volumes (Persistent Data)
 
-Currently, Gokku doesn't support Docker volumes directly. Workarounds:
+Gokku supports Docker volumes through the `volumes` field in your `gokku.yml`:
 
-### Option 1: Host Path Mount
+### Basic Volume Configuration
 
-Modify the Docker run command in the hook (advanced).
+```yaml
+apps:
+  my-app:
+    build:
+      path: ./cmd/my-app
+      volumes:
+        - "/host/path:/container/path"           # Bind mount
+        - "/usr/lib/data:/app/data"               # Shared data folder
+        - "/var/log/app:/app/logs"                 # Log files
+```
 
-### Option 2: External Storage
+### Shared Volumes Between Apps
 
-Use S3, PostgreSQL, Redis for persistent data.
+Perfect for microservices that need to share data:
 
-### Option 3: Database Container
+```yaml
+apps:
+  recorder:
+    build:
+      path: ./cmd/recorder
+      volumes:
+        - "/usr/lib/recordings:/app/recordings"   # Write files here
+        - "/var/log/recordings:/app/logs"
+  
+  processor:
+    build:
+      path: ./cmd/processor
+      volumes:
+        - "/usr/lib/recordings:/app/recordings"   # Read files from here
+        - "/var/log/recordings:/app/logs"
+  
+  webhook:
+    build:
+      path: ./cmd/webhook
+      volumes:
+        - "/usr/lib/recordings:/app/recordings"   # Access processed files
+        - "/var/log/recordings:/app/logs"
+```
+
+### Volume Types Supported
+
+- **Bind Mounts**: `/host/path:/container/path`
+- **Named Volumes**: `volume_name:/container/path`
+- **Read-only Mounts**: `/host/path:/container/path:ro`
+
+### External Storage Options
+
+For cloud-native apps, consider:
+
+- **S3**: For file storage
+- **PostgreSQL**: For structured data
+- **Redis**: For caching
+
+### Database Container Example
 
 Run database outside Gokku:
 

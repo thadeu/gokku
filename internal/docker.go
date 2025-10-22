@@ -44,6 +44,7 @@ type DeploymentConfig struct {
 	HealthTimeout int
 	NetworkMode   string
 	DockerPorts   []string
+	Volumes       []string
 }
 
 // ListContainers returns list of containers in JSON format
@@ -315,6 +316,12 @@ func StandardDeploy(config DeploymentConfig) error {
 		Volumes:       []string{fmt.Sprintf("%s:/app", config.ReleaseDir)},
 	}
 
+	// Add custom volumes from gokku.yml
+	if len(config.Volumes) > 0 {
+		containerConfig.Volumes = append(containerConfig.Volumes, config.Volumes...)
+		fmt.Printf("-----> Adding %d custom volumes\n", len(config.Volumes))
+	}
+
 	// Add port mappings
 	if config.NetworkMode != "host" {
 		if len(config.DockerPorts) > 0 {
@@ -443,6 +450,12 @@ func startGreenContainer(config DeploymentConfig, containerPort int) error {
 		RestartPolicy: "unless-stopped",
 		WorkingDir:    "/app",
 		Volumes:       []string{fmt.Sprintf("%s:/app", config.ReleaseDir)},
+	}
+
+	// Add custom volumes from gokku.yml
+	if len(config.Volumes) > 0 {
+		containerConfig.Volumes = append(containerConfig.Volumes, config.Volumes...)
+		fmt.Printf("-----> Adding %d custom volumes to green container\n", len(config.Volumes))
 	}
 
 	// Add port mappings

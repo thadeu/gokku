@@ -96,6 +96,11 @@ func (l *Golang) Deploy(appName string, app *App, releaseDir string) error {
 	}
 
 	// Create deployment config
+	volumes := []string{}
+	if app.Build != nil && len(app.Build.Volumes) > 0 {
+		volumes = app.Build.Volumes
+	}
+
 	return DeployContainer(DeploymentConfig{
 		AppName:     appName,
 		ImageTag:    "latest",
@@ -103,6 +108,7 @@ func (l *Golang) Deploy(appName string, app *App, releaseDir string) error {
 		ReleaseDir:  releaseDir,
 		NetworkMode: networkMode,
 		DockerPorts: app.Ports,
+		Volumes:     volumes,
 	})
 }
 
