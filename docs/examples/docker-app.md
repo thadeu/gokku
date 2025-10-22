@@ -37,8 +37,8 @@ apps:
   python-app:
     lang: python
     path: .
-      entrypoint: app.py
-      base_image: python:3.11-slim
+    entrypoint: app.py
+    image: python:3.11-slim
 ```
 
 Generated Dockerfile:
@@ -59,8 +59,8 @@ apps:
   nodejs-app:
     lang: nodejs
     path: .
-      entrypoint: index.js
-      base_image: node:20-alpine
+    entrypoint: index.js
+    image: node:20-alpine
 ```
 
 Generated Dockerfile:
@@ -79,8 +79,8 @@ CMD ["node", "index.js"]
 ```yaml
 apps:
   go-app:
+    image: golang:1.25-alpine
     path: ./cmd/api
-      base_image: golang:1.25-alpine
 ```
 
 ## Custom Dockerfile Examples
@@ -326,7 +326,7 @@ docker:
 
 apps:
   my-app:
-    base_image: registry.example.com/python:3.11
+    image: registry.example.com/python:3.11
 ```
 
 Login on server first:

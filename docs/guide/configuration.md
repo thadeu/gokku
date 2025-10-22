@@ -62,7 +62,6 @@ work_dir: .             # Working directory for build
   
   # Docker-specific settings
   dockerfile: ./Dockerfile     # Custom Dockerfile path
-  base_image: python:3.11-slim # Base image
       
 ```
 
@@ -124,8 +123,8 @@ apps:
 apps:
   app-name: worker
     lang: python
+    image: python:3.11-slim
     path: ./apps/worker
-      base_image: python:3.11-slim
 ```
 
 ### Node.js Application
@@ -134,8 +133,8 @@ apps:
 apps:
   app-name: frontend
     lang: nodejs
+    image: node:20-alpine
     path: ./apps/frontend
-      base_image: node:20-alpine
 ```
 
 ## Multi-App Configuration

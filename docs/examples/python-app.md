@@ -278,9 +278,9 @@ def predict(text: str):
 apps:
   ml-service:
     lang: python
+    image: python:3.11
     path: .
-      entrypoint: server.py
-      base_image: python:3.11
+    entrypoint: server.py
 ```
 
 ## With FFmpeg (Audio Processing)

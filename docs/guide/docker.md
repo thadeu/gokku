@@ -185,7 +185,7 @@ docker:
 apps:
   ml-service:
     lang: python
-    base_image: "python:3.11"  # Full image, not slim
+    image: "python:3.11"  # Full image, not slim
 ```
 
 ### From Private Registry
@@ -196,7 +196,7 @@ docker:
 
 apps:
   api:
-    base_image: "registry.example.com/python:3.11-custom"
+    image: "registry.example.com/python:3.11-custom"
 ```
 
 Login on server first:
@@ -507,7 +507,7 @@ docker:
 
 apps:
   api:
-    base_image: "registry.example.com/python:3.11"
+    image: "registry.example.com/python:3.11"
 ```
 
 Login on server:
