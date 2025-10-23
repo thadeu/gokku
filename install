@@ -314,6 +314,8 @@ EOF
     mkdir -p $BASE_DIR/volumes
 
     for script in "${scripts[@]}"; do
+        sleep 1
+
         if ! curl -fsSL "$REPO_URL/$script" -o "$BASE_DIR/$script"; then
             log_error "Failed to download $script"
             exit 1
