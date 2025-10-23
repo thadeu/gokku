@@ -57,6 +57,11 @@ func (pm *PluginManager) InstallOfficialPlugin(pluginName string) error {
 		return fmt.Errorf("failed to clone official plugin: %v", err)
 	}
 
+	// Create plugin config.json
+	if err := pm.createPluginConfig(pluginDir, pluginName, gitURL); err != nil {
+		return fmt.Errorf("failed to create plugin config: %v", err)
+	}
+
 	// Make scripts executable
 	if err := pm.makeScriptsExecutable(pluginDir); err != nil {
 		return fmt.Errorf("failed to make scripts executable: %v", err)
@@ -235,6 +240,11 @@ func (pm *PluginManager) InstallPluginFromGit(gitURL, pluginName string) error {
 		return fmt.Errorf("failed to clone repository: %v", err)
 	}
 
+	// Create plugin config.json
+	if err := pm.createPluginConfig(pluginDir, pluginName, gitURL); err != nil {
+		return fmt.Errorf("failed to create plugin config: %v", err)
+	}
+
 	// Make scripts executable
 	if err := pm.makeScriptsExecutable(pluginDir); err != nil {
 		return fmt.Errorf("failed to make scripts executable: %v", err)
@@ -252,6 +262,84 @@ func (pm *PluginManager) cloneRepository(gitURL, targetDir string) error {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git clone failed: %v\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// createPluginConfig creates a config.json file for the plugin
+func (pm *PluginManager) createPluginConfig(pluginDir, pluginName, gitURL string) error {
+	configJSON := fmt.Sprintf(`{
+  "name": "%s",
+  "url": "%s"
+}`, pluginName, gitURL)
+
+	configPath := filepath.Join(pluginDir, "config.json")
+	return os.WriteFile(configPath, []byte(configJSON), 0644)
+}
+
+// UpdatePlugin updates a plugin by re-cloning from its source URL
+func (pm *PluginManager) UpdatePlugin(pluginName string) error {
+	// Check if plugin exists
+	if !pm.pluginExists(pluginName) {
+		return fmt.Errorf("plugin '%s' not found", pluginName)
+	}
+
+	pluginDir := filepath.Join(pm.pluginsDir, pluginName)
+	configPath := filepath.Join(pluginDir, "config.json")
+
+	// Read plugin config to get source URL
+	configData, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read plugin config: %v", err)
+	}
+
+	// Extract URL from config (simple parsing)
+	configStr := string(configData)
+	var gitURL string
+
+	// Find URL in config.json
+	lines := strings.Split(configStr, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, `"url":`) {
+			// Extract URL from line like: "url": "https://github.com/user/repo"
+			parts := strings.Split(line, `"url": "`)
+			if len(parts) > 1 {
+				gitURL = strings.TrimSuffix(strings.TrimSpace(parts[1]), `"`)
+				break
+			}
+		}
+	}
+
+	if gitURL == "" {
+		return fmt.Errorf("plugin source URL not found in config.json")
+	}
+
+	// Remove existing plugin directory
+	if err := os.RemoveAll(pluginDir); err != nil {
+		return fmt.Errorf("failed to remove existing plugin: %v", err)
+	}
+
+	// Recreate plugin directory
+	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+		return fmt.Errorf("failed to create plugin directory: %v", err)
+	}
+
+	// Clone repository again
+	if err := pm.cloneRepository(gitURL, pluginDir); err != nil {
+		// Cleanup on error
+		os.RemoveAll(pluginDir)
+		return fmt.Errorf("failed to clone repository: %v", err)
+	}
+
+	// Recreate plugin config.json
+	if err := pm.createPluginConfig(pluginDir, pluginName, gitURL); err != nil {
+		return fmt.Errorf("failed to create plugin config: %v", err)
+	}
+
+	// Make scripts executable
+	if err := pm.makeScriptsExecutable(pluginDir); err != nil {
+		return fmt.Errorf("failed to make scripts executable: %v", err)
 	}
 
 	return nil

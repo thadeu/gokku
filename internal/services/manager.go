@@ -77,7 +77,8 @@ func (sm *ServiceManager) CreateService(pluginName, serviceName, version string)
 	}
 
 	// Execute plugin install script
-	installScript := filepath.Join(sm.pluginsDir, pluginName, "install")
+	installScript := filepath.Join(sm.pluginsDir, pluginName, "bin", "install")
+
 	if _, err := os.Stat(installScript); err == nil {
 		cmd := exec.Command("bash", installScript, serviceName, version)
 		cmd.Stdout = os.Stdout

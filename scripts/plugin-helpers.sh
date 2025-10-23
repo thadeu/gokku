@@ -37,8 +37,16 @@ set_app_env() {
 
     # Check if key already exists
     if grep -q "^$key=" "$env_file" 2>/dev/null; then
-        # Update existing key
-        sed -i "s/^$key=.*/$key=$value/" "$env_file"
+        # Update existing key using a more robust approach
+        local temp_file=$(mktemp)
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^$key= ]]; then
+                echo "$key=$value"
+            else
+                echo "$line"
+            fi
+        done < "$env_file" > "$temp_file"
+        mv "$temp_file" "$env_file"
     else
         # Add new key
         echo "$key=$value" >> "$env_file"
@@ -54,7 +62,14 @@ unset_app_env() {
     local env_file="/opt/gokku/apps/$app_name/$env/.env"
 
     if [ -f "$env_file" ]; then
-        sed -i "/^$key=/d" "$env_file"
+        # Remove lines starting with the key using a more robust approach
+        local temp_file=$(mktemp)
+        while IFS= read -r line; do
+            if [[ ! "$line" =~ ^$key= ]]; then
+                echo "$line"
+            fi
+        done < "$env_file" > "$temp_file"
+        mv "$temp_file" "$env_file"
     fi
 }
 
@@ -162,19 +177,18 @@ update_service_config() {
     local value="$3"
 
     local config_file="/opt/gokku/services/$service_name/config.json"
-    local temp_file=$(mktemp)
 
-    # Update JSON config (basic implementation)
+    # Create directory if it doesn't exist
+    mkdir -p "$(dirname "$config_file")"
+
+    # Use jq to update JSON (reliable and handles special characters properly)
     if [ -f "$config_file" ]; then
-        cp "$config_file" "$temp_file"
+        # Update existing config
+        jq --arg key "$key" --arg value "$value" '.[$key] = $value' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
     else
-        echo "{}" > "$temp_file"
+        # Create new config with the key-value pair
+        jq -n --arg key "$key" --arg value "$value" '{($key): $value}' > "$config_file"
     fi
-
-    # Simple JSON update (this is basic, for production use jq)
-    sed -i "s/\"$key\":[^,}]*/\"$key\":\"$value\"/" "$temp_file"
-
-    mv "$temp_file" "$config_file"
 }
 
 # Log message with timestamp

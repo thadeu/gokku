@@ -39,6 +39,8 @@ func handlePlugins(args []string) {
 		handlePluginsList()
 	case "add":
 		handlePluginsAdd(args[1:])
+	case "update":
+		handlePluginsUpdate(args[1:])
 	case "remove":
 		handlePluginsRemove(args[1:])
 	default:
@@ -144,6 +146,37 @@ func handlePluginsAdd(args []string) {
 	os.Exit(1)
 }
 
+// handlePluginsUpdate updates a plugin from its source repository
+func handlePluginsUpdate(args []string) {
+	if len(args) < 1 {
+		fmt.Println("Usage: gokku plugins:update <plugin-name>")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  gokku plugins:update redis")
+		fmt.Println("  gokku plugins:update nginx")
+		os.Exit(1)
+	}
+
+	pluginName := args[0]
+
+	pm := plugins.NewPluginManager()
+
+	if !pm.PluginExists(pluginName) {
+		fmt.Printf("Plugin '%s' not found\n", pluginName)
+		fmt.Printf("Install it with: gokku plugins:add %s\n", pluginName)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Updating plugin '%s'...\n", pluginName)
+
+	if err := pm.UpdatePlugin(pluginName); err != nil {
+		fmt.Printf("Error updating plugin: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Plugin '%s' updated successfully\n", pluginName)
+}
+
 // handlePluginsRemove removes a plugin
 func handlePluginsRemove(args []string) {
 	if len(args) < 1 {
@@ -226,6 +259,7 @@ func showPluginHelp() {
 	fmt.Println("  gokku plugins:list                    List all installed plugins")
 	fmt.Println("  gokku plugins:add <name>              Add official plugin")
 	fmt.Println("  gokku plugins:add <name> <git-url>    Add community plugin")
+	fmt.Println("  gokku plugins:update <plugin>         Update plugin from source")
 	fmt.Println("  gokku plugins:remove <plugin>         Remove plugin")
 	fmt.Println("")
 	fmt.Println("Plugin commands:")
@@ -234,4 +268,5 @@ func showPluginHelp() {
 	fmt.Println("Examples:")
 	fmt.Println("  gokku plugins:add nginx                              # Official plugin")
 	fmt.Println("  gokku plugins:add aws https://github.com/thadeu/gokku-aws  # Community plugin")
+	fmt.Println("  gokku plugins:update redis                           # Update plugin")
 }
