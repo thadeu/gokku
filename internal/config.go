@@ -68,8 +68,12 @@ func GetRemoteInfo(remoteName string) (*RemoteInfo, error) {
 
 	remoteURL := strings.TrimSpace(string(output))
 
-	// Parse: user@host:/path/to/repos/app.git
+	// Parse:
+	// user@host:/opt/gokku/repos/app-name.git
+	// or
+	// user@host:app-name
 	parts := strings.Split(remoteURL, ":")
+
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid remote URL format: %s (expected user@host:/path)", remoteURL)
 	}
@@ -79,7 +83,10 @@ func GetRemoteInfo(remoteName string) (*RemoteInfo, error) {
 
 	// Extract app name from path: api -> api
 	pathParts := strings.Split(path, "/")
-	if len(pathParts) < 2 {
+
+	if len(pathParts) == 1 {
+		pathParts = append(pathParts, "/opt/gokku/repos", pathParts[0])
+	} else if len(pathParts) < 2 {
 		return nil, fmt.Errorf("invalid remote path: %s", path)
 	}
 
