@@ -15,7 +15,7 @@ export default withMermaid(defineConfig({
     logo: '/logo.svg',
 
     nav: [
-      { text: '1.0.64', link: '/' },
+      { text: '1.0.65', link: '/' },
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Examples', link: '/examples/' },
