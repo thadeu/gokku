@@ -191,19 +191,35 @@ func (sm *ServiceManager) DestroyService(serviceName string) error {
 		return fmt.Errorf("failed to get service config: %v", err)
 	}
 
-	// Stop container if it's running
-	if service.Running && service.ContainerID != "" {
-		fmt.Printf("-----> Stopping container: %s\n", service.ContainerID)
-		if err := internal.StopContainer(service.ContainerID); err != nil {
-			fmt.Printf("Warning: Failed to stop container: %v\n", err)
+	// Find and stop all containers related to this service
+	containers, err := sm.findServiceContainers(serviceName)
+	if err != nil {
+		fmt.Printf("Warning: Failed to find service containers: %v\n", err)
+	}
+
+	// Stop and remove all found containers
+	for _, containerName := range containers {
+		fmt.Printf("-----> Stopping container: %s\n", containerName)
+		if err := internal.StopContainer(containerName); err != nil {
+			fmt.Printf("Warning: Failed to stop container %s: %v\n", containerName, err)
+		}
+
+		fmt.Printf("-----> Removing container: %s\n", containerName)
+		if err := internal.RemoveContainer(containerName, true); err != nil {
+			fmt.Printf("Warning: Failed to remove container %s: %v\n", containerName, err)
 		}
 	}
 
-	// Remove container if it exists
+	// Also try to stop/remove the container ID from service config (legacy support)
 	if service.ContainerID != "" {
-		fmt.Printf("-----> Removing container: %s\n", service.ContainerID)
+		fmt.Printf("-----> Stopping legacy container: %s\n", service.ContainerID)
+		if err := internal.StopContainer(service.ContainerID); err != nil {
+			fmt.Printf("Warning: Failed to stop legacy container: %v\n", err)
+		}
+
+		fmt.Printf("-----> Removing legacy container: %s\n", service.ContainerID)
 		if err := internal.RemoveContainer(service.ContainerID, true); err != nil {
-			fmt.Printf("Warning: Failed to remove container: %v\n", err)
+			fmt.Printf("Warning: Failed to remove legacy container: %v\n", err)
 		}
 	}
 
@@ -407,6 +423,59 @@ func (sm *ServiceManager) getServiceEnvKeys(pluginName string) []string {
 	default:
 		return []string{}
 	}
+}
+
+// findServiceContainers finds all containers related to a service
+func (sm *ServiceManager) findServiceContainers(serviceName string) ([]string, error) {
+	var containers []string
+
+	// Find containers with exact name match
+	checkCmd := exec.Command("docker", "ps", "-aq", "-f", fmt.Sprintf("name=^%s$", serviceName))
+	output, err := checkCmd.Output()
+	if err == nil && len(strings.TrimSpace(string(output))) > 0 {
+		containerIDs := strings.Split(strings.TrimSpace(string(output)), "\n")
+		for _, id := range containerIDs {
+			if id != "" {
+				// Get container name from ID
+				nameCmd := exec.Command("docker", "inspect", "--format", "{{.Name}}", id)
+				nameOutput, err := nameCmd.Output()
+				if err == nil {
+					containerName := strings.TrimPrefix(strings.TrimSpace(string(nameOutput)), "/")
+					containers = append(containers, containerName)
+				}
+			}
+		}
+	}
+
+	// Also find containers that start with the service name (for services with multiple containers)
+	patternCmd := exec.Command("docker", "ps", "-aq", "-f", fmt.Sprintf("name=^%s-", serviceName))
+	patternOutput, err := patternCmd.Output()
+	if err == nil && len(strings.TrimSpace(string(patternOutput))) > 0 {
+		containerIDs := strings.Split(strings.TrimSpace(string(patternOutput)), "\n")
+		for _, id := range containerIDs {
+			if id != "" {
+				// Get container name from ID
+				nameCmd := exec.Command("docker", "inspect", "--format", "{{.Name}}", id)
+				nameOutput, err := nameCmd.Output()
+				if err == nil {
+					containerName := strings.TrimPrefix(strings.TrimSpace(string(nameOutput)), "/")
+					// Avoid duplicates
+					found := false
+					for _, existing := range containers {
+						if existing == containerName {
+							found = true
+							break
+						}
+					}
+					if !found {
+						containers = append(containers, containerName)
+					}
+				}
+			}
+		}
+	}
+
+	return containers, nil
 }
 
 // getServiceContainerInfo gets container information from Docker
