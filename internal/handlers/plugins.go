@@ -236,15 +236,17 @@ func handlePluginCommand(args []string) {
 	commandPath := filepath.Join(pluginDir, "commands", command)
 
 	// Build command arguments (pass all remaining args to the plugin command)
-	cmdArgs := []string{"bash", commandPath}
+	cmdArgs := []string{"-c", commandPath}
+
 	if len(args) > 1 {
 		cmdArgs = append(cmdArgs, args[1:]...)
 	}
 
 	// Execute the plugin command
-	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	cmd := exec.Command("bash", cmdArgs[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 
 	if err := cmd.Run(); err != nil {
 		// Don't print error if command already printed its own error
