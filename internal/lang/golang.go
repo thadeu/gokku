@@ -362,14 +362,6 @@ func (l *Golang) detectSystemArchitecture() (goos, goarch string) {
 	return goos, goarch
 }
 
-// getWorkdirCommand returns the WORKDIR command for Dockerfile if workdir is specified
-func (l *Golang) getWorkdirCommand(workDir string) string {
-	if workDir != "." {
-		return fmt.Sprintf("WORKDIR /app/%s", workDir)
-	}
-	return ""
-}
-
 // getDockerBuildArgs returns build arguments for Docker build command
 func (l *Golang) getDockerBuildArgs(app *App) map[string]string {
 	// Detect system architecture

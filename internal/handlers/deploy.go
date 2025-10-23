@@ -267,6 +267,9 @@ func executeDirectDeployment(appName string) error {
 		}
 	}
 
+	volumesDir := fmt.Sprintf("%s/volumes", app.Name)
+	os.MkdirAll(volumesDir, 0755)
+
 	fmt.Println("-----> Build complete!")
 
 	// Deploy application using language handler
@@ -327,10 +330,10 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 		return nil
 	}
 
-	// Find the app in the config
-	var app *internal.App
-	if a, exists := serverConfig.Apps[appName]; exists {
-		app = &a
+	app, err := serverConfig.GetApp(appName)
+
+	if err != nil {
+		return fmt.Errorf("failed to get app: %v", err)
 	}
 
 	if app == nil {

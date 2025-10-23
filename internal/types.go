@@ -22,6 +22,7 @@ type Config struct {
 
 // App represents an application configuration
 type App struct {
+	Name         string            `yaml:"name,omitempty"`
 	Lang         string            `yaml:"lang,omitempty"`
 	Path         string            `yaml:"path,omitempty"`
 	WorkDir      string            `yaml:"workdir,omitempty"`
@@ -120,6 +121,7 @@ func LoadAppConfig(appName string) (*App, error) {
 
 	// Find the app by name
 	if app, exists := serverConfig.Apps[appName]; exists {
+		app.Name = appName
 		return &app, nil
 	}
 
@@ -129,8 +131,10 @@ func LoadAppConfig(appName string) (*App, error) {
 // GetApp finds an app by name
 func (c *ServerConfig) GetApp(name string) (*App, error) {
 	if app, exists := c.Apps[name]; exists {
+		app.Name = name
 		return &app, nil
 	}
+
 	return nil, fmt.Errorf("app '%s' not found", name)
 }
 
