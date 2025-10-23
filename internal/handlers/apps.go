@@ -456,7 +456,6 @@ if git rev-parse --verify HEAD >/dev/null 2>&1; then
     fi
 
     echo "-----> Deploying from branch: $CURRENT_HEAD_BRANCH"
-    echo "-----> Deploying $APP_NAME..."
 
     # Execute deployment using the centralized deploy command
     gokku deploy -a "$APP_NAME"
@@ -652,7 +651,6 @@ if git rev-parse --verify HEAD >/dev/null 2>&1; then
     fi
 
     echo "-----> Deploying from branch: $CURRENT_HEAD_BRANCH"
-    echo "-----> Deploying $APP_NAME..."
 
     # Execute deployment using the centralized deploy command
     gokku deploy -a "$APP_NAME"
@@ -812,7 +810,6 @@ if git rev-parse --verify HEAD >/dev/null 2>&1; then
     fi
 
     echo "-----> Deploying from branch: $CURRENT_HEAD_BRANCH"
-    echo "-----> Deploying $APP_NAME..."
 
     # Execute deployment using the centralized deploy command
     gokku deploy -a "$APP_NAME"
