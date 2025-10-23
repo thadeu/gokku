@@ -294,6 +294,7 @@ func DetectGoVersion(releaseDir string) string {
 		// Look for go version in go.mod
 		re := regexp.MustCompile(`go\s+(\d+\.\d+)`)
 		matches := re.FindStringSubmatch(content)
+
 		if len(matches) > 1 {
 			version := matches[1]
 			return fmt.Sprintf("golang:%s-alpine", version)
@@ -301,7 +302,7 @@ func DetectGoVersion(releaseDir string) string {
 	}
 
 	// Fallback to latest Go
-	return "golang:latest-alpine"
+	return "golang:latest"
 }
 
 // DetectNodeVersion detects Node.js version from .nvmrc or package.json
