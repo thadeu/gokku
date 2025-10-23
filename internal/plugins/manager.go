@@ -1,11 +1,7 @@
 package plugins
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,8 +33,8 @@ func NewPluginManager() *PluginManager {
 	}
 }
 
-// DownloadPlugin downloads a plugin from GitHub
-func (pm *PluginManager) DownloadPlugin(owner, repoName, pluginName string) error {
+// InstallOfficialPlugin installs an official plugin from gokku-vm organization
+func (pm *PluginManager) InstallOfficialPlugin(pluginName string) error {
 	// Check if plugin already exists
 	if pm.pluginExists(pluginName) {
 		return fmt.Errorf("plugin '%s' already exists", pluginName)
@@ -50,11 +46,15 @@ func (pm *PluginManager) DownloadPlugin(owner, repoName, pluginName string) erro
 		return fmt.Errorf("failed to create plugin directory: %v", err)
 	}
 
-	// Download and extract plugin
-	if err := pm.downloadAndExtractPlugin(owner, repoName, pluginDir); err != nil {
+	// Official plugins are in gokku-vm organization with gokku- prefix
+	repoName := fmt.Sprintf("gokku-%s", pluginName)
+	gitURL := fmt.Sprintf("https://github.com/gokku-vm/%s", repoName)
+
+	// Clone repository
+	if err := pm.cloneRepository(gitURL, pluginDir); err != nil {
 		// Cleanup on error
 		os.RemoveAll(pluginDir)
-		return fmt.Errorf("failed to download plugin: %v", err)
+		return fmt.Errorf("failed to clone official plugin: %v", err)
 	}
 
 	// Make scripts executable
@@ -124,98 +124,18 @@ func (pm *PluginManager) CommandExists(pluginName, command string) bool {
 	return !os.IsNotExist(err)
 }
 
-// downloadAndExtractPlugin downloads and extracts a plugin from GitHub
-func (pm *PluginManager) downloadAndExtractPlugin(owner, repoName, pluginDir string) error {
-	// Download latest release or main branch
-	url := fmt.Sprintf("https://github.com/%s/%s/archive/refs/heads/main.tar.gz", owner, repoName)
-
-	fmt.Printf("-----> Downloading from %s\n", url)
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("failed to download plugin: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download plugin: HTTP %d", resp.StatusCode)
-	}
-
-	// Extract tar.gz
-	gzReader, err := gzip.NewReader(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to create gzip reader: %v", err)
-	}
-	defer gzReader.Close()
-
-	tarReader := tar.NewReader(gzReader)
-
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("failed to read tar: %v", err)
-		}
-
-		// Skip the root directory (repoName-main/)
-		if header.Name == fmt.Sprintf("%s-main/", repoName) {
-			continue
-		}
-
-		// Remove the root directory prefix
-		targetPath := strings.TrimPrefix(header.Name, fmt.Sprintf("%s-main/", repoName))
-		if targetPath == "" {
-			continue
-		}
-
-		fullPath := filepath.Join(pluginDir, targetPath)
-
-		switch header.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(fullPath, os.FileMode(header.Mode)); err != nil {
-				return fmt.Errorf("failed to create directory: %v", err)
-			}
-		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
-				return fmt.Errorf("failed to create parent directory: %v", err)
-			}
-
-			file, err := os.Create(fullPath)
-			if err != nil {
-				return fmt.Errorf("failed to create file: %v", err)
-			}
-
-			if _, err := io.Copy(file, tarReader); err != nil {
-				file.Close()
-				return fmt.Errorf("failed to copy file content: %v", err)
-			}
-
-			file.Close()
-
-			// Set file permissions
-			if err := os.Chmod(fullPath, os.FileMode(header.Mode)); err != nil {
-				return fmt.Errorf("failed to set file permissions: %v", err)
-			}
-		}
-	}
-
-	return nil
-}
-
 // makeScriptsExecutable makes all plugin scripts executable
 func (pm *PluginManager) makeScriptsExecutable(pluginDir string) error {
-	// Make install script executable
-	installPath := filepath.Join(pluginDir, "install")
+	// Make bin/install script executable
+	installPath := filepath.Join(pluginDir, "bin", "install")
 	if _, err := os.Stat(installPath); err == nil {
 		if err := os.Chmod(installPath, 0755); err != nil {
 			return fmt.Errorf("failed to make install script executable: %v", err)
 		}
 	}
 
-	// Make uninstall script executable
-	uninstallPath := filepath.Join(pluginDir, "uninstall")
+	// Make bin/uninstall script executable
+	uninstallPath := filepath.Join(pluginDir, "bin", "uninstall")
 	if _, err := os.Stat(uninstallPath); err == nil {
 		if err := os.Chmod(uninstallPath, 0755); err != nil {
 			return fmt.Errorf("failed to make uninstall script executable: %v", err)
@@ -335,84 +255,4 @@ func (pm *PluginManager) cloneRepository(gitURL, targetDir string) error {
 	}
 
 	return nil
-}
-
-// InstallLocalPlugin installs a plugin from local contrib/plugins directory
-func (pm *PluginManager) InstallLocalPlugin(pluginName, localPath string) error {
-	// Check if plugin already exists
-	if pm.pluginExists(pluginName) {
-		return fmt.Errorf("plugin '%s' already exists", pluginName)
-	}
-
-	// Create plugin directory
-	pluginDir := filepath.Join(pm.pluginsDir, pluginName)
-	if err := os.MkdirAll(pluginDir, 0755); err != nil {
-		return fmt.Errorf("failed to create plugin directory: %v", err)
-	}
-
-	// Copy plugin files from local directory
-	if err := pm.copyLocalPlugin(localPath, pluginDir); err != nil {
-		// Cleanup on error
-		os.RemoveAll(pluginDir)
-		return fmt.Errorf("failed to copy local plugin: %v", err)
-	}
-
-	// Make scripts executable
-	if err := pm.makeScriptsExecutable(pluginDir); err != nil {
-		return fmt.Errorf("failed to make scripts executable: %v", err)
-	}
-
-	return nil
-}
-
-// copyLocalPlugin copies plugin files from local directory
-func (pm *PluginManager) copyLocalPlugin(srcDir, dstDir string) error {
-	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Calculate relative path
-		relPath, err := filepath.Rel(srcDir, path)
-		if err != nil {
-			return err
-		}
-
-		// Skip the root directory
-		if relPath == "." {
-			return nil
-		}
-
-		dstPath := filepath.Join(dstDir, relPath)
-
-		if info.IsDir() {
-			return os.MkdirAll(dstPath, info.Mode())
-		}
-
-		// Create parent directories
-		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
-			return err
-		}
-
-		// Copy file
-		srcFile, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer srcFile.Close()
-
-		dstFile, err := os.Create(dstPath)
-		if err != nil {
-			return err
-		}
-		defer dstFile.Close()
-
-		_, err = io.Copy(dstFile, srcFile)
-		if err != nil {
-			return err
-		}
-
-		// Set file permissions
-		return os.Chmod(dstPath, info.Mode())
-	})
 }
