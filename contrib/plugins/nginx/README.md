@@ -14,7 +14,7 @@ A Gokku plugin that provides nginx as a service for load balancing, reverse prox
 ## Installation
 
 ```bash
-gokku plugins:add ginx
+gokku plugins:add nginx
 ```
 
 ## Usage
