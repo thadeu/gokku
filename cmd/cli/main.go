@@ -9,7 +9,7 @@ import (
 	"infra/internal/handlers"
 )
 
-const version = "1.0.60"
+const version = "1.0.61"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -44,6 +44,24 @@ func main() {
 	if strings.HasPrefix(command, "ps:") {
 		subcommand := strings.TrimPrefix(command, "ps:")
 		handlers.HandlePS(append([]string{subcommand}, os.Args[2:]...))
+		return
+	}
+
+	if strings.HasPrefix(command, "plugins:") {
+		subcommand := strings.TrimPrefix(command, "plugins:")
+		handlers.HandlePlugins(append([]string{subcommand}, os.Args[2:]...))
+		return
+	}
+
+	if strings.HasPrefix(command, "services:") {
+		subcommand := strings.TrimPrefix(command, "services:")
+		handlers.HandleServices(append([]string{subcommand}, os.Args[2:]...))
+		return
+	}
+
+	if strings.HasPrefix(command, "config:") {
+		subcommand := strings.TrimPrefix(command, "config:")
+		handlers.HandleConfigWithContext(ctx, append([]string{subcommand}, os.Args[2:]...))
 		return
 	}
 
