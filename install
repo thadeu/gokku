@@ -417,9 +417,7 @@ main() {
 
     echo ""
     log_success "Installation complete! 🎉"
-    echo ""
-    echo -e "Run: ${CYAN}gokku --help${NC} to get started"
-    echo ""
+    bash -c "gokku version"
 }
 
 trap 'log_error "Installation failed at line $LINENO"' ERR
