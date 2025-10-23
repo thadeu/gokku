@@ -112,7 +112,6 @@ func handleServicesCreate(args []string) {
 	}
 
 	fmt.Printf("Service '%s' created successfully\n", serviceName)
-	fmt.Printf("Link it to an app with: gokku services:link %s -a <app>\n", serviceName)
 }
 
 // handleServicesLink links a service to an app
