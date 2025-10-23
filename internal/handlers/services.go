@@ -168,10 +168,24 @@ func handleServicesUnlink(args []string) {
 func handleServicesDestroy(args []string) {
 	if len(args) < 1 {
 		fmt.Println("Usage: gokku services:destroy <service>")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  gokku services:destroy postgres-api")
+		fmt.Println("  gokku services:destroy redis-cache")
 		os.Exit(1)
 	}
 
 	serviceName := args[0]
+
+	// Handle help flag
+	if serviceName == "--help" || serviceName == "-h" {
+		fmt.Println("Usage: gokku services:destroy <service>")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  gokku services:destroy postgres-api")
+		fmt.Println("  gokku services:destroy redis-cache")
+		return
+	}
 
 	sm := services.NewServiceManager()
 

@@ -191,9 +191,26 @@ func (sm *ServiceManager) DestroyService(serviceName string) error {
 		return fmt.Errorf("failed to get service config: %v", err)
 	}
 
+	// Stop container if it's running
+	if service.Running && service.ContainerID != "" {
+		fmt.Printf("-----> Stopping container: %s\n", service.ContainerID)
+		if err := internal.StopContainer(service.ContainerID); err != nil {
+			fmt.Printf("Warning: Failed to stop container: %v\n", err)
+		}
+	}
+
+	// Remove container if it exists
+	if service.ContainerID != "" {
+		fmt.Printf("-----> Removing container: %s\n", service.ContainerID)
+		if err := internal.RemoveContainer(service.ContainerID, true); err != nil {
+			fmt.Printf("Warning: Failed to remove container: %v\n", err)
+		}
+	}
+
 	// Execute plugin uninstall script
 	uninstallScript := filepath.Join(sm.pluginsDir, service.Plugin, "uninstall")
 	if _, err := os.Stat(uninstallScript); err == nil {
+		fmt.Printf("-----> Executing plugin uninstall script\n")
 		cmd := exec.Command("bash", uninstallScript, serviceName)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -204,6 +221,7 @@ func (sm *ServiceManager) DestroyService(serviceName string) error {
 
 	// Remove service directory
 	serviceDir := filepath.Join(sm.servicesDir, serviceName)
+	fmt.Printf("-----> Removing service directory\n")
 	if err := os.RemoveAll(serviceDir); err != nil {
 		return fmt.Errorf("failed to remove service directory: %v", err)
 	}
