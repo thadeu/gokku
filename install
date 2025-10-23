@@ -17,6 +17,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Configuration
+GITHUB_TOKEN="${GITHUB_TOKEN:-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}"
 REPO_URL="${GOKKU_REPO_URL:-https://raw.githubusercontent.com/thadeu/gokku/refs/heads/main}"
 INSTALL_DIR="${GOKKU_INSTALL_DIR:-$HOME/.gokku}"
 BIN_DIR="/usr/local/bin"
@@ -268,6 +269,24 @@ EOF
     fi
 }
 
+download_with_github_api() {
+    sleep 0.5
+
+    local script="$1"
+    local output="$2"
+
+    # Try GitHub API first (if token is available)
+    if [ -n "$GITHUB_TOKEN" ]; then
+        local api_url="https://api.github.com/repos/thadeu/gokku/contents/$script"
+        if curl -fsSL -H "Authorization: token $GITHUB_TOKEN" "$api_url" | jq -r '.content' | base64 -d > "$output" 2>/dev/null; then
+            return 0
+        fi
+    fi
+
+    # Fallback to raw URL
+    curl -fsSL "$REPO_URL/$script" -o "$output"
+}
+
 setup_server() {
     log "Setting up server deployment..."
 
@@ -314,9 +333,7 @@ EOF
     mkdir -p $BASE_DIR/volumes
 
     for script in "${scripts[@]}"; do
-        sleep 1
-
-        if ! curl -fsSL "$REPO_URL/$script" -o "$BASE_DIR/$script"; then
+        if ! download_with_github_api "$script" "$BASE_DIR/$script"; then
             log_error "Failed to download $script"
             exit 1
         fi
@@ -418,8 +435,9 @@ main() {
     cleanup
 
     echo ""
+
     log_success "Installation complete! 🎉"
-    bash -c "gokku version"
+    log_success "$(bash -c "gokku version")"
 }
 
 trap 'log_error "Installation failed at line $LINENO"' ERR
