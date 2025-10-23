@@ -210,48 +210,86 @@ func handleAppsDestroy(args []string) {
 
 	appName := remainingArgs[0]
 
-	if remote == "" {
-		fmt.Println("Error: --remote is required for destroy command")
-		fmt.Println("This prevents accidental deletion of the wrong app")
-		os.Exit(1)
+	// Check if running on server
+	isServerMode := internal.IsServerMode()
+
+	if isServerMode {
+		// Server mode - destroy app directly without SSH
+		fmt.Printf("Destroying app %s...\n", appName)
+		fmt.Printf("This will permanently delete the app and all its data.\n")
+		fmt.Printf("Continue? (y/N): ")
+
+		var response string
+		fmt.Scanln(&response)
+		if response != "y" && response != "Y" {
+			fmt.Println("Aborted.")
+			return
+		}
+
+		// Remove app directory and repository directly
+		destroyCmd := exec.Command("bash", "-c", fmt.Sprintf(`
+			set -e
+			echo "Removing app directory..."
+			sudo rm -rf /opt/gokku/apps/%s
+			echo "Removing repository..."
+			sudo rm -rf /opt/gokku/repos/%s.git
+			echo "App destroyed successfully"
+		`, appName, appName))
+
+		destroyCmd.Stdout = os.Stdout
+		destroyCmd.Stderr = os.Stderr
+
+		if err := destroyCmd.Run(); err != nil {
+			fmt.Printf("Failed to destroy app: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("✓ App destroyed successfully!")
+	} else {
+		// Client mode - require remote flag
+		if remote == "" {
+			fmt.Println("Error: --remote is required for destroy command")
+			fmt.Println("This prevents accidental deletion of the wrong app")
+			os.Exit(1)
+		}
+
+		remoteInfo, err := internal.GetRemoteInfo(remote)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Destroying app %s on %s...\n", appName, remoteInfo.Host)
+		fmt.Printf("This will permanently delete the app and all its data.\n")
+		fmt.Printf("Continue? (y/N): ")
+
+		var response string
+		fmt.Scanln(&response)
+		if response != "y" && response != "Y" {
+			fmt.Println("Aborted.")
+			return
+		}
+
+		// Remove app directory and repository via SSH
+		destroyCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
+			set -e
+			echo "Removing app directory..."
+			sudo rm -rf /opt/gokku/apps/%s
+			echo "Removing repository..."
+			sudo rm -rf /opt/gokku/repos/%s.git
+			echo "App destroyed successfully"
+		`, appName, appName))
+
+		destroyCmd.Stdout = os.Stdout
+		destroyCmd.Stderr = os.Stderr
+
+		if err := destroyCmd.Run(); err != nil {
+			fmt.Printf("Failed to destroy app: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("✓ App destroyed successfully!")
 	}
-
-	remoteInfo, err := internal.GetRemoteInfo(remote)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Destroying app %s on %s...\n", appName, remoteInfo.Host)
-	fmt.Printf("This will permanently delete the app and all its data.\n")
-	fmt.Printf("Continue? (y/N): ")
-
-	var response string
-	fmt.Scanln(&response)
-	if response != "y" && response != "Y" {
-		fmt.Println("Aborted.")
-		return
-	}
-
-	// Remove app directory and repository
-	destroyCmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
-		set -e
-		echo "Removing app directory..."
-		sudo rm -rf /opt/gokku/apps/%s
-		echo "Removing repository..."
-		sudo rm -rf /opt/gokku/repos/%s.git
-		echo "App destroyed successfully"
-	`, appName, appName))
-
-	destroyCmd.Stdout = os.Stdout
-	destroyCmd.Stderr = os.Stderr
-
-	if err := destroyCmd.Run(); err != nil {
-		fmt.Printf("Failed to destroy app: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("✓ App destroyed successfully!")
 }
 
 // appExistsInConfig checks if an app exists in the configuration
