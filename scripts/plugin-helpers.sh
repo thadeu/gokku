@@ -2,6 +2,13 @@
 # Gokku Plugin Helper Scripts
 # This file provides common functions for plugins
 
+export GOKKU_BIN_DIR=/usr/local/bin
+export GOKKU_DIR=/opt/gokku
+export GOKKU_SCRIPTS_DIR=$GOKKU_DIR/scripts
+export GOKKU_MODE=$(cat ~/.gokkurc | grep "mode" | cut -d= -f2)
+export GOKKU_OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+export GOKKU_ARCH=$(uname -m | tr '[:upper:]' '[:lower:]')
+
 # Get next available port
 get_next_port() {
     local port=${3000:-9000}

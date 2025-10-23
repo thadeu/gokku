@@ -306,9 +306,12 @@ EOF
 
     local scripts=(
         "scripts/docker-helpers.sh"
+        "scripts/plugin-helpers.sh"
     )
 
     mkdir -p $BASE_DIR/scripts
+    mkdir -p $BASE_DIR/plugins
+    mkdir -p $BASE_DIR/volumes
 
     for script in "${scripts[@]}"; do
         if ! curl -fsSL "$REPO_URL/$script" -o "$BASE_DIR/$script"; then
