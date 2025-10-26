@@ -127,6 +127,8 @@ func scaleUp(appName, processType string, count int, registry *containers.Contai
 			"--name", containerName,
 			"-p", fmt.Sprintf("%d:8080", hostPort),
 			"--env-file", fmt.Sprintf("/opt/gokku/apps/%s/.env", appName),
+			"--ulimit", "nofile=65536:65536",
+			"--ulimit", "nproc=4096:4096",
 			appImage)
 
 		if err := cmd.Run(); err != nil {

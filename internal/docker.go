@@ -165,6 +165,10 @@ func CreateContainer(config ContainerConfig) error {
 		args = append(args, "-w", config.WorkingDir)
 	}
 
+	// Add ulimits
+	args = append(args, "--ulimit", "nofile=65536:65536")
+	args = append(args, "--ulimit", "nproc=4096:4096")
+
 	// Add image
 	args = append(args, config.Image)
 
