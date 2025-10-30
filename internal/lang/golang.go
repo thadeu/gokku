@@ -311,7 +311,9 @@ RUN CGO_ENABLED=%s GOOS=%s GOARCH=%s \
 # Final stage
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates tzdata
+RUN apk --no-cache add ca-certificates \
+  tzdata sox \
+  && rm -rf /var/cache/apk/*
 
 WORKDIR /root/
 

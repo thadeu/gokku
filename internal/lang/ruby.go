@@ -235,7 +235,7 @@ FROM %s
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache build-base
+RUN apk add --no-cache build-base sox
 
 # Copy Gemfile
 COPY Gemfile* ./
