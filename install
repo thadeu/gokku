@@ -329,7 +329,6 @@ EOF
     local scripts=(
         "scripts/docker-helpers.sh"
         "scripts/plugin-helpers.sh"
-        "scripts/completion.sh"
     )
 
     mkdir -p $BASE_DIR/scripts
@@ -418,91 +417,6 @@ print_usage_server() {
     echo ""
 }
 
-install_completion() {
-    # This function should never fail the installation
-    # Use subshell to catch errors without affecting main script
-    (
-        set +e
-
-        log "Installing shell completion..."
-
-        local completion_file="scripts/completion.sh"
-        local completion_dest=""
-        local shell_rc=""
-        local completion_dir=""
-
-        # Detect shell
-        if [ -n "$ZSH_VERSION" ]; then
-            shell_rc="$HOME/.zshrc"
-            completion_dir="$HOME/.zsh-completions"
-            if ! mkdir -p "$completion_dir" 2>/dev/null; then
-                log_warn "Failed to create completion directory, skipping completion installation"
-                return 1
-            fi
-            completion_dest="$completion_dir/_gokku"
-        elif [ -n "$BASH_VERSION" ]; then
-            if [ "$OS" = "darwin" ]; then
-                completion_dir="$HOME/.bash_completion.d"
-                shell_rc="$HOME/.bash_profile"
-            else
-                completion_dir="$HOME/.bash_completion.d"
-                shell_rc="$HOME/.bashrc"
-            fi
-            if ! mkdir -p "$completion_dir" 2>/dev/null; then
-                log_warn "Failed to create completion directory, skipping completion installation"
-                return 1
-            fi
-            completion_dest="$completion_dir/completion.sh"
-        else
-            log_warn "Unknown shell, skipping completion installation"
-            return 1
-        fi
-
-        # Download completion script
-        if ! download_with_github_api "$completion_file" "$completion_dest" 2>/dev/null; then
-            log_warn "Failed to download completion script, skipping completion installation"
-            return 1
-        fi
-
-        # Verify file was downloaded
-        if [ ! -f "$completion_dest" ]; then
-            log_warn "Completion script not found after download, skipping completion installation"
-            return 1
-        fi
-
-        # Make executable
-        if ! chmod +x "$completion_dest" 2>/dev/null; then
-            log_warn "Failed to make completion script executable, skipping completion installation"
-            return 1
-        fi
-
-        # Source completion in shell rc if not already present
-        if [ -n "$ZSH_VERSION" ]; then
-            # For zsh, add completion directory to fpath
-            if [ ! -f "$shell_rc" ] || ! grep -q "\.zsh-completions" "$shell_rc" 2>/dev/null; then
-                if ! echo "fpath=(\$HOME/.zsh-completions \$fpath)" >> "$shell_rc" 2>/dev/null; then
-                    log_warn "Failed to add completion to $shell_rc"
-                    return 1
-                fi
-            fi
-            log_success "Zsh completion installed. Run 'source $shell_rc' or restart your terminal."
-        elif [ -n "$BASH_VERSION" ]; then
-            if [ ! -f "$shell_rc" ] || ! grep -q "completion.sh" "$shell_rc" 2>/dev/null; then
-                if ! echo "[ -f $completion_dest ] && source $completion_dest 2>/dev/null || true" >> "$shell_rc" 2>/dev/null; then
-                    log_warn "Failed to add completion to $shell_rc"
-                    return 1
-                fi
-            fi
-            log_success "Bash completion installed. Run 'source $shell_rc' or restart your terminal."
-        fi
-
-        return 0
-    ) || {
-        # If completion installation fails, just log a warning and continue
-        log_warn "Completion installation skipped (optional)"
-    }
-}
-
 cleanup() {
     # Change to a safe directory before cleanup
     cd - 2>/dev/null || cd /tmp 2>/dev/null || true
@@ -527,17 +441,16 @@ main() {
         print_usage_client
     fi
 
-    install_completion
     cleanup
 
     echo ""
-
-    log_success "Installation complete!"
 
     # Run gokku version in a safe way, don't fail if it errors
     if command -v gokku >/dev/null 2>&1; then
         gokku version 2>/dev/null || true
     fi
+
+    log_success "Installation complete!"
 }
 
 trap 'log_error "Installation failed at line $LINENO"' ERR

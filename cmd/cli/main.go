@@ -9,7 +9,7 @@ import (
 	"infra/internal/handlers"
 )
 
-const version = "1.0.76"
+const version = "1.0.77"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -97,6 +97,8 @@ func main() {
 		handlers.HandlePS(os.Args[2:])
 	case "au", "update", "auto-update":
 		handlers.HandleAutoUpdate(os.Args[2:])
+	case "autocomplete":
+		handlers.HandleAutocomplete(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Printf("gokku version %s\n", version)
 	case "help", "--help", "-h":
@@ -141,6 +143,7 @@ CLIENT COMMANDS (run from local machine):
   plugins        Manage plugins
   services       Manage services
   ps             Process management (scale, list, restart, stop)
+  autocomplete  Install shell completion (bash, zsh, fish)
   version        Show version
   help           Show this help
 
