@@ -235,6 +235,9 @@ install_binary() {
         sudo chmod +x $BIN_DIR/gokku
     fi
 
+    # Change back to a safe directory
+    cd - 2>/dev/null || cd /tmp 2>/dev/null || true
+
     log_success "Binary installed"
 }
 
@@ -340,6 +343,9 @@ EOF
         fi
         chmod +x "$BASE_DIR/$script"
     done
+
+    # Change back to a safe directory
+    cd - 2>/dev/null || cd /tmp 2>/dev/null || true
 
     log_success "Server setup complete"
 }
@@ -498,6 +504,9 @@ install_completion() {
 }
 
 cleanup() {
+    # Change to a safe directory before cleanup
+    cd - 2>/dev/null || cd /tmp 2>/dev/null || true
+
     # Clean up temporary directory used for downloads
     rm -rf /tmp/gokku-install
 }
@@ -523,8 +532,12 @@ main() {
 
     echo ""
 
-    log_success "Installation complete! 🎉"
-    log_success "$(bash -c "gokku version")"
+    log_success "Installation complete!"
+
+    # Run gokku version in a safe way, don't fail if it errors
+    if command -v gokku >/dev/null 2>&1; then
+        gokku version 2>/dev/null || true
+    fi
 }
 
 trap 'log_error "Installation failed at line $LINENO"' ERR

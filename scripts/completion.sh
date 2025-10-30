@@ -7,7 +7,7 @@ _gokku() {
     # Disable error exit for completion function
     set +e
 
-    local cur prev
+    local cur prev words cword
     local cmds
     local is_server_mode=false
 
@@ -22,13 +22,15 @@ _gokku() {
     if [ -n "$ZSH_VERSION" ]; then
         cur="${words[CURRENT]}"
         prev="${words[CURRENT-1]}"
+        cword=${CURRENT}
     else
         cur="${COMP_WORDS[COMP_CWORD]}"
         prev="${COMP_WORDS[COMP_CWORD-1]}"
+        cword=${COMP_CWORD}
     fi
 
-    # Main commands
-    cmds="apps config deploy logs ps restart rollback run server services ssh status tool plugins version help au update auto-update"
+    # Main commands (including commands with colons)
+    cmds="apps config deploy logs ps ps:scale ps:list ps:restart ps:stop ps:report restart rollback run server services services:list services:create services:link services:unlink services:destroy services:info services:logs ssh status tool plugins plugins:list plugins:install plugins:uninstall config:set config:get config:list config:unset version help au update auto-update"
 
     # Check if we're completing a flag value
     if [[ "$prev" == "-a" || "$prev" == "--app" ]]; then
@@ -59,15 +61,31 @@ _gokku() {
         return 0
     fi
 
-    # Handle ps commands
-    if [[ "$prev" == "ps" ]]; then
-        COMPREPLY=($(compgen -W "scale list restart stop report" -- "$cur" 2>/dev/null || true))
+    # Handle ps command - complete with ps: commands
+    if [[ "$prev" == "ps" ]] || [[ "$cur" == ps:* ]]; then
+        local ps_subcommands="ps:scale ps:list ps:restart ps:stop ps:report"
+        COMPREPLY=($(compgen -W "$ps_subcommands" -- "$cur" 2>/dev/null || true))
         return 0
     fi
 
-    # Handle ps: commands
-    if [[ "$prev" =~ ^ps: ]]; then
-        COMPREPLY=($(compgen -W "-a --app" -- "$cur" 2>/dev/null || true))
+    # Handle services command
+    if [[ "$prev" == "services" ]] || [[ "$cur" == services:* ]]; then
+        local services_subcommands="services:list services:create services:link services:unlink services:destroy services:info services:logs"
+        COMPREPLY=($(compgen -W "$services_subcommands" -- "$cur" 2>/dev/null || true))
+        return 0
+    fi
+
+    # Handle plugins command
+    if [[ "$prev" == "plugins" ]] || [[ "$cur" == plugins:* ]]; then
+        local plugins_subcommands="plugins:list plugins:install plugins:uninstall"
+        COMPREPLY=($(compgen -W "$plugins_subcommands" -- "$cur" 2>/dev/null || true))
+        return 0
+    fi
+
+    # Handle config command
+    if [[ "$prev" == "config" ]] || [[ "$cur" == config:* ]]; then
+        local config_subcommands="config:set config:get config:list config:unset"
+        COMPREPLY=($(compgen -W "$config_subcommands" -- "$cur" 2>/dev/null || true))
         return 0
     fi
 
@@ -77,57 +95,34 @@ _gokku() {
         return 0
     fi
 
-    # Subcommands for 'config'
-    if [[ "$prev" == "config" ]]; then
-        COMPREPLY=($(compgen -W "set get list unset" -- "$cur" 2>/dev/null || true))
-        return 0
-    fi
-
-    # Handle config: commands
-    if [[ "$prev" =~ ^config: ]]; then
-        COMPREPLY=($(compgen -W "-a --app" -- "$cur" 2>/dev/null || true))
-        return 0
-    fi
-
     # Subcommands for 'server'
     if [[ "$prev" == "server" ]]; then
         COMPREPLY=($(compgen -W "add list remove set-default" -- "$cur" 2>/dev/null || true))
         return 0
     fi
 
-    # Subcommands for 'services'
-    if [[ "$prev" == "services" ]]; then
-        COMPREPLY=($(compgen -W "list create link unlink destroy info logs" -- "$cur" 2>/dev/null || true))
-        return 0
-    fi
-
-    # Handle services: commands
-    if [[ "$prev" =~ ^services: ]]; then
+    # Handle ps:scale, ps:list, etc - they need -a flag
+    if [[ "$prev" =~ ^ps:(scale|list|restart|stop|report)$ ]]; then
         COMPREPLY=($(compgen -W "-a --app" -- "$cur" 2>/dev/null || true))
         return 0
     fi
 
-    # Subcommands for 'plugins'
-    if [[ "$prev" == "plugins" ]]; then
-        COMPREPLY=($(compgen -W "list install uninstall" -- "$cur" 2>/dev/null || true))
+    # Handle services: commands that need -a flag
+    if [[ "$prev" =~ ^services:(link|unlink)$ ]]; then
+        COMPREPLY=($(compgen -W "-a --app" -- "$cur" 2>/dev/null || true))
         return 0
     fi
 
-    # Handle plugins: commands
-    if [[ "$prev" =~ ^plugins: ]]; then
-        # No completion for plugin commands
+    # Handle config: commands that need -a flag
+    if [[ "$prev" =~ ^config:(set|get|list|unset)$ ]]; then
+        COMPREPLY=($(compgen -W "-a --app" -- "$cur" 2>/dev/null || true))
         return 0
     fi
 
-    # Default: complete with main commands
-    if [ -n "$ZSH_VERSION" ]; then
-        if [ ${#words[@]} -eq 2 ]; then
-            COMPREPLY=($(compgen -W "$cmds" -- "$cur" 2>/dev/null || true))
-        fi
-    else
-        if [[ $COMP_CWORD -eq 1 ]]; then
-            COMPREPLY=($(compgen -W "$cmds" -- "$cur" 2>/dev/null || true))
-        fi
+    # Default: complete with main commands (first argument only)
+    if [[ $cword -eq 1 ]]; then
+        COMPREPLY=($(compgen -W "$cmds" -- "$cur" 2>/dev/null || true))
+        return 0
     fi
 
     # Ensure COMPREPLY is always set (bash only)
