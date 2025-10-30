@@ -11,6 +11,14 @@ import (
 	"syscall"
 )
 
+func ReadVersionFile() string {
+	file, err := os.ReadFile(".goversion")
+	if err != nil {
+		return "unknown"
+	}
+	return strings.TrimSpace(string(file))
+}
+
 // GetConfigPath returns the path to the configuration file
 func GetConfigPath() string {
 	home, _ := os.UserHomeDir()

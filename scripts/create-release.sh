@@ -29,7 +29,7 @@ log_warn() {
 
 # Extract version from main.go
 extract_version() {
-    local version_line=$(grep -E '^\s*const\s+version\s*=\s*"[^"]+"' cmd/cli/main.go)
+    local version_line=$(grep -E '^\s*var\s+version\s*=\s*"[^"]+"' cmd/cli/main.go)
 
     if [ -z "$version_line" ]; then
         log_error "Could not find version constant in cmd/cli/main.go"
