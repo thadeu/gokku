@@ -20,6 +20,43 @@ func HandlePS(args []string) {
 
 	subcommand := args[0]
 
+	// Check if first argument is a flag (-a or --app), treat as list command
+	if subcommand == "-a" || subcommand == "--app" {
+		appName, _ := internal.ExtractAppFlag(args)
+		if appName == "" {
+			fmt.Println("Error: App name is required")
+			fmt.Println("Usage: gokku ps -a <app>")
+			fmt.Println("   or: gokku ps:list -a <app>")
+			os.Exit(1)
+		}
+
+		// Check if we're in client mode - if so, execute remotely
+		isClientMode := internal.IsClientMode()
+		if isClientMode {
+			// Get remote info to execute command remotely
+			remoteInfo, err := internal.GetRemoteInfo(appName)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			// Execute ps:list command remotely
+			cmd := fmt.Sprintf("gokku ps:list --app %s", remoteInfo.App)
+			sshCmd := exec.Command("ssh", remoteInfo.Host, cmd)
+			sshCmd.Stdout = os.Stdout
+			sshCmd.Stderr = os.Stderr
+			sshCmd.Stdin = os.Stdin
+			if err := sshCmd.Run(); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+
+		// Server mode - execute locally
+		handlePSList([]string{"-a", appName})
+		return
+	}
+
 	if subcommand == "" {
 		appName, _ := internal.ExtractAppFlag(args)
 		handlePSList([]string{"-a", appName})
@@ -255,6 +292,35 @@ func handlePSList(args []string) {
 			fmt.Println("  gokku ps:list -a api-production")
 			os.Exit(1)
 		}
+	}
+
+	// Check if we're in client mode - if so, execute remotely
+	isClientMode := internal.IsClientMode()
+	if isClientMode {
+		// Get remote name from args (the -a flag value)
+		remoteName, _ := internal.ExtractAppFlag(args)
+		if remoteName == "" {
+			fmt.Println("Error: -a <app> is required")
+			fmt.Println("Usage: gokku ps:list -a <app>")
+			os.Exit(1)
+		}
+
+		remoteInfo, err := internal.GetRemoteInfo(remoteName)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Execute ps:list command remotely using the app name from remote info
+		cmd := fmt.Sprintf("gokku ps:list --app %s", remoteInfo.App)
+		sshCmd := exec.Command("ssh", remoteInfo.Host, cmd)
+		sshCmd.Stdout = os.Stdout
+		sshCmd.Stderr = os.Stderr
+		sshCmd.Stdin = os.Stdin
+		if err := sshCmd.Run(); err != nil {
+			os.Exit(1)
+		}
+		return
 	}
 
 	// Use docker ps to get running containers

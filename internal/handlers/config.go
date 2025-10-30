@@ -73,7 +73,14 @@ func executeAsServerMode(ctx *internal.ExecutionContext, subcommand string, args
 		internal.EnvSet(envFile, args)
 	case "get":
 		if len(args) < 1 {
+			fmt.Println("Error: KEY is required for config get")
 			fmt.Println("Usage: gokku config get KEY -a <app>")
+			fmt.Println("")
+			fmt.Println("Example:")
+			fmt.Printf("  gokku config get PORT -a %s\n", appName)
+			fmt.Println("")
+			fmt.Println("To list all config variables, use:")
+			fmt.Printf("  gokku config list -a %s\n", appName)
 			os.Exit(1)
 		}
 		internal.EnvGet(envFile, args[0])
@@ -119,7 +126,14 @@ func executeAsClientMode(ctx *internal.ExecutionContext, subcommand string, args
 		cmd = fmt.Sprintf("gokku config set %s --app %s", pairs, ctx.GetAppName())
 	case "get":
 		if len(args) < 1 {
+			fmt.Println("Error: KEY is required for config get")
 			fmt.Println("Usage: gokku config get KEY -a <app>")
+			fmt.Println("")
+			fmt.Println("Example:")
+			fmt.Printf("  gokku config get PORT -a %s\n", ctx.GetAppName())
+			fmt.Println("")
+			fmt.Println("To list all config variables, use:")
+			fmt.Printf("  gokku config list -a %s\n", ctx.GetAppName())
 			os.Exit(1)
 		}
 		key := args[0]

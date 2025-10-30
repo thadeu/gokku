@@ -612,9 +612,20 @@ func RecreateActiveContainer(appName, envFile, appDir string) error {
 		Volumes:       []string{fmt.Sprintf("%s:/app", appDir)},
 	}
 
+	// Add custom volumes from gokku.yml
+	if len(appConfig.Volumes) > 0 {
+		containerConfig.Volumes = append(containerConfig.Volumes, appConfig.Volumes...)
+		fmt.Printf("       Adding %d custom volumes\n", len(appConfig.Volumes))
+	}
+
 	// Add port mappings
 	if networkMode != "host" {
-		containerConfig.Ports = []string{fmt.Sprintf("%d:%d", containerPort, containerPort)}
+		if len(appConfig.Ports) > 0 {
+			containerConfig.Ports = appConfig.Ports
+			fmt.Println("       Using ports from gokku.yml")
+		} else {
+			containerConfig.Ports = []string{fmt.Sprintf("%d:%d", containerPort, containerPort)}
+		}
 	} else {
 		fmt.Println("       Using host network (all ports exposed)")
 	}

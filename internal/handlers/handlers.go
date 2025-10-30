@@ -95,10 +95,3 @@ func HandleAutoUpdate(args []string) {
 		handleAutoUpdate(args)
 	})
 }
-
-// HandleAutocomplete installs shell completion for gokku
-func HandleAutocomplete(args []string) {
-	internal.TryCatch(func() {
-		handleAutocomplete(args)
-	})
-}
