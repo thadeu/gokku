@@ -50,74 +50,116 @@ func handleApps(args []string) {
 
 // handleAppsList lists applications on the server
 func handleAppsList(args []string) {
-	app, remainingArgs := internal.ExtractAppFlag(args)
+	// Check if we're running on server
+	isServerMode := internal.IsServerMode()
 
-	if len(remainingArgs) < 1 {
-		fmt.Println("Usage: gokku apps list [-a <app>]")
-		os.Exit(1)
-	}
+	if isServerMode {
+		// Server mode: list apps directly without needing -a flag
+		baseDir := "/opt/gokku"
+		cmd := exec.Command("bash", "-c", fmt.Sprintf(`
+			if [ -d "%s/apps" ]; then
+				echo "App Name                    Status    Releases    Current Release"
+				echo "================================================================"
+				ls -1 %s/apps 2>/dev/null | while read app; do
+					if [ -d "%s/apps/$app" ]; then
+						# Get app status
+						if docker ps --format '{{.Names}}' | grep -q "^$app"; then
+							status="running"
+						elif docker ps -a --format '{{.Names}}' | grep -q "^$app"; then
+							status="stopped"
+						else
+							status="not deployed"
+						fi
 
-	appName := remainingArgs[0]
-	remoteInfo, err := internal.GetRemoteInfo(app)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
-	}
-	config, err := internal.LoadConfig()
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
-	}
+						# Count releases
+						releases_count=0
+						if [ -d "%s/apps/$app/releases" ]; then
+							releases_count=$(ls -1 %s/apps/$app/releases 2>/dev/null | wc -l)
+						fi
 
-	appConfig := config.GetAppConfig(appName)
+						# Get current release
+						current_release="none"
+						if [ -L "%s/apps/$app/current" ]; then
+							current_release=$(basename $(readlink %s/apps/$app/current) 2>/dev/null || echo "none")
+						fi
 
-	if appConfig == nil {
-		fmt.Printf("Error: App '%s' not found in gokku.yml\n", appName)
-		os.Exit(1)
-	}
-
-	// List apps from /opt/gokku/apps directory with detailed information
-	cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
-		if [ -d "%s/apps" ]; then
-			echo "App Name                    Status    Releases    Current Release"
-			echo "================================================================"
-			ls -1 %s/apps 2>/dev/null | while read app; do
-				if [ -d "%s/apps/$app" ]; then
-					# Get app status
-					if docker ps --format '{{.Names}}' | grep -q "^$app"; then
-						status="running"
-					elif docker ps -a --format '{{.Names}}' | grep -q "^$app"; then
-						status="stopped"
-					else
-						status="not deployed"
+						printf "%%-25s %%-10s %%-10s %%s\n" "$app" "$status" "$releases_count" "$current_release"
 					fi
+				done
+			else
+				echo "No apps directory found at %s/apps"
+			fi
+		`, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir))
 
-					# Count releases
-					releases_count=0
-					if [ -d "%s/apps/$app/releases" ]; then
-						releases_count=$(ls -1 %s/apps/$app/releases 2>/dev/null | wc -l)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			fmt.Printf("Error listing apps: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		// Client mode: require -a flag with git remote
+		app, _ := internal.ExtractAppFlag(args)
+
+		if app == "" {
+			fmt.Println("Usage: gokku apps ls -a <git-remote>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku apps ls -a api-production")
+			fmt.Println("  gokku apps ls -a worker-staging")
+			os.Exit(1)
+		}
+
+		remoteInfo, err := internal.GetRemoteInfo(app)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		// List apps from /opt/gokku/apps directory with detailed information
+		cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
+			if [ -d "%s/apps" ]; then
+				echo "App Name                    Status    Releases    Current Release"
+				echo "================================================================"
+				ls -1 %s/apps 2>/dev/null | while read app; do
+					if [ -d "%s/apps/$app" ]; then
+						# Get app status
+						if docker ps --format '{{.Names}}' | grep -q "^$app"; then
+							status="running"
+						elif docker ps -a --format '{{.Names}}' | grep -q "^$app"; then
+							status="stopped"
+						else
+							status="not deployed"
+						fi
+
+						# Count releases
+						releases_count=0
+						if [ -d "%s/apps/$app/releases" ]; then
+							releases_count=$(ls -1 %s/apps/$app/releases 2>/dev/null | wc -l)
+						fi
+
+						# Get current release
+						current_release="none"
+						if [ -L "%s/apps/$app/current" ]; then
+							current_release=$(basename $(readlink %s/apps/$app/current) 2>/dev/null || echo "none")
+						fi
+
+						printf "%%-25s %%-10s %%-10s %%s\n" "$app" "$status" "$releases_count" "$current_release"
 					fi
+				done
+			else
+				echo "No apps directory found at %s/apps"
+			fi
+		`, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir))
 
-					# Get current release
-					current_release="none"
-					if [ -L "%s/apps/$app/current" ]; then
-						current_release=$(basename $(readlink %s/apps/$app/current) 2>/dev/null || echo "none")
-					fi
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 
-					printf "%%-25s %%-10s %%-10s %%s\n" "$app" "$status" "$releases_count" "$current_release"
-				fi
-			done
-		else
-			echo "No apps directory found at %s/apps"
-		fi
-	`, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir))
-
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("Error listing apps: %v\n", err)
-		os.Exit(1)
+		if err := cmd.Run(); err != nil {
+			fmt.Printf("Error listing apps: %v\n", err)
+			os.Exit(1)
+		}
 	}
 }
 

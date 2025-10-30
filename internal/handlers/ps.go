@@ -19,10 +19,15 @@ func HandlePS(args []string) {
 
 	subcommand := args[0]
 
+	if subcommand == "" {
+		handlePSList(args[1:])
+		return
+	}
+
 	switch subcommand {
 	case "scale":
 		handlePSScale(args[1:])
-	case "report", "rs":
+	case "report", "rs", "list":
 		handlePSList(args[1:])
 	case "restart":
 		handlePSRestart(args[1:])
@@ -35,20 +40,66 @@ func HandlePS(args []string) {
 	}
 }
 
+// extractAppNameForPS extracts app name from arguments based on server/client mode
+// Server mode: accepts app name as direct argument (e.g., gokku ps:list APP_NAME)
+// Client mode: requires -a flag (e.g., gokku ps:list -a APP_NAME)
+func extractAppNameForPS(args []string) string {
+	isServerMode := internal.IsServerMode()
+
+	if isServerMode {
+		// Server mode: look for app name as direct argument (not a flag)
+		// For scale command, app name is typically the last non-scale argument
+		// For other commands, it's the first/only non-flag argument
+		// Skip flags and scale arguments (e.g., web=4)
+		for i := len(args) - 1; i >= 0; i-- {
+			arg := args[i]
+			if !strings.HasPrefix(arg, "-") && !strings.Contains(arg, "=") {
+				return arg
+			}
+		}
+		return ""
+	} else {
+		// Client mode: require -a flag
+		return internal.ExtractAppName(args)
+	}
+}
+
 // handlePSScale handles the ps:scale command
 func handlePSScale(args []string) {
-	// Parse: gokku ps:scale web=4 worker=2 -a api
-	appName := internal.ExtractAppName(args)
+	// Parse: gokku ps:scale web=4 worker=2 -a api (client)
+	//        gokku ps:scale web=4 worker=2 APP_NAME (server)
+	appName := extractAppNameForPS(args)
 	if appName == "" {
-		fmt.Println("Error: -a <app> is required")
-		os.Exit(1)
+		isServerMode := internal.IsServerMode()
+		if isServerMode {
+			fmt.Println("Error: App name is required")
+			fmt.Println("Usage: gokku ps:scale <process=count>... <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku ps:scale web=4 worker=2 api")
+			os.Exit(1)
+		} else {
+			fmt.Println("Error: -a <app> is required")
+			fmt.Println("Usage: gokku ps:scale <process=count>... -a <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku ps:scale web=4 worker=2 -a api-production")
+			os.Exit(1)
+		}
 	}
+
+	isServerMode := internal.IsServerMode()
 
 	// Parse scale arguments
 	scales := make(map[string]int)
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "-a") {
-			continue // Skip app flag
+			continue // Skip app flag (client mode)
+		}
+
+		// Skip app name (server mode - it's the last non-scale argument)
+		if isServerMode && arg == appName {
+			continue
 		}
 
 		processType, count, err := containers.ParseScaleArgument(arg)
@@ -184,10 +235,26 @@ func scaleDown(appName, processType string, count int, registry *containers.Cont
 
 // handlePSList handles the ps:list command
 func handlePSList(args []string) {
-	appName := internal.ExtractAppName(args)
+	// Parse: gokku ps:list -a api (client)
+	//        gokku ps:list APP_NAME (server)
+	appName := extractAppNameForPS(args)
 	if appName == "" {
-		fmt.Println("Error: -a <app> is required")
-		os.Exit(1)
+		isServerMode := internal.IsServerMode()
+		if isServerMode {
+			fmt.Println("Error: App name is required")
+			fmt.Println("Usage: gokku ps:list <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku ps:list api")
+			os.Exit(1)
+		} else {
+			fmt.Println("Error: -a <app> is required")
+			fmt.Println("Usage: gokku ps:list -a <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku ps:list -a api-production")
+			os.Exit(1)
+		}
 	}
 
 	// Use docker ps to get running containers
@@ -243,10 +310,26 @@ func handlePSList(args []string) {
 
 // handlePSRestart handles the ps:restart command
 func handlePSRestart(args []string) {
-	appName := internal.ExtractAppName(args)
+	// Parse: gokku ps:restart -a api (client)
+	//        gokku ps:restart APP_NAME (server)
+	appName := extractAppNameForPS(args)
 	if appName == "" {
-		fmt.Println("Error: -a <app> is required")
-		os.Exit(1)
+		isServerMode := internal.IsServerMode()
+		if isServerMode {
+			fmt.Println("Error: App name is required")
+			fmt.Println("Usage: gokku ps:restart <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku ps:restart api")
+			os.Exit(1)
+		} else {
+			fmt.Println("Error: -a <app> is required")
+			fmt.Println("Usage: gokku ps:restart -a <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku ps:restart -a api-production")
+			os.Exit(1)
+		}
 	}
 
 	registry := containers.NewContainerRegistry()
@@ -282,18 +365,60 @@ func handlePSRestart(args []string) {
 
 // handlePSStop handles the ps:stop command
 func handlePSStop(args []string) {
-	appName := internal.ExtractAppName(args)
-	if appName == "" {
-		fmt.Println("Error: -a <app> is required")
-		os.Exit(1)
-	}
+	// Parse: gokku ps:stop web -a api (client)
+	//        gokku ps:stop web APP_NAME (server)
+	//        gokku ps:stop -a api (client, stop all)
+	//        gokku ps:stop APP_NAME (server, stop all)
+	isServerMode := internal.IsServerMode()
 
-	// Check if a specific process type was provided
+	var appName string
 	var processType string
-	for _, arg := range args {
-		if !strings.HasPrefix(arg, "-a") && !strings.Contains(arg, "=") {
-			processType = arg
-			break
+
+	if isServerMode {
+		// Server mode: app name is last argument (or only argument if no process type)
+		// Find app name (not a flag, not a process type argument)
+		var foundAppName bool
+		for i := len(args) - 1; i >= 0; i-- {
+			arg := args[i]
+			if !strings.HasPrefix(arg, "-") && !strings.Contains(arg, "=") {
+				if !foundAppName {
+					appName = arg
+					foundAppName = true
+				} else {
+					processType = arg
+					break
+				}
+			}
+		}
+
+		if appName == "" {
+			fmt.Println("Error: App name is required")
+			fmt.Println("Usage: gokku ps:stop [<process>] <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku ps:stop web api")
+			fmt.Println("  gokku ps:stop api")
+			os.Exit(1)
+		}
+	} else {
+		// Client mode: require -a flag
+		appName = internal.ExtractAppName(args)
+		if appName == "" {
+			fmt.Println("Error: -a <app> is required")
+			fmt.Println("Usage: gokku ps:stop [<process>] -a <app>")
+			fmt.Println("")
+			fmt.Println("Examples:")
+			fmt.Println("  gokku ps:stop web -a api-production")
+			fmt.Println("  gokku ps:stop -a api-production")
+			os.Exit(1)
+		}
+
+		// Check if a specific process type was provided
+		for _, arg := range args {
+			if !strings.HasPrefix(arg, "-a") && !strings.Contains(arg, "=") && arg != appName {
+				processType = arg
+				break
+			}
 		}
 	}
 
@@ -395,17 +520,37 @@ func imageExists(imageName string) bool {
 
 // showPSHelp shows help for ps commands
 func showPSHelp() {
-	fmt.Println("Process management commands:")
-	fmt.Println("")
-	fmt.Println("  gokku ps:scale <process=count>... -a <app>    Scale app processes")
-	fmt.Println("  gokku ps:report -a <app>                       List running processes")
-	fmt.Println("  gokku ps:restart -a <app>                    Restart all processes")
-	fmt.Println("  gokku ps:stop [<process>] -a <app>           Stop processes")
-	fmt.Println("")
-	fmt.Println("Examples:")
-	fmt.Println("  gokku ps:scale web=4 worker=2 -a api")
-	fmt.Println("  gokku ps:report -a api")
-	fmt.Println("  gokku ps:restart -a api")
-	fmt.Println("  gokku ps:stop web -a api")
-	fmt.Println("  gokku ps:stop -a api")
+	isServerMode := internal.IsServerMode()
+
+	if isServerMode {
+		fmt.Println("Process management commands (server mode):")
+		fmt.Println("")
+		fmt.Println("  gokku ps:scale <process=count>... <app>    Scale app processes")
+		fmt.Println("  gokku ps:report <app>                      List running processes")
+		fmt.Println("  gokku ps:list <app>                        List running processes")
+		fmt.Println("  gokku ps:restart <app>                     Restart all processes")
+		fmt.Println("  gokku ps:stop [<process>] <app>            Stop processes")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  gokku ps:scale web=4 worker=2 api")
+		fmt.Println("  gokku ps:report api")
+		fmt.Println("  gokku ps:restart api")
+		fmt.Println("  gokku ps:stop web api")
+		fmt.Println("  gokku ps:stop api")
+	} else {
+		fmt.Println("Process management commands (client mode):")
+		fmt.Println("")
+		fmt.Println("  gokku ps:scale <process=count>... -a <app>    Scale app processes")
+		fmt.Println("  gokku ps:report -a <app>                       List running processes")
+		fmt.Println("  gokku ps:list -a <app>                         List running processes")
+		fmt.Println("  gokku ps:restart -a <app>                     Restart all processes")
+		fmt.Println("  gokku ps:stop [<process>] -a <app>             Stop processes")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  gokku ps:scale web=4 worker=2 -a api-production")
+		fmt.Println("  gokku ps:report -a api-production")
+		fmt.Println("  gokku ps:restart -a api-production")
+		fmt.Println("  gokku ps:stop web -a api-production")
+		fmt.Println("  gokku ps:stop -a api-production")
+	}
 }
