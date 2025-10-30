@@ -308,7 +308,7 @@ func StandardDeploy(config DeploymentConfig) error {
 	}
 
 	// Get container port
-	containerPort := GetContainerPort(config.EnvFile, 8080)
+	containerPort := GetContainerPort(config.EnvFile, 0)
 
 	// Build container configuration
 	containerConfig := ContainerConfig{
@@ -593,7 +593,7 @@ func RecreateActiveContainer(appName, envFile, appDir string) error {
 		networkMode = appConfig.Network.Mode
 	}
 
-	containerPort := GetContainerPort(envFile, 8080)
+	containerPort := GetContainerPort(envFile, 0)
 
 	fmt.Printf("       Network mode: %s\n", networkMode)
 

@@ -9,7 +9,7 @@ import (
 	"infra/internal/handlers"
 )
 
-const version = "1.0.77"
+const version = "1.0.78"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -31,7 +31,12 @@ func main() {
 		"ps": true,
 	}
 
-	if contextCommands[command] {
+	// Check if command needs context (exact match or prefix match)
+	needsContext := contextCommands[command] ||
+		strings.HasPrefix(command, "config:") ||
+		strings.HasPrefix(command, "ps:")
+
+	if needsContext {
 		// Extract app flag to create context
 		appName, _ := internal.ExtractAppFlag(args)
 		ctx, err = internal.NewExecutionContext(appName)

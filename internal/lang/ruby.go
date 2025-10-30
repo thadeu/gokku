@@ -244,9 +244,6 @@ RUN bundle install --without development test
 # Copy application code
 COPY . .
 
-# Expose port (will be set via env var)
-EXPOSE ${PORT:-8080}
-
 # Run the application
 CMD ["ruby", "%s"]
 `, appName, entrypoint, baseImage, entrypoint)

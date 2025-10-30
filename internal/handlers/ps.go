@@ -178,7 +178,7 @@ func scaleUp(appName, processType string, count int, registry *containers.Contai
 		// Create container with docker run
 		cmd := exec.Command("docker", "run", "-d",
 			"--name", containerName,
-			"-p", fmt.Sprintf("%d:8080", hostPort),
+			"-p", fmt.Sprintf("%d", hostPort),
 			"--env-file", fmt.Sprintf("/opt/gokku/apps/%s/.env", appName),
 			"--ulimit", "nofile=65536:65536",
 			"--ulimit", "nproc=4096:4096",
@@ -190,7 +190,7 @@ func scaleUp(appName, processType string, count int, registry *containers.Contai
 		}
 
 		// Save container info
-		info := containers.CreateContainerInfo(appName, processType, containerNum, hostPort, 8080)
+		info := containers.CreateContainerInfo(appName, processType, containerNum, hostPort, hostPort)
 		if err := registry.SaveContainerInfo(info); err != nil {
 			fmt.Printf("       Warning: Failed to save container info: %v\n", err)
 		}

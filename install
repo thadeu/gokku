@@ -365,7 +365,7 @@ print_usage_client() {
     echo -e "   ${CYAN}git remote add api-production ubuntu@server:api${NC}"
     echo ""
     echo "2. Configure environment variables:"
-    echo -e "   ${CYAN}gokku config set PORT=8080 --remote api-production${NC}"
+    echo -e "   ${CYAN}gokku config set PORT=80 --remote api-production${NC}"
     echo -e "   ${CYAN}gokku config list --remote api-production${NC}"
     echo ""
     echo "3. Deploy:"

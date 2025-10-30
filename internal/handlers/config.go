@@ -27,6 +27,13 @@ func handleConfigWithContext(ctx *internal.ExecutionContext, args []string) {
 		os.Exit(1)
 	}
 
+	// Validate context is not nil
+	if ctx == nil {
+		fmt.Println("Error: Execution context is required")
+		fmt.Println("Usage: gokku config <set|get|list|unset> [args...] -a <app>")
+		os.Exit(1)
+	}
+
 	// Validate that app is required
 	if err := ctx.ValidateAppRequired(); err != nil {
 		ctx.PrintUsageError("config", err.Error())

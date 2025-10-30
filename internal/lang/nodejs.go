@@ -241,9 +241,6 @@ RUN npm ci --only=production
 # Copy application code
 COPY . .
 
-# Expose port (will be set via env var)
-EXPOSE ${PORT:-8080}
-
 # Run the application
 CMD ["node", "%s"]
 `, appName, entrypoint, baseImage, entrypoint)

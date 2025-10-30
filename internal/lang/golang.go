@@ -320,9 +320,6 @@ WORKDIR /root/
 # Copy binary from builder
 COPY --from=builder /app/app .
 
-# Expose port
-EXPOSE ${PORT:-8080}
-
 # Run the application
 CMD ["/root/app"]
 `, baseImage, workDir, cgoEnabled, goos, goarch, buildPath)
