@@ -13,7 +13,8 @@ import (
 // HandlePS handles ps-related commands
 func HandlePS(args []string) {
 	if len(args) == 0 {
-		showPSHelp()
+		// List all containers when no arguments provided
+		listAllContainers()
 		return
 	}
 
@@ -238,16 +239,14 @@ func scaleDown(appName, processType string, count int, registry *containers.Cont
 func handlePSList(args []string) {
 	// Parse: gokku ps:list -a api (client)
 	//        gokku ps:list APP_NAME (server)
+	//        gokku ps:list (server, list all)
 	appName := extractAppNameForPS(args)
 	if appName == "" {
 		isServerMode := internal.IsServerMode()
 		if isServerMode {
-			fmt.Println("Error: App name is required")
-			fmt.Println("Usage: gokku ps:list <app>")
-			fmt.Println("")
-			fmt.Println("Examples:")
-			fmt.Println("  gokku ps:list api")
-			os.Exit(1)
+			// In server mode, list all containers when no app name provided
+			listAllContainers()
+			return
 		} else {
 			fmt.Println("Error: -a <app> is required")
 			fmt.Println("Usage: gokku ps:list -a <app>")
@@ -304,6 +303,46 @@ func handlePSList(args []string) {
 			name := parts[0]
 			status := parts[1]
 			ports := parts[2]
+			fmt.Printf("%-20s %-10s %-15s\n", name, status, ports)
+		}
+	}
+}
+
+// listAllContainers lists all running containers with gokku format
+func listAllContainers() {
+	// Use docker ps to get running containers with pipe-separated format for easier parsing
+	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}|{{.Status}}|{{.Ports}}")
+	output, err := cmd.Output()
+	if err != nil {
+		fmt.Printf("Error running docker ps: %v\n", err)
+		os.Exit(1)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) == 0 || (len(lines) == 1 && lines[0] == "") {
+		fmt.Println("No processes running")
+		return
+	}
+
+	fmt.Printf("%-20s %-10s %-15s\n", "NAME", "STATUS", "PORT")
+	fmt.Printf("%-20s %-10s %-15s\n", "----", "------", "----")
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		parts := strings.Split(line, "|")
+		if len(parts) >= 3 {
+			name := strings.TrimSpace(parts[0])
+			status := strings.TrimSpace(parts[1])
+			ports := strings.TrimSpace(parts[2])
+
+			// Truncate status if too long
+			if len(status) > 15 {
+				status = status[:15]
+			}
+
 			fmt.Printf("%-20s %-10s %-15s\n", name, status, ports)
 		}
 	}
@@ -526,15 +565,19 @@ func showPSHelp() {
 	if isServerMode {
 		fmt.Println("Process management commands (server mode):")
 		fmt.Println("")
+		fmt.Println("  gokku ps                                  List all running containers")
 		fmt.Println("  gokku ps:scale <process=count>... <app>    Scale app processes")
 		fmt.Println("  gokku ps:report <app>                      List running processes")
-		fmt.Println("  gokku ps:list <app>                        List running processes")
+		fmt.Println("  gokku ps:list [<app>]                       List running processes (all if no app)")
 		fmt.Println("  gokku ps:restart <app>                     Restart all processes")
 		fmt.Println("  gokku ps:stop [<process>] <app>            Stop processes")
 		fmt.Println("")
 		fmt.Println("Examples:")
+		fmt.Println("  gokku ps")
 		fmt.Println("  gokku ps:scale web=4 worker=2 api")
 		fmt.Println("  gokku ps:report api")
+		fmt.Println("  gokku ps:list api")
+		fmt.Println("  gokku ps:list")
 		fmt.Println("  gokku ps:restart api")
 		fmt.Println("  gokku ps:stop web api")
 		fmt.Println("  gokku ps:stop api")

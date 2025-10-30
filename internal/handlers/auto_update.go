@@ -12,10 +12,10 @@ func handleAutoUpdate(args []string) {
 	isServerMode := internal.IsServerMode()
 
 	command := "curl -fsSL https://gokku-vm.com/install | bash -s --"
-	mode := "--server"
+	mode := " --server"
 
 	if !isServerMode {
-		mode = "--client"
+		mode = " --client"
 	}
 
 	command += mode
