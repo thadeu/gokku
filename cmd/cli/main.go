@@ -95,7 +95,7 @@ func main() {
 		handlers.HandleServices(os.Args[2:])
 	case "ps":
 		handlers.HandlePS(os.Args[2:])
-	case "auto-update":
+	case "au", "update", "auto-update":
 		handlers.HandleAutoUpdate(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Printf("gokku version %s\n", version)
