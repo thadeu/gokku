@@ -88,3 +88,10 @@ func HandlePlugins(args []string) {
 func HandleServices(args []string) {
 	handleServices(args)
 }
+
+// HandleAutoUpdate updates gokku based on current mode
+func HandleAutoUpdate(args []string) {
+	internal.TryCatch(func() {
+		handleAutoUpdate(args)
+	})
+}

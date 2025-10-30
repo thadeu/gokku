@@ -9,7 +9,7 @@ import (
 	"infra/internal/handlers"
 )
 
-const version = "1.0.72"
+const version = "1.0.73"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -95,6 +95,8 @@ func main() {
 		handlers.HandleServices(os.Args[2:])
 	case "ps":
 		handlers.HandlePS(os.Args[2:])
+	case "auto-update":
+		handlers.HandleAutoUpdate(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Printf("gokku version %s\n", version)
 	case "help", "--help", "-h":

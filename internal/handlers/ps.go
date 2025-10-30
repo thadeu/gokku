@@ -20,7 +20,8 @@ func HandlePS(args []string) {
 	subcommand := args[0]
 
 	if subcommand == "" {
-		handlePSList(args[1:])
+		appName, _ := internal.ExtractAppFlag(args)
+		handlePSList([]string{"-a", appName})
 		return
 	}
 
