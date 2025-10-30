@@ -9,7 +9,7 @@ import (
 	"infra/internal/handlers"
 )
 
-var version = internal.ReadVersionFile()
+var version = "1.0.71"
 
 func main() {
 	if len(os.Args) < 2 {
