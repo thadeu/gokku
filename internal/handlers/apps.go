@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gokku/internal"
+	"gokku/internal/services"
 	"gokku/tui"
 )
 
@@ -49,14 +50,6 @@ func handleApps(args []string) {
 	}
 }
 
-// AppInfo represents information about an app
-type AppInfo struct {
-	Name           string
-	Status         string
-	ReleasesCount  int
-	CurrentRelease string
-}
-
 // handleAppsList lists applications on the server
 func handleAppsList(args []string) {
 	// Check if we're running on server
@@ -65,7 +58,8 @@ func handleAppsList(args []string) {
 	if isServerMode {
 		// Server mode: list apps directly without needing -a flag
 		baseDir := "/opt/gokku"
-		apps, err := collectAppsInfo(baseDir)
+		appsService := services.NewAppsService(baseDir)
+		apps, err := appsService.ListApps()
 		if err != nil {
 			fmt.Printf("Error listing apps: %v\n", err)
 			os.Exit(1)
@@ -108,69 +102,8 @@ func handleAppsList(args []string) {
 	}
 }
 
-// collectAppsInfo collects information about all apps in the base directory
-func collectAppsInfo(baseDir string) ([]AppInfo, error) {
-	appsDir := filepath.Join(baseDir, "apps")
-
-	// Check if apps directory exists
-	if _, err := os.Stat(appsDir); os.IsNotExist(err) {
-		return []AppInfo{}, nil
-	}
-
-	entries, err := os.ReadDir(appsDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read apps directory: %v", err)
-	}
-
-	var apps []AppInfo
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		appName := entry.Name()
-		appDir := filepath.Join(appsDir, appName)
-
-		// Get app status
-		status := getAppStatus(appName)
-
-		// Count releases
-		releasesCount := 0
-		releasesDir := filepath.Join(appDir, "releases")
-		if releaseEntries, err := os.ReadDir(releasesDir); err == nil {
-			releasesCount = len(releaseEntries)
-		}
-
-		// Get current release
-		currentRelease := "none"
-		currentLink := filepath.Join(appDir, "current")
-		if linkTarget, err := os.Readlink(currentLink); err == nil {
-			currentRelease = filepath.Base(linkTarget)
-		}
-
-		apps = append(apps, AppInfo{
-			Name:           appName,
-			Status:         status,
-			ReleasesCount:  releasesCount,
-			CurrentRelease: currentRelease,
-		})
-	}
-
-	return apps, nil
-}
-
-// getAppStatus determines the status of an app based on Docker containers
-func getAppStatus(appName string) string {
-	if internal.ContainerIsRunning(appName) {
-		return "running"
-	} else if internal.ContainerExists(appName) {
-		return "stopped"
-	}
-	return "not deployed"
-}
-
 // renderAppsTable renders the apps list using tablefy
-func renderAppsTable(apps []AppInfo) {
+func renderAppsTable(apps []services.AppInfo) {
 	table := tui.NewTable(tui.ASCII)
 	table.AppendHeaders([]string{"App Name", "Status", "Releases", "Current Release"})
 

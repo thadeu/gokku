@@ -8,6 +8,7 @@ import (
 
 	"gokku/internal"
 	"gokku/internal/containers"
+	"gokku/internal/services"
 	"gokku/tui"
 )
 
@@ -158,12 +159,16 @@ func handlePSScale(args []string) {
 
 	fmt.Printf("Scaling app '%s'...\n", appName)
 
+	baseDir := "/opt/gokku"
+	if !isServerMode {
+		baseDir = "/opt/gokku" // Will be executed on server via SSH
+	}
+
+	containerService := services.NewContainerService(baseDir)
+
+	// Get current counts for display
 	registry := containers.NewContainerRegistry()
-
 	for processType, count := range scales {
-		fmt.Printf("-----> Scaling %s to %d instances\n", processType, count)
-
-		// Get current containers
 		currentContainers, err := registry.GetContainers(appName, processType)
 		if err != nil {
 			fmt.Printf("Error getting current containers: %v\n", err)
@@ -171,107 +176,26 @@ func handlePSScale(args []string) {
 		}
 
 		currentCount := len(currentContainers)
+		fmt.Printf("-----> Scaling %s from %d to %d instances\n", processType, currentCount, count)
 
-		if count > currentCount {
-			// Scale up
-			scaleUp(appName, processType, count-currentCount, registry)
-		} else if count < currentCount {
-			// Scale down
-			scaleDown(appName, processType, currentCount-count, registry)
-		} else {
+		if count == currentCount {
 			fmt.Printf("       %s already at %d instances\n", processType, count)
+			continue
 		}
+	}
 
-		// Notify plugins about scale change
+	// Perform scaling
+	if err := containerService.ScaleProcesses(appName, scales); err != nil {
+		fmt.Printf("Error scaling app: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Notify plugins about scale change
+	for processType := range scales {
 		notifyPluginsOfScaleChange(appName, processType)
 	}
 
 	fmt.Printf("Scaling complete for app '%s'\n", appName)
-}
-
-// scaleUp creates new containers
-func scaleUp(appName, processType string, count int, registry *containers.ContainerRegistry) {
-	for i := 0; i < count; i++ {
-		// Get next container number
-		containerNum := registry.GetNextContainerNumber(appName, processType)
-		containerName := fmt.Sprintf("%s-%s-%d", appName, processType, containerNum)
-
-		// Get dynamic port
-		hostPort, err := containers.GetNextAvailablePort()
-		if err != nil {
-			fmt.Printf("       Error getting port for %s: %v\n", containerName, err)
-			continue
-		}
-
-		// Create container
-		fmt.Printf("       Creating container: %s (port %d)\n", containerName, hostPort)
-
-		// Check if app image exists
-		appImage := fmt.Sprintf("%s:latest", appName)
-		if !imageExists(appImage) {
-			fmt.Printf("       Error: Image %s not found. Deploy the app first.\n", appImage)
-			continue
-		}
-
-		// Create container with docker run
-		cmd := exec.Command("docker", "run", "-d",
-			"--name", containerName,
-			"--label", fmt.Sprintf("%s=%s", internal.GokkuLabelKey, internal.GokkuLabelValue),
-			"-p", fmt.Sprintf("%d", hostPort),
-			"--env-file", fmt.Sprintf("/opt/gokku/apps/%s/.env", appName),
-			"--ulimit", "nofile=65536:65536",
-			"--ulimit", "nproc=4096:4096",
-			appImage)
-
-		if err := cmd.Run(); err != nil {
-			fmt.Printf("       Error creating container %s: %v\n", containerName, err)
-			continue
-		}
-
-		// Save container info
-		info := containers.CreateContainerInfo(appName, processType, containerNum, hostPort, hostPort)
-		if err := registry.SaveContainerInfo(info); err != nil {
-			fmt.Printf("       Warning: Failed to save container info: %v\n", err)
-		}
-	}
-}
-
-// scaleDown removes containers
-func scaleDown(appName, processType string, count int, registry *containers.ContainerRegistry) {
-	containers, err := registry.GetContainers(appName, processType)
-	if err != nil {
-		fmt.Printf("       Error getting containers: %v\n", err)
-		return
-	}
-
-	// Remove last N containers (highest numbers first)
-	toRemove := count
-	if toRemove > len(containers) {
-		toRemove = len(containers)
-	}
-
-	for i := len(containers) - toRemove; i < len(containers); i++ {
-		container := containers[i]
-		containerName := container.Name
-
-		fmt.Printf("       Stopping container: %s\n", containerName)
-
-		// Stop and remove container
-		stopCmd := exec.Command("docker", "stop", containerName)
-		if err := stopCmd.Run(); err != nil {
-			fmt.Printf("       Warning: Failed to stop container %s: %v\n", containerName, err)
-		}
-
-		rmCmd := exec.Command("docker", "rm", containerName)
-		if err := rmCmd.Run(); err != nil {
-			fmt.Printf("       Warning: Failed to remove container %s: %v\n", containerName, err)
-		}
-
-		// Remove container info
-		if err := registry.RemoveContainerInfo(appName, processType, container.Number); err != nil {
-			fmt.Printf("       Warning: Failed to remove container info: %v\n", err)
-		}
-	}
 }
 
 // handlePSList handles the ps:list command
@@ -326,38 +250,22 @@ func handlePSList(args []string) {
 		return
 	}
 
-	// Use docker ps to get running containers with pipe-separated format for easier parsing
-	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}|{{.Status}}|{{.Ports}}",
-		"--filter", fmt.Sprintf("label=%s=%s", internal.GokkuLabelKey, internal.GokkuLabelValue))
-	output, err := cmd.Output()
+	// Server mode - use ContainerService
+	baseDir := "/opt/gokku"
+	containerService := services.NewContainerService(baseDir)
+
+	filter := services.ContainerFilter{
+		AppName: appName,
+		All:     false,
+	}
+
+	containers, err := containerService.ListContainers(filter)
 	if err != nil {
-		fmt.Printf("Error running docker ps: %v\n", err)
+		fmt.Printf("Error listing containers: %v\n", err)
 		os.Exit(1)
 	}
 
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(lines) == 0 || (len(lines) == 1 && lines[0] == "") {
-		fmt.Printf("No processes running for app '%s'\n", appName)
-		return
-	}
-
-	// Filter containers that belong to this app
-	var appContainers [][]string
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-
-		parts := strings.Split(line, "|")
-		if len(parts) >= 3 {
-			name := strings.TrimSpace(parts[0])
-			if strings.HasPrefix(name, appName+"-") || name == appName {
-				appContainers = append(appContainers, parts)
-			}
-		}
-	}
-
-	if len(appContainers) == 0 {
+	if len(containers) == 0 {
 		fmt.Printf("No processes running for app '%s'\n", appName)
 		return
 	}
@@ -368,8 +276,12 @@ func handlePSList(args []string) {
 	table.AppendHeaders([]string{"NAME", "STATUS", "PORT"})
 	table.AppendSeparator()
 
-	for _, row := range appContainers {
-		table.AppendRow(row)
+	for _, container := range containers {
+		table.AppendRow([]string{
+			container.Names,
+			container.Status,
+			container.Ports,
+		})
 	}
 
 	fmt.Print(table.Render())
@@ -377,20 +289,20 @@ func handlePSList(args []string) {
 
 // listAllContainers lists all running containers with gokku format
 func listAllContainers() {
-	// Use docker ps to get running containers with pipe-separated format for easier parsing
-	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}|{{.Status}}|{{.Ports}}",
-		"--filter", fmt.Sprintf("label=%s=%s", internal.GokkuLabelKey, internal.GokkuLabelValue))
+	baseDir := "/opt/gokku"
+	containerService := services.NewContainerService(baseDir)
 
-	output, err := cmd.Output()
+	filter := services.ContainerFilter{
+		All: false,
+	}
 
+	containers, err := containerService.ListContainers(filter)
 	if err != nil {
-		fmt.Printf("Error running docker ps: %v\n", err)
+		fmt.Printf("Error listing containers: %v\n", err)
 		os.Exit(1)
 	}
 
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-
-	if len(lines) == 0 || (len(lines) == 1 && lines[0] == "") {
+	if len(containers) == 0 {
 		fmt.Println("No processes running")
 		return
 	}
@@ -398,12 +310,12 @@ func listAllContainers() {
 	table := tui.NewTable(tui.ASCII)
 	table.AppendHeaders([]string{"NAME", "STATUS", "PORT"})
 
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-
-		table.AppendRow(strings.Split(line, "|"), len(line) > 100)
+	for _, container := range containers {
+		table.AppendRow([]string{
+			container.Names,
+			container.Status,
+			container.Ports,
+		})
 		table.AppendSeparator()
 	}
 
@@ -448,12 +360,14 @@ func handlePSRestart(args []string) {
 
 	fmt.Printf("Restarting processes for app '%s'...\n", appName)
 
+	baseDir := "/opt/gokku"
+	containerService := services.NewContainerService(baseDir)
+
 	for _, container := range allContainers {
 		fmt.Printf("-----> Restarting %s\n", container.Name)
 
-		// Restart container
-		cmd := exec.Command("docker", "restart", container.Name)
-		if err := cmd.Run(); err != nil {
+		// Restart container using service
+		if err := containerService.RestartContainer(container.Name); err != nil {
 			fmt.Printf("       Error restarting container %s: %v\n", container.Name, err)
 			continue
 		}
@@ -541,12 +455,14 @@ func handlePSStop(args []string) {
 
 		fmt.Printf("Stopping %s processes for app '%s'...\n", processType, appName)
 
+		baseDir := "/opt/gokku"
+		containerService := services.NewContainerService(baseDir)
+
 		for _, container := range containers {
 			fmt.Printf("-----> Stopping %s\n", container.Name)
 
-			// Stop container
-			cmd := exec.Command("docker", "stop", container.Name)
-			if err := cmd.Run(); err != nil {
+			// Stop container using service
+			if err := containerService.StopContainer(container.Name); err != nil {
 				fmt.Printf("       Error stopping container %s: %v\n", container.Name, err)
 				continue
 			}
@@ -565,22 +481,23 @@ func handlePSStop(args []string) {
 		if len(allContainers) == 0 {
 			// Fallback: try to find containers directly by name for backwards compatibility
 			// This handles containers created before labels or not registered in the registry
-			cmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}", "--filter", fmt.Sprintf("name=^%s$", appName))
-			output, err := cmd.Output()
-			if err == nil {
-				names := strings.TrimSpace(string(output))
-				if names != "" {
-					// Found container(s) by name, stop them directly
-					fmt.Printf("Stopping all processes for app '%s' (found %d container(s))...\n", appName, len(strings.Split(names, "\n")))
-					stopCmd := exec.Command("docker", "stop", appName)
-					if err := stopCmd.Run(); err != nil {
-						fmt.Printf("       Error stopping container %s: %v\n", appName, err)
-					} else {
-						fmt.Printf("-----> Stopped %s\n", appName)
-						fmt.Printf("Stop complete for app '%s'\n", appName)
-						return
-					}
+			baseDir := "/opt/gokku"
+			containerService := services.NewContainerService(baseDir)
+
+			filter := services.ContainerFilter{
+				AppName: appName,
+				All:     true,
+			}
+
+			containers, err := containerService.ListContainers(filter)
+			if err == nil && len(containers) > 0 {
+				fmt.Printf("Stopping all processes for app '%s' (found %d container(s))...\n", appName, len(containers))
+				for _, container := range containers {
+					fmt.Printf("-----> Stopping %s\n", container.Names)
+					containerService.StopContainer(container.Names) // Ignore errors for backwards compatibility
 				}
+				fmt.Printf("Stop complete for app '%s'\n", appName)
+				return
 			}
 
 			fmt.Printf("No processes running for app '%s'\n", appName)
@@ -589,12 +506,14 @@ func handlePSStop(args []string) {
 
 		fmt.Printf("Stopping all processes for app '%s'...\n", appName)
 
+		baseDir := "/opt/gokku"
+		containerService := services.NewContainerService(baseDir)
+
 		for _, container := range allContainers {
 			fmt.Printf("-----> Stopping %s\n", container.Name)
 
-			// Stop container
-			cmd := exec.Command("docker", "stop", container.Name)
-			if err := cmd.Run(); err != nil {
+			// Stop container using service
+			if err := containerService.StopContainer(container.Name); err != nil {
 				fmt.Printf("       Error stopping container %s: %v\n", container.Name, err)
 				continue
 			}
@@ -632,12 +551,6 @@ func notifyPluginsOfScaleChange(appName, processType string) {
 			cmd.Run() // Don't fail if plugin hook fails
 		}
 	}
-}
-
-// imageExists checks if a Docker image exists
-func imageExists(imageName string) bool {
-	cmd := exec.Command("docker", "image", "inspect", imageName)
-	return cmd.Run() == nil
 }
 
 // showPSHelp shows help for ps commands

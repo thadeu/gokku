@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"gokku/internal"
+	"gokku/internal/services"
 )
 
 // handleConfigWithContext manages environment variable configuration using context
@@ -62,7 +63,7 @@ func handleConfigWithContext(ctx *internal.ExecutionContext, args []string) {
 // handleexecuteAsServerMode handles config commands when running on server
 func executeAsServerMode(ctx *internal.ExecutionContext, subcommand string, args []string) {
 	appName := ctx.GetAppName()
-	envFile := fmt.Sprintf("%s/apps/%s/shared/.env", ctx.BaseDir, appName)
+	configService := services.NewConfigService(ctx.BaseDir)
 
 	switch subcommand {
 	case "set":
@@ -70,7 +71,13 @@ func executeAsServerMode(ctx *internal.ExecutionContext, subcommand string, args
 			fmt.Println("Usage: gokku config set KEY=VALUE [KEY2=VALUE2...] -a <app>")
 			os.Exit(1)
 		}
-		internal.EnvSet(envFile, args)
+		if err := configService.SetEnvVar(appName, args); err != nil {
+			fmt.Printf("Error setting config: %v\n", err)
+			os.Exit(1)
+		}
+		for _, arg := range args {
+			fmt.Println(arg)
+		}
 	case "get":
 		if len(args) < 1 {
 			fmt.Println("Error: KEY is required for config get")
@@ -83,15 +90,46 @@ func executeAsServerMode(ctx *internal.ExecutionContext, subcommand string, args
 			fmt.Printf("  gokku config list -a %s\n", appName)
 			os.Exit(1)
 		}
-		internal.EnvGet(envFile, args[0])
+		value, err := configService.GetEnvVar(appName, args[0])
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("%s=%s\n", args[0], value)
 	case "list":
-		internal.EnvList(envFile)
+		envVars := configService.ListEnvVars(appName)
+		if len(envVars) == 0 {
+			fmt.Println("No environment variables set")
+			return
+		}
+		// Sort keys for consistent output
+		keys := make([]string, 0, len(envVars))
+		for k := range envVars {
+			keys = append(keys, k)
+		}
+		// Sort alphabetically
+		for i := 0; i < len(keys); i++ {
+			for j := i + 1; j < len(keys); j++ {
+				if keys[i] > keys[j] {
+					keys[i], keys[j] = keys[j], keys[i]
+				}
+			}
+		}
+		for _, key := range keys {
+			fmt.Printf("%s=%s\n", key, envVars[key])
+		}
 	case "unset":
 		if len(args) < 1 {
 			fmt.Println("Usage: gokku config unset KEY [KEY2...] -a <app>")
 			os.Exit(1)
 		}
-		internal.EnvUnset(envFile, args)
+		if err := configService.UnsetEnvVar(appName, args); err != nil {
+			fmt.Printf("Error unsetting config: %v\n", err)
+			os.Exit(1)
+		}
+		for _, key := range args {
+			fmt.Printf("Unset %s\n", key)
+		}
 	default:
 		fmt.Printf("Unknown subcommand: %s\n", subcommand)
 		os.Exit(1)
@@ -100,10 +138,7 @@ func executeAsServerMode(ctx *internal.ExecutionContext, subcommand string, args
 	// Auto-restart container after set/unset to apply changes
 	if subcommand == "set" || subcommand == "unset" {
 		fmt.Printf("\n-----> Restarting container to apply changes...\n")
-		appDir := fmt.Sprintf("%s/apps/%s/current", ctx.BaseDir, appName)
-
-		// Recreate container with updated environment variables
-		if err := internal.RecreateActiveContainer(appName, envFile, appDir); err != nil {
+		if err := configService.ReloadApp(appName); err != nil {
 			fmt.Printf("Warning: Failed to restart container: %v\n", err)
 			fmt.Printf("         Run 'gokku restart -a %s' manually.\n", appName)
 		} else {
