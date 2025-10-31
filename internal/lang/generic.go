@@ -79,8 +79,10 @@ func (l *Generic) Deploy(appName string, app *App, releaseDir string) error {
 
 	// Deploy using Docker client
 	volumes := []string{}
+	volumes = append(volumes, fmt.Sprintf("/opt/gokku/volumes/%s:/app/shared", appName))
+
 	if len(app.Volumes) > 0 {
-		volumes = app.Volumes
+		volumes = append(volumes, app.Volumes...)
 	}
 
 	return DeployContainer(DeploymentConfig{
