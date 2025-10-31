@@ -359,20 +359,15 @@ func handlePSList(args []string) {
 	}
 
 	fmt.Printf("Processes for app '%s':\n", appName)
-	fmt.Printf("%-20s %-10s %s\n", "NAME", "STATUS", "PORT")
-	fmt.Printf("%-20s %-10s %s\n", "----", "------", "----")
+	fmt.Printf("%-20s %-15s %s\n", "NAME", "STATUS", "PORT")
+	fmt.Printf("%-20s %-15s %s\n", "----", "------", "----")
 
 	for _, parts := range appContainers {
 		name := strings.TrimSpace(parts[0])
 		status := strings.TrimSpace(parts[1])
 		ports := strings.TrimSpace(parts[2])
 
-		// Truncate status if too long
-		if len(status) > 15 {
-			status = status[:15]
-		}
-
-		fmt.Printf("%-20s %-10s %s\n", name, status, ports)
+		fmt.Printf("%-20s %-15s %s\n", name, status, ports)
 	}
 }
 
@@ -392,8 +387,8 @@ func listAllContainers() {
 		return
 	}
 
-	fmt.Printf("%-20s %-10s %s\n", "NAME", "STATUS", "PORT")
-	fmt.Printf("%-20s %-10s %s\n", "----", "------", "----")
+	fmt.Printf("%-20s %-15s %s\n", "NAME", "STATUS", "PORT")
+	fmt.Printf("%-20s %-15s %s\n", "----", "------", "----")
 
 	for _, line := range lines {
 		if line == "" {
@@ -406,12 +401,7 @@ func listAllContainers() {
 			status := strings.TrimSpace(parts[1])
 			ports := strings.TrimSpace(parts[2])
 
-			// Truncate status if too long
-			if len(status) > 15 {
-				status = status[:15]
-			}
-
-			fmt.Printf("%-20s %-10s %s\n", name, status, ports)
+			fmt.Printf("%-20s %-15s %s\n", name, status, ports)
 		}
 	}
 }
