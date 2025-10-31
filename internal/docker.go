@@ -369,9 +369,11 @@ func StandardDeploy(config DeploymentConfig) error {
 		if len(config.DockerPorts) > 0 {
 			containerConfig.Ports = config.DockerPorts
 			fmt.Println("-----> Using ports from gokku.yml")
-		} else {
+		} else if containerPort > 0 {
+			// Only auto-map if containerPort is set and ports are not explicitly empty
 			containerConfig.Ports = []string{fmt.Sprintf("%d:%d", containerPort, containerPort)}
 		}
+		// If DockerPorts is empty array and containerPort is 0, no ports will be mapped
 	} else {
 		fmt.Println("-----> Using host network (all ports exposed)")
 	}
