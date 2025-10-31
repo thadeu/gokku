@@ -234,14 +234,21 @@ func handlePluginCommand(args []string) {
 	}
 
 	// Check if command exists
-	if !pm.CommandExists(pluginName, command) {
+	if !pm.BinExists(pluginName, command) || !pm.CommandExists(pluginName, command) {
 		fmt.Printf("Command '%s' not found for plugin '%s'\n", command, pluginName)
 		os.Exit(1)
 	}
 
 	// Get the plugin directory from PluginManager
 	pluginDir := filepath.Join(pm.GetPluginsDir(), pluginName)
-	commandPath := filepath.Join(pluginDir, "commands", command)
+
+	var commandPath string
+
+	if pm.BinExists(pluginName, command) {
+		commandPath = filepath.Join(pluginDir, "bin", command)
+	} else {
+		commandPath = filepath.Join(pluginDir, "commands", command)
+	}
 
 	// Build command arguments (pass all remaining args to the plugin command)
 	cmdArgs := []string{"-c", commandPath}

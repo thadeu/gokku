@@ -67,6 +67,28 @@ func (pm *PluginManager) InstallOfficialPlugin(pluginName string) error {
 		return fmt.Errorf("failed to make scripts executable: %v", err)
 	}
 
+	if err := pm.afterInstallation(pluginDir); err != nil {
+		return fmt.Errorf("failed to after installation: %v", err)
+	}
+
+	return nil
+}
+
+func (pm *PluginManager) afterInstallation(pluginDir string) error {
+	binInstallPath := filepath.Join(pluginDir, "bin", "install")
+
+	if fi, err := os.Stat(binInstallPath); err == nil && !fi.IsDir() && fi.Mode()&0111 != 0 {
+		cmd := exec.Command(binInstallPath)
+
+		cmd.Dir = pluginDir
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to execute bin/install: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -123,6 +145,12 @@ func (pm *PluginManager) PluginExists(pluginName string) bool {
 }
 
 // CommandExists checks if a plugin command exists
+func (pm *PluginManager) BinExists(pluginName, command string) bool {
+	commandPath := filepath.Join(pm.pluginsDir, pluginName, "bin", command)
+	_, err := os.Stat(commandPath)
+	return !os.IsNotExist(err)
+}
+
 func (pm *PluginManager) CommandExists(pluginName, command string) bool {
 	commandPath := filepath.Join(pm.pluginsDir, pluginName, "commands", command)
 	_, err := os.Stat(commandPath)
