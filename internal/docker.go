@@ -62,14 +62,10 @@ type DeploymentConfig struct {
 // ListContainers returns list of containers in JSON format
 // By default, only lists containers with Gokku labels to avoid conflicts
 func ListContainers(all bool) ([]ContainerInfo, error) {
-	args := []string{"ps", "--format", "json", "--filter"}
+	args := []string{"ps", "--format", "json", "--filter", fmt.Sprintf("label=%s=%s", GokkuLabelKey, GokkuLabelValue)}
 
 	if all {
-		args = []string{"ps", "-a", "--format", "json", "--filter"}
-	}
-
-	for _, label := range GetGokkuLabels() {
-		args = append(args, "--label", label)
+		args = []string{"ps", "-a", "--format", "json", "--filter", fmt.Sprintf("label=%s=%s", GokkuLabelKey, GokkuLabelValue)}
 	}
 
 	cmd := exec.Command("docker", args...)
@@ -95,33 +91,51 @@ func ListContainers(all bool) ([]ContainerInfo, error) {
 }
 
 // ContainerExists checks if a container exists
+// First checks containers with Gokku labels, then falls back to direct name check for backwards compatibility
 func ContainerExists(name string) bool {
+	// First try with label filter
 	containers, err := ListContainers(true)
+	if err == nil {
+		for _, container := range containers {
+			if strings.Contains(container.Names, name) {
+				return true
+			}
+		}
+	}
+
+	// Fallback: check directly by name for backwards compatibility with containers created before labels
+	cmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}", "--filter", fmt.Sprintf("name=^%s$", name))
+	output, err := cmd.Output()
 	if err != nil {
 		return false
 	}
 
-	for _, container := range containers {
-		if strings.Contains(container.Names, name) {
-			return true
-		}
-	}
-	return false
+	names := strings.TrimSpace(string(output))
+	return names != "" && strings.Contains(names, name)
 }
 
 // ContainerIsRunning checks if a container is running
+// First checks containers with Gokku labels, then falls back to direct name check for backwards compatibility
 func ContainerIsRunning(name string) bool {
+	// First try with label filter
 	containers, err := ListContainers(false)
+	if err == nil {
+		for _, container := range containers {
+			if strings.Contains(container.Names, name) {
+				return true
+			}
+		}
+	}
+
+	// Fallback: check directly by name for backwards compatibility
+	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}", "--filter", fmt.Sprintf("name=^%s$", name))
+	output, err := cmd.Output()
 	if err != nil {
 		return false
 	}
 
-	for _, container := range containers {
-		if strings.Contains(container.Names, name) {
-			return true
-		}
-	}
-	return false
+	names := strings.TrimSpace(string(output))
+	return names != "" && strings.Contains(names, name)
 }
 
 // StopContainer stops a container

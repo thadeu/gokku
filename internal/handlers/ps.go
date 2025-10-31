@@ -563,6 +563,26 @@ func handlePSStop(args []string) {
 		}
 
 		if len(allContainers) == 0 {
+			// Fallback: try to find containers directly by name for backwards compatibility
+			// This handles containers created before labels or not registered in the registry
+			cmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}", "--filter", fmt.Sprintf("name=^%s$", appName))
+			output, err := cmd.Output()
+			if err == nil {
+				names := strings.TrimSpace(string(output))
+				if names != "" {
+					// Found container(s) by name, stop them directly
+					fmt.Printf("Stopping all processes for app '%s' (found %d container(s))...\n", appName, len(strings.Split(names, "\n")))
+					stopCmd := exec.Command("docker", "stop", appName)
+					if err := stopCmd.Run(); err != nil {
+						fmt.Printf("       Error stopping container %s: %v\n", appName, err)
+					} else {
+						fmt.Printf("-----> Stopped %s\n", appName)
+						fmt.Printf("Stop complete for app '%s'\n", appName)
+						return
+					}
+				}
+			}
+
 			fmt.Printf("No processes running for app '%s'\n", appName)
 			return
 		}
