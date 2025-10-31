@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"infra/internal"
+	tablefy "infra/internal/tablefy"
 )
 
 // handleApps manages applications on the server
@@ -48,6 +49,14 @@ func handleApps(args []string) {
 	}
 }
 
+// AppInfo represents information about an app
+type AppInfo struct {
+	Name           string
+	Status         string
+	ReleasesCount  int
+	CurrentRelease string
+}
+
 // handleAppsList lists applications on the server
 func handleAppsList(args []string) {
 	// Check if we're running on server
@@ -56,48 +65,18 @@ func handleAppsList(args []string) {
 	if isServerMode {
 		// Server mode: list apps directly without needing -a flag
 		baseDir := "/opt/gokku"
-		cmd := exec.Command("bash", "-c", fmt.Sprintf(`
-			if [ -d "%s/apps" ]; then
-				echo "App Name                    Status    Releases    Current Release"
-				echo "================================================================"
-				ls -1 %s/apps 2>/dev/null | while read app; do
-					if [ -d "%s/apps/$app" ]; then
-						# Get app status
-						if docker ps --format '{{.Names}}' | grep -q "^$app"; then
-							status="running"
-						elif docker ps -a --format '{{.Names}}' | grep -q "^$app"; then
-							status="stopped"
-						else
-							status="not deployed"
-						fi
-
-						# Count releases
-						releases_count=0
-						if [ -d "%s/apps/$app/releases" ]; then
-							releases_count=$(ls -1 %s/apps/$app/releases 2>/dev/null | wc -l)
-						fi
-
-						# Get current release
-						current_release="none"
-						if [ -L "%s/apps/$app/current" ]; then
-							current_release=$(basename $(readlink %s/apps/$app/current) 2>/dev/null || echo "none")
-						fi
-
-						printf "%%-25s %%-10s %%-10s %%s\n" "$app" "$status" "$releases_count" "$current_release"
-					fi
-				done
-			else
-				echo "No apps directory found at %s/apps"
-			fi
-		`, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir))
-
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Run(); err != nil {
+		apps, err := collectAppsInfo(baseDir)
+		if err != nil {
 			fmt.Printf("Error listing apps: %v\n", err)
 			os.Exit(1)
 		}
+
+		if len(apps) == 0 {
+			fmt.Println("No apps found")
+			return
+		}
+
+		renderAppsTable(apps)
 	} else {
 		// Client mode: require -a flag with git remote
 		app, _ := internal.ExtractAppFlag(args)
@@ -117,42 +96,8 @@ func handleAppsList(args []string) {
 			os.Exit(1)
 		}
 
-		// List apps from /opt/gokku/apps directory with detailed information
-		cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf(`
-			if [ -d "%s/apps" ]; then
-				echo "App Name                    Status    Releases    Current Release"
-				echo "================================================================"
-				ls -1 %s/apps 2>/dev/null | while read app; do
-					if [ -d "%s/apps/$app" ]; then
-						# Get app status
-						if docker ps --format '{{.Names}}' | grep -q "^$app"; then
-							status="running"
-						elif docker ps -a --format '{{.Names}}' | grep -q "^$app"; then
-							status="stopped"
-						else
-							status="not deployed"
-						fi
-
-						# Count releases
-						releases_count=0
-						if [ -d "%s/apps/$app/releases" ]; then
-							releases_count=$(ls -1 %s/apps/$app/releases 2>/dev/null | wc -l)
-						fi
-
-						# Get current release
-						current_release="none"
-						if [ -L "%s/apps/$app/current" ]; then
-							current_release=$(basename $(readlink %s/apps/$app/current) 2>/dev/null || echo "none")
-						fi
-
-						printf "%%-25s %%-10s %%-10s %%s\n" "$app" "$status" "$releases_count" "$current_release"
-					fi
-				done
-			else
-				echo "No apps directory found at %s/apps"
-			fi
-		`, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir, remoteInfo.BaseDir))
-
+		// Execute command remotely via SSH
+		cmd := exec.Command("ssh", remoteInfo.Host, "gokku apps list")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
@@ -161,6 +106,84 @@ func handleAppsList(args []string) {
 			os.Exit(1)
 		}
 	}
+}
+
+// collectAppsInfo collects information about all apps in the base directory
+func collectAppsInfo(baseDir string) ([]AppInfo, error) {
+	appsDir := filepath.Join(baseDir, "apps")
+
+	// Check if apps directory exists
+	if _, err := os.Stat(appsDir); os.IsNotExist(err) {
+		return []AppInfo{}, nil
+	}
+
+	entries, err := os.ReadDir(appsDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read apps directory: %v", err)
+	}
+
+	var apps []AppInfo
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		appName := entry.Name()
+		appDir := filepath.Join(appsDir, appName)
+
+		// Get app status
+		status := getAppStatus(appName)
+
+		// Count releases
+		releasesCount := 0
+		releasesDir := filepath.Join(appDir, "releases")
+		if releaseEntries, err := os.ReadDir(releasesDir); err == nil {
+			releasesCount = len(releaseEntries)
+		}
+
+		// Get current release
+		currentRelease := "none"
+		currentLink := filepath.Join(appDir, "current")
+		if linkTarget, err := os.Readlink(currentLink); err == nil {
+			currentRelease = filepath.Base(linkTarget)
+		}
+
+		apps = append(apps, AppInfo{
+			Name:           appName,
+			Status:         status,
+			ReleasesCount:  releasesCount,
+			CurrentRelease: currentRelease,
+		})
+	}
+
+	return apps, nil
+}
+
+// getAppStatus determines the status of an app based on Docker containers
+func getAppStatus(appName string) string {
+	if internal.ContainerIsRunning(appName) {
+		return "running"
+	} else if internal.ContainerExists(appName) {
+		return "stopped"
+	}
+	return "not deployed"
+}
+
+// renderAppsTable renders the apps list using tablefy
+func renderAppsTable(apps []AppInfo) {
+	table := tablefy.New(tablefy.ASCII)
+	table.AppendHeaders([]string{"App Name", "Status", "Releases", "Current Release"})
+
+	for _, app := range apps {
+		table.AppendRow([]string{
+			app.Name,
+			app.Status,
+			fmt.Sprintf("%d", app.ReleasesCount),
+			app.CurrentRelease,
+		})
+	}
+
+	fmt.Print(table.Render())
 }
 
 // handleAppsCreate creates an application and sets up deployment

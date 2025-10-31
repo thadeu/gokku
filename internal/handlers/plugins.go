@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"infra/internal/plugins"
+	tablefy "infra/internal/tablefy"
 )
 
 // IsPluginInstalled checks if a plugin is installed
@@ -65,9 +66,16 @@ func handlePluginsList() {
 	}
 
 	fmt.Println("Installed plugins:")
+
+	table := tablefy.New(tablefy.TEXT)
+	table.AppendHeaders([]string{"NAME"})
+	table.AppendSeparator()
+
 	for _, plugin := range pluginList {
-		fmt.Printf("  %s\n", plugin)
+		table.AppendRow([]string{plugin}, true)
 	}
+
+	fmt.Print(table.Render())
 }
 
 // handlePluginsAdd adds a new plugin from official repository or Git URL

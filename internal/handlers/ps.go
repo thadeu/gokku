@@ -8,6 +8,7 @@ import (
 
 	"infra/internal"
 	"infra/internal/containers"
+	tablefy "infra/internal/tablefy"
 )
 
 // HandlePS handles ps-related commands
@@ -280,6 +281,7 @@ func handlePSList(args []string) {
 	appName := extractAppNameForPS(args)
 	if appName == "" {
 		isServerMode := internal.IsServerMode()
+
 		if isServerMode {
 			// In server mode, list all containers when no app name provided
 			listAllContainers()
@@ -359,51 +361,50 @@ func handlePSList(args []string) {
 	}
 
 	fmt.Printf("Processes for app '%s':\n", appName)
-	fmt.Printf("%-20s %-15s %s\n", "NAME", "STATUS", "PORT")
-	fmt.Printf("%-20s %-15s %s\n", "----", "------", "----")
 
-	for _, parts := range appContainers {
-		name := strings.TrimSpace(parts[0])
-		status := strings.TrimSpace(parts[1])
-		ports := strings.TrimSpace(parts[2])
+	table := tablefy.New(tablefy.ASCII)
+	table.AppendHeaders([]string{"NAME", "STATUS", "PORT"})
+	table.AppendSeparator()
 
-		fmt.Printf("%-20s %-15s %s\n", name, status, ports)
+	for _, row := range appContainers {
+		table.AppendRow(row)
 	}
+
+	fmt.Print(table.Render())
 }
 
 // listAllContainers lists all running containers with gokku format
 func listAllContainers() {
 	// Use docker ps to get running containers with pipe-separated format for easier parsing
 	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}|{{.Status}}|{{.Ports}}")
+
 	output, err := cmd.Output()
+
 	if err != nil {
 		fmt.Printf("Error running docker ps: %v\n", err)
 		os.Exit(1)
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+
 	if len(lines) == 0 || (len(lines) == 1 && lines[0] == "") {
 		fmt.Println("No processes running")
 		return
 	}
 
-	fmt.Printf("%-20s %-15s %s\n", "NAME", "STATUS", "PORT")
-	fmt.Printf("%-20s %-15s %s\n", "----", "------", "----")
+	table := tablefy.New(tablefy.ASCII)
+	table.AppendHeaders([]string{"NAME", "STATUS", "PORT"})
 
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
 
-		parts := strings.Split(line, "|")
-		if len(parts) >= 3 {
-			name := strings.TrimSpace(parts[0])
-			status := strings.TrimSpace(parts[1])
-			ports := strings.TrimSpace(parts[2])
-
-			fmt.Printf("%-20s %-15s %s\n", name, status, ports)
-		}
+		table.AppendRow(strings.Split(line, "|"), len(line) > 100)
+		table.AppendSeparator()
 	}
+
+	fmt.Print(table.Render())
 }
 
 // handlePSRestart handles the ps:restart command

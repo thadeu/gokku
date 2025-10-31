@@ -9,6 +9,7 @@ import (
 
 	"infra/internal"
 	"infra/internal/services"
+	tablefy "infra/internal/tablefy"
 )
 
 // handleServices manages service-related commands
@@ -56,18 +57,28 @@ func handleServicesList() {
 		return
 	}
 
-	fmt.Println("Services:")
+	fmt.Print("===== Services")
+
+	table := tablefy.New(tablefy.ASCII)
+	table.AppendHeaders([]string{"NAME", "PLUGIN", "STATUS"})
+
 	for _, service := range serviceList {
 		status := "stopped"
+
 		if service.Running {
 			status = "running"
 		}
 
-		fmt.Printf("  %s (%s) - %s\n", service.Name, service.Plugin, status)
+		// fmt.Printf("  %s (%s) - %s\n", service.Name, service.Plugin, status)
+		table.AppendRow([]string{service.Name, service.Plugin, status}, len(service.Name) > 110)
+
 		if len(service.LinkedApps) > 0 {
-			fmt.Printf("    Linked to: %s\n", strings.Join(service.LinkedApps, ", "))
+			// fmt.Printf("    Linked to: %s\n", strings.Join(service.LinkedApps, ", "))
+			table.AppendRow([]string{service.Name, service.Plugin, status, strings.Join(service.LinkedApps, ", ")}, len(service.Name) > 110)
 		}
 	}
+
+	fmt.Print(table.Render())
 }
 
 // handleServicesCreate creates a new service
