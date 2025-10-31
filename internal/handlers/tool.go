@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"infra/internal"
+	"gokku/internal"
 )
 
 func handleTool(args []string) {

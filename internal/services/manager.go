@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"infra/internal"
+	"gokku/internal"
 )
 
 // ServiceManager manages services and their lifecycle

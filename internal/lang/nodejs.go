@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	. "infra/internal"
+	. "gokku/internal"
 )
 
 type Nodejs struct {

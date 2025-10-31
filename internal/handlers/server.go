@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	. "infra/internal"
+	. "gokku/internal"
 )
 
 // handleServer manages server connections and remotes

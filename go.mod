@@ -1,4 +1,4 @@
-module infra
+module gokku
 
 go 1.25.0
 

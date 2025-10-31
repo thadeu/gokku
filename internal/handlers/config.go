@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"infra/internal"
+	"gokku/internal"
 )
 
 // handleConfigWithContext manages environment variable configuration using context

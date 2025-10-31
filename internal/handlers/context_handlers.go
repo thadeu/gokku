@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"infra/internal"
+	"gokku/internal"
 )
 
 // handleLogsWithContext shows application logs using context

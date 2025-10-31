@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	"infra/internal"
+	"gokku/internal"
 )
 
 func handleAutoUpdate(args []string) {

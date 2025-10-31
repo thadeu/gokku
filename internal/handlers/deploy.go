@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"infra/internal"
-	"infra/internal/lang"
+	"gokku/internal"
+	"gokku/internal/lang"
 
 	"gopkg.in/yaml.v3"
 )

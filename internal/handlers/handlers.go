@@ -1,6 +1,6 @@
 package handlers
 
-import "infra/internal"
+import "gokku/internal"
 
 // HandleApps lists applications on the server
 func HandleApps(args []string) {

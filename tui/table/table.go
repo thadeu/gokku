@@ -1,12 +1,6 @@
-package tablefy
+package table
 
 const DEFAULT_MAX_LINE_LENGTH = 95
-
-const (
-	ASCII = "ascii"
-	TEXT  = "text"
-	TABLE = "table"
-)
 
 const (
 	colorGreen = "\033[32m"
@@ -22,7 +16,7 @@ type Table struct {
 }
 
 // NewTable creates a new table with the specified type
-func New(tableType string) *Table {
+func NewTable(tableType string) *Table {
 	return &Table{
 		Type:       tableType,
 		headers:    []string{},

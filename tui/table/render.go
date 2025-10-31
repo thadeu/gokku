@@ -1,4 +1,4 @@
-package tablefy
+package table
 
 import (
 	"fmt"
@@ -8,11 +8,11 @@ import (
 // Render renders the table based on the Type
 func (t *Table) Render() string {
 	switch t.Type {
-	case ASCII:
+	case "ascii":
 		return t.Ascii()
-	case TEXT:
+	case "text":
 		return t.Text()
-	case TABLE:
+	case "table":
 		return t.Table()
 	default:
 		return t.Table()

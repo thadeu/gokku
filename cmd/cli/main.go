@@ -5,11 +5,11 @@ import (
 	"os"
 	"strings"
 
-	"infra/internal"
-	"infra/internal/handlers"
+	"gokku/internal"
+	"gokku/internal/handlers"
 )
 
-const version = "1.0.84"
+const version = "1.0.85"
 
 func main() {
 	if len(os.Args) < 2 {

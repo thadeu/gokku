@@ -385,7 +385,7 @@ func RunDockerBuildWithTimeout(cmd *exec.Cmd, timeoutMinutes int) error {
 			if cmd.Process != nil {
 				cmd.Process.Kill()
 			}
-			
+
 			// Extract build context from command args
 			buildContext := "."
 			if len(cmd.Args) > 0 {
@@ -395,7 +395,7 @@ func RunDockerBuildWithTimeout(cmd *exec.Cmd, timeoutMinutes int) error {
 			if cmd.Dir != "" {
 				buildContext = cmd.Dir
 			}
-			
+
 			return fmt.Errorf("docker build timed out after %d minutes. The build may be stuck or taking too long.\nTroubleshooting:\n  - Check Docker resources: docker system df\n  - Check Docker daemon logs: journalctl -u docker\n  - Verify available disk space: df -h\n  - Check if Go build is consuming resources: docker stats\n  - Try building manually: docker build -t <image> %s", timeoutMinutes, buildContext)
 		case err := <-done:
 			elapsed := time.Since(buildStartTime)

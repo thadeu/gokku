@@ -1,4 +1,4 @@
-package tablefy
+package table
 
 // AppendHeader adds a header to the table
 func (t *Table) AppendHeader(header string) {

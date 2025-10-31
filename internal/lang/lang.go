@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	. "infra/internal"
+	. "gokku/internal"
 )
 
 type Lang interface {

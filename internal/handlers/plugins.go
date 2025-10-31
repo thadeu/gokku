@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"infra/internal/plugins"
-	tablefy "infra/internal/tablefy"
+	"gokku/internal/plugins"
+	"gokku/tui"
 )
 
 // IsPluginInstalled checks if a plugin is installed
@@ -67,7 +67,7 @@ func handlePluginsList() {
 
 	fmt.Println("Installed plugins:")
 
-	table := tablefy.New(tablefy.ASCII)
+	table := tui.NewTable(tui.ASCII)
 	table.AppendHeaders([]string{"NAME"})
 	table.AppendSeparator()
 

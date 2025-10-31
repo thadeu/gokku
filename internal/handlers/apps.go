@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"infra/internal"
-	tablefy "infra/internal/tablefy"
+	"gokku/internal"
+	"gokku/tui"
 )
 
 // handleApps manages applications on the server
@@ -171,7 +171,7 @@ func getAppStatus(appName string) string {
 
 // renderAppsTable renders the apps list using tablefy
 func renderAppsTable(apps []AppInfo) {
-	table := tablefy.New(tablefy.ASCII)
+	table := tui.NewTable(tui.ASCII)
 	table.AppendHeaders([]string{"App Name", "Status", "Releases", "Current Release"})
 
 	for _, app := range apps {

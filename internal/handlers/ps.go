@@ -6,9 +6,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"infra/internal"
-	"infra/internal/containers"
-	tablefy "infra/internal/tablefy"
+	"gokku/internal"
+	"gokku/internal/containers"
+	"gokku/tui"
 )
 
 // HandlePS handles ps-related commands
@@ -362,7 +362,7 @@ func handlePSList(args []string) {
 
 	fmt.Printf("Processes for app '%s':\n", appName)
 
-	table := tablefy.New(tablefy.ASCII)
+	table := tui.NewTable(tui.ASCII)
 	table.AppendHeaders([]string{"NAME", "STATUS", "PORT"})
 	table.AppendSeparator()
 
@@ -392,7 +392,7 @@ func listAllContainers() {
 		return
 	}
 
-	table := tablefy.New(tablefy.ASCII)
+	table := tui.NewTable(tui.ASCII)
 	table.AppendHeaders([]string{"NAME", "STATUS", "PORT"})
 
 	for _, line := range lines {

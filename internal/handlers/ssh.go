@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	"infra/internal"
+	"gokku/internal"
 )
 
 // handleSSH establishes SSH connections to servers

@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	. "infra/internal"
+	. "gokku/internal"
 )
 
 type Golang struct {

@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"infra/internal"
-	"infra/internal/services"
-	tablefy "infra/internal/tablefy"
+	"gokku/internal"
+	"gokku/internal/services"
+	"gokku/tui"
 )
 
 // handleServices manages service-related commands
@@ -59,7 +59,7 @@ func handleServicesList() {
 
 	fmt.Print("===== Services")
 
-	table := tablefy.New(tablefy.ASCII)
+	table := tui.NewTable(tui.ASCII)
 	table.AppendHeaders([]string{"NAME", "PLUGIN", "STATUS"})
 
 	for _, service := range serviceList {
