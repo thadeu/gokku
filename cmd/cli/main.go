@@ -9,7 +9,7 @@ import (
 	"gokku/internal/handlers"
 )
 
-const version = "1.0.91"
+const version = "1.0.92"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -52,9 +52,21 @@ func main() {
 		return
 	}
 
+	if strings.HasPrefix(command, "plugin:") {
+		subcommand := strings.TrimPrefix(command, "plugin:")
+		handlers.HandlePlugins(append([]string{subcommand}, os.Args[2:]...))
+		return
+	}
+
 	if strings.HasPrefix(command, "plugins:") {
 		subcommand := strings.TrimPrefix(command, "plugins:")
 		handlers.HandlePlugins(append([]string{subcommand}, os.Args[2:]...))
+		return
+	}
+
+	if strings.HasPrefix(command, "service:") {
+		subcommand := strings.TrimPrefix(command, "service:")
+		handlers.HandleServices(append([]string{subcommand}, os.Args[2:]...))
 		return
 	}
 
