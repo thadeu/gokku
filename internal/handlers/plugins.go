@@ -67,7 +67,7 @@ func handlePluginsList() {
 
 	fmt.Println("Installed plugins:")
 
-	table := tablefy.New(tablefy.TEXT)
+	table := tablefy.New(tablefy.ASCII)
 	table.AppendHeaders([]string{"NAME"})
 	table.AppendSeparator()
 

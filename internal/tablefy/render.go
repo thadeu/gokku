@@ -28,8 +28,6 @@ func (t *Table) Table() string {
 	widths := t.calculateWidths()
 	var result strings.Builder
 
-	result.WriteString("\n")
-
 	// Build format string
 	formatParts := make([]string, len(t.headers))
 	for i := range t.headers {
@@ -95,8 +93,6 @@ func (t *Table) Ascii() string {
 
 	widths := t.calculateWidths()
 	var result strings.Builder
-
-	result.WriteString("\n")
 
 	// Build top border
 	result.WriteString("+")
@@ -180,8 +176,6 @@ func (t *Table) Text() string {
 
 	widths := t.calculateWidths()
 	var result strings.Builder
-
-	result.WriteString("\n")
 
 	// Print header
 	coloredHeaders := make([]string, len(t.headers))
