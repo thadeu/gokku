@@ -39,7 +39,7 @@ func handlePlugins(args []string) {
 	switch subcommand {
 	case "list", "ls":
 		handlePluginsList()
-	case "add":
+	case "add", "install":
 		handlePluginsAdd(args[1:])
 	case "update":
 		handlePluginsUpdate(args[1:])
