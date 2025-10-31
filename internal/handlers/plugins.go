@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gokku/internal"
 	"gokku/internal/plugins"
 	"gokku/tui"
 )
@@ -233,40 +234,41 @@ func handlePluginCommand(args []string) {
 		os.Exit(1)
 	}
 
-	// Check if command exists
-	if !pm.BinExists(pluginName, command) || !pm.CommandExists(pluginName, command) {
-		fmt.Printf("Command '%s' not found for plugin '%s'\n", command, pluginName)
-		os.Exit(1)
-	}
+	internal.TryCatch(func() {
+		// Get the plugin directory from PluginManager
+		pluginDir := filepath.Join(pm.GetPluginsDir(), pluginName)
 
-	// Get the plugin directory from PluginManager
-	pluginDir := filepath.Join(pm.GetPluginsDir(), pluginName)
+		var commandPath string
 
-	var commandPath string
+		if pm.BinExists(pluginName, command) {
+			commandPath = filepath.Join(pluginDir, "bin", command)
+		} else {
+			commandPath = filepath.Join(pluginDir, "commands", command)
+		}
 
-	if pm.BinExists(pluginName, command) {
-		commandPath = filepath.Join(pluginDir, "bin", command)
-	} else {
-		commandPath = filepath.Join(pluginDir, "commands", command)
-	}
+		if commandPath == "" {
+			fmt.Printf("Command '%s' not found for plugin '%s'\n", command, pluginName)
+			os.Exit(1)
+		}
 
-	// Build command arguments (pass all remaining args to the plugin command)
-	cmdArgs := []string{"-c", commandPath}
+		// Build command arguments (pass all remaining args to the plugin command)
+		cmdArgs := []string{"-c", commandPath}
 
-	if len(args) > 1 {
-		cmdArgs = append(cmdArgs, args[1:]...)
-	}
+		if len(args) > 1 {
+			cmdArgs = append(cmdArgs, args[1:]...)
+		}
 
-	// Execute the plugin command
-	cmd := exec.Command("bash", cmdArgs[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
+		// Execute the plugin command
+		cmd := exec.Command("bash", cmdArgs[1:]...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
 
-	if err := cmd.Run(); err != nil {
-		// Don't print error if command already printed its own error
-		os.Exit(1)
-	}
+		if err := cmd.Run(); err != nil {
+			// Don't print error if command already printed its own error
+			os.Exit(1)
+		}
+	})
 }
 
 // showPluginHelp shows plugin help

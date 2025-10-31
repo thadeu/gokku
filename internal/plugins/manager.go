@@ -67,10 +67,6 @@ func (pm *PluginManager) InstallOfficialPlugin(pluginName string) error {
 		return fmt.Errorf("failed to make scripts executable: %v", err)
 	}
 
-	if err := pm.afterInstallation(pluginDir); err != nil {
-		return fmt.Errorf("failed to after installation: %v", err)
-	}
-
 	return nil
 }
 
