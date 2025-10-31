@@ -421,8 +421,6 @@ if git rev-parse --verify HEAD >/dev/null 2>&1; then
     CURRENT_HEAD_REF=$(git symbolic-ref HEAD 2>/dev/null || echo "")
     CURRENT_HEAD_BRANCH=$(basename "$CURRENT_HEAD_REF" 2>/dev/null || echo "")
 
-    echo "-----> Current HEAD points to: $CURRENT_HEAD_BRANCH"
-
     # Check if the current HEAD branch has commits
     if ! git log --oneline -1 "$CURRENT_HEAD_BRANCH" >/dev/null 2>&1; then
         echo "-----> Current HEAD branch '$CURRENT_HEAD_BRANCH' has no commits"
@@ -616,8 +614,6 @@ if git rev-parse --verify HEAD >/dev/null 2>&1; then
     CURRENT_HEAD_REF=$(git symbolic-ref HEAD 2>/dev/null || echo "")
     CURRENT_HEAD_BRANCH=$(basename "$CURRENT_HEAD_REF" 2>/dev/null || echo "")
 
-    echo "-----> Current HEAD points to: $CURRENT_HEAD_BRANCH"
-
     # Check if the current HEAD branch has commits
     if ! git log --oneline -1 "$CURRENT_HEAD_BRANCH" >/dev/null 2>&1; then
         echo "-----> Current HEAD branch '$CURRENT_HEAD_BRANCH' has no commits"
@@ -774,8 +770,6 @@ if git rev-parse --verify HEAD >/dev/null 2>&1; then
     # Get the current HEAD branch
     CURRENT_HEAD_REF=$(git symbolic-ref HEAD 2>/dev/null || echo "")
     CURRENT_HEAD_BRANCH=$(basename "$CURRENT_HEAD_REF" 2>/dev/null || echo "")
-
-    echo "-----> Current HEAD points to: $CURRENT_HEAD_BRANCH"
 
     # Check if the current HEAD branch has commits
     if ! git log --oneline -1 "$CURRENT_HEAD_BRANCH" >/dev/null 2>&1; then

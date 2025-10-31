@@ -167,7 +167,6 @@ func executeDirectDeployment(appName string) error {
 	}
 
 	// Extract code from git repository
-	fmt.Println("-----> Extracting code...")
 	if err := extractCodeFromRepo(appName, reposDir, releaseDir); err != nil {
 		return fmt.Errorf("failed to extract code: %v", err)
 	}
