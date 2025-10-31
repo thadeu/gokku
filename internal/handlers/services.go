@@ -57,7 +57,7 @@ func handleServicesList() {
 		return
 	}
 
-	fmt.Print("===== Services")
+	fmt.Print("===== Services\n")
 
 	table := tui.NewTable(tui.ASCII)
 	table.AppendHeaders([]string{"NAME", "PLUGIN", "STATUS"})
