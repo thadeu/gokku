@@ -323,8 +323,8 @@ func handlePSList(args []string) {
 		return
 	}
 
-	// Use docker ps to get running containers
-	cmd := exec.Command("docker", "ps", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}")
+	// Use docker ps to get running containers with pipe-separated format for easier parsing
+	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}|{{.Status}}|{{.Ports}}")
 	output, err := cmd.Output()
 	if err != nil {
 		fmt.Printf("Error running docker ps: %v\n", err)
@@ -332,24 +332,23 @@ func handlePSList(args []string) {
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(lines) <= 1 {
+	if len(lines) == 0 || (len(lines) == 1 && lines[0] == "") {
 		fmt.Printf("No processes running for app '%s'\n", appName)
 		return
 	}
 
 	// Filter containers that belong to this app
-	var appContainers []string
-	for _, line := range lines[1:] { // Skip header
+	var appContainers [][]string
+	for _, line := range lines {
 		if line == "" {
 			continue
 		}
 
-		// Check if container name starts with app name
-		parts := strings.Fields(line)
-		if len(parts) > 0 {
-			containerName := parts[0]
-			if strings.HasPrefix(containerName, appName+"-") || containerName == appName {
-				appContainers = append(appContainers, line)
+		parts := strings.Split(line, "|")
+		if len(parts) >= 3 {
+			name := strings.TrimSpace(parts[0])
+			if strings.HasPrefix(name, appName+"-") || name == appName {
+				appContainers = append(appContainers, parts)
 			}
 		}
 	}
@@ -360,17 +359,20 @@ func handlePSList(args []string) {
 	}
 
 	fmt.Printf("Processes for app '%s':\n", appName)
-	fmt.Printf("%-20s %-10s %-15s\n", "NAME", "STATUS", "PORT")
-	fmt.Printf("%-20s %-10s %-15s\n", "----", "------", "----")
+	fmt.Printf("%-20s %-10s %s\n", "NAME", "STATUS", "PORT")
+	fmt.Printf("%-20s %-10s %s\n", "----", "------", "----")
 
-	for _, container := range appContainers {
-		parts := strings.Fields(container)
-		if len(parts) >= 3 {
-			name := parts[0]
-			status := parts[1]
-			ports := parts[2]
-			fmt.Printf("%-20s %-10s %-15s\n", name, status, ports)
+	for _, parts := range appContainers {
+		name := strings.TrimSpace(parts[0])
+		status := strings.TrimSpace(parts[1])
+		ports := strings.TrimSpace(parts[2])
+
+		// Truncate status if too long
+		if len(status) > 15 {
+			status = status[:15]
 		}
+
+		fmt.Printf("%-20s %-10s %s\n", name, status, ports)
 	}
 }
 
@@ -390,8 +392,8 @@ func listAllContainers() {
 		return
 	}
 
-	fmt.Printf("%-20s %-10s %-15s\n", "NAME", "STATUS", "PORT")
-	fmt.Printf("%-20s %-10s %-15s\n", "----", "------", "----")
+	fmt.Printf("%-20s %-10s %s\n", "NAME", "STATUS", "PORT")
+	fmt.Printf("%-20s %-10s %s\n", "----", "------", "----")
 
 	for _, line := range lines {
 		if line == "" {
@@ -409,7 +411,7 @@ func listAllContainers() {
 				status = status[:15]
 			}
 
-			fmt.Printf("%-20s %-10s %-15s\n", name, status, ports)
+			fmt.Printf("%-20s %-10s %s\n", name, status, ports)
 		}
 	}
 }

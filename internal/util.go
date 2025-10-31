@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 )
 
 // GetConfigPath returns the path to the configuration file
@@ -343,4 +345,72 @@ func DetectNodeVersion(releaseDir string) string {
 func DetectPythonVersion(releaseDir string) string {
 	// Always use latest Python as fallback
 	return "python:latest"
+}
+
+// RunDockerBuildWithTimeout executes docker build with timeout and progress monitoring
+func RunDockerBuildWithTimeout(cmd *exec.Cmd, timeoutMinutes int) error {
+	if timeoutMinutes <= 0 {
+		timeoutMinutes = 30 // Default 30 minutes
+	}
+
+	timeout := time.Duration(timeoutMinutes) * time.Minute
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	buildStartTime := time.Now()
+	fmt.Printf("-----> Starting Docker build (timeout: %d minutes)...\n", timeoutMinutes)
+
+	// Start command
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start docker build: %v", err)
+	}
+
+	// Monitor progress
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	// Progress ticker - log every 30 seconds to show we're still working
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			// Timeout reached
+			elapsed := time.Since(buildStartTime)
+			fmt.Printf("-----> Build timeout reached after %s\n", elapsed.Round(time.Second))
+			fmt.Println("-----> Terminating build process...")
+			if cmd.Process != nil {
+				cmd.Process.Kill()
+			}
+			
+			// Extract build context from command args
+			buildContext := "."
+			if len(cmd.Args) > 0 {
+				// Last argument is usually the build context
+				buildContext = cmd.Args[len(cmd.Args)-1]
+			}
+			if cmd.Dir != "" {
+				buildContext = cmd.Dir
+			}
+			
+			return fmt.Errorf("docker build timed out after %d minutes. The build may be stuck or taking too long.\nTroubleshooting:\n  - Check Docker resources: docker system df\n  - Check Docker daemon logs: journalctl -u docker\n  - Verify available disk space: df -h\n  - Check if Go build is consuming resources: docker stats\n  - Try building manually: docker build -t <image> %s", timeoutMinutes, buildContext)
+		case err := <-done:
+			elapsed := time.Since(buildStartTime)
+			if err != nil {
+				return fmt.Errorf("docker build failed after %s: %v", elapsed.Round(time.Second), err)
+			}
+			fmt.Printf("-----> Build completed successfully in %s\n", elapsed.Round(time.Second))
+			return nil
+		case <-ticker.C:
+			// Log progress every 30 seconds
+			elapsed := time.Since(buildStartTime)
+			remaining := timeout - elapsed
+			if remaining > 0 {
+				fmt.Printf("-----> Build still running... (elapsed: %s, remaining: %s)\n", elapsed.Round(time.Second), remaining.Round(time.Second))
+			}
+		}
+	}
 }

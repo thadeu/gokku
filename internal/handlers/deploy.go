@@ -243,16 +243,18 @@ func executeDirectDeployment(appName string) error {
 			imageTag := fmt.Sprintf("%s:latest", appName)
 			exec.Command("docker", "rmi", imageTag).Run() // Ignore errors if image doesn't exist
 
-			// Build with no cache
-			cmd := exec.Command("docker", "build", "--no-cache", "-t", imageTag, releaseDir)
+			// Build with no cache and progress output
+			cmd := exec.Command("docker", "build", "--progress=plain", "--no-cache", "-t", imageTag, releaseDir)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err != nil {
+
+			// Use timeout wrapper for build (default 60 minutes)
+			if err := internal.RunDockerBuildWithTimeout(cmd, 60); err != nil {
 				// Check if it's a signal interruption
 				if internal.IsSignalInterruption(err) {
 					return fmt.Errorf("docker build interrupted by user")
 				}
-				return fmt.Errorf("docker build failed: %v", err)
+				return err
 			}
 		} else {
 			// Use language handler for non-Docker builds

@@ -59,7 +59,7 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 
 		// Build Docker command with build args
 		buildArgs := l.getDockerBuildArgs(app)
-		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
+		cmd = exec.Command("docker", "build", "--progress=plain", "-f", dockerfilePath, "-t", imageTag, releaseDir)
 
 		// Add build args to command
 		for key, value := range buildArgs {
@@ -69,14 +69,15 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
 	} else {
 		// Use default Dockerfile in release directory
-		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
+		cmd = exec.Command("docker", "build", "--progress=plain", "-t", imageTag, releaseDir)
 	}
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("docker build failed: %v", err)
+	// Use timeout wrapper for build (default 60 minutes for Go builds)
+	if err := RunDockerBuildWithTimeout(cmd, 60); err != nil {
+		return err
 	}
 
 	fmt.Println("-----> Go build complete!")
