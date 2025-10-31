@@ -49,9 +49,17 @@ func (l *Generic) Build(appName string, app *App, releaseDir string) error {
 	if app.Dockerfile != "" {
 		// Use custom Dockerfile path
 		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
+		// Add Gokku labels to image
+		for _, label := range GetGokkuLabels() {
+			cmd.Args = append(cmd.Args, "--label", label)
+		}
 	} else {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
+		// Add Gokku labels to image
+		for _, label := range GetGokkuLabels() {
+			cmd.Args = append(cmd.Args, "--label", label)
+		}
 	}
 
 	cmd.Stdout = os.Stdout

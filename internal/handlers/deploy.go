@@ -245,6 +245,10 @@ func executeDirectDeployment(appName string) error {
 
 			// Build with no cache and progress output
 			cmd := exec.Command("docker", "build", "--progress=plain", "--no-cache", "-t", imageTag, releaseDir)
+			// Add Gokku labels to image
+			for _, label := range internal.GetGokkuLabels() {
+				cmd.Args = append(cmd.Args, "--label", label)
+			}
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 

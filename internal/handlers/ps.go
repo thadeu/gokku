@@ -216,6 +216,7 @@ func scaleUp(appName, processType string, count int, registry *containers.Contai
 		// Create container with docker run
 		cmd := exec.Command("docker", "run", "-d",
 			"--name", containerName,
+			"--label", fmt.Sprintf("%s=%s", internal.GokkuLabelKey, internal.GokkuLabelValue),
 			"-p", fmt.Sprintf("%d", hostPort),
 			"--env-file", fmt.Sprintf("/opt/gokku/apps/%s/.env", appName),
 			"--ulimit", "nofile=65536:65536",
@@ -326,7 +327,8 @@ func handlePSList(args []string) {
 	}
 
 	// Use docker ps to get running containers with pipe-separated format for easier parsing
-	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}|{{.Status}}|{{.Ports}}")
+	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}|{{.Status}}|{{.Ports}}",
+		"--filter", fmt.Sprintf("label=%s=%s", internal.GokkuLabelKey, internal.GokkuLabelValue))
 	output, err := cmd.Output()
 	if err != nil {
 		fmt.Printf("Error running docker ps: %v\n", err)
@@ -376,7 +378,8 @@ func handlePSList(args []string) {
 // listAllContainers lists all running containers with gokku format
 func listAllContainers() {
 	// Use docker ps to get running containers with pipe-separated format for easier parsing
-	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}|{{.Status}}|{{.Ports}}")
+	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}|{{.Status}}|{{.Ports}}",
+		"--filter", fmt.Sprintf("label=%s=%s", internal.GokkuLabelKey, internal.GokkuLabelValue))
 
 	output, err := cmd.Output()
 

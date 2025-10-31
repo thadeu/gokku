@@ -10,6 +10,18 @@ import (
 	"time"
 )
 
+const (
+	// GokkuLabelKey is the label key used to identify resources created by Gokku
+	GokkuLabelKey = "createdby"
+	// GokkuLabelValue is the label value used to identify resources created by Gokku
+	GokkuLabelValue = "gokku"
+)
+
+// GetGokkuLabels returns the standard labels to identify Gokku resources
+func GetGokkuLabels() []string {
+	return []string{fmt.Sprintf("%s=%s", GokkuLabelKey, GokkuLabelValue)}
+}
+
 // ContainerInfo represents container information from docker ps --format json
 type ContainerInfo struct {
 	ID      string `json:"ID"`
@@ -48,12 +60,19 @@ type DeploymentConfig struct {
 }
 
 // ListContainers returns list of containers in JSON format
+// By default, only lists containers with Gokku labels to avoid conflicts
 func ListContainers(all bool) ([]ContainerInfo, error) {
-	cmd := exec.Command("docker", "ps", "--format", "json")
+	args := []string{"ps", "--format", "json", "--filter"}
+
 	if all {
-		cmd = exec.Command("docker", "ps", "-a", "--format", "json")
+		args = []string{"ps", "-a", "--format", "json", "--filter"}
 	}
 
+	for _, label := range GetGokkuLabels() {
+		args = append(args, "--label", label)
+	}
+
+	cmd := exec.Command("docker", args...)
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %v", err)
@@ -134,6 +153,11 @@ func RemoveContainer(name string, force bool) error {
 // CreateContainer creates a new container with the given configuration
 func CreateContainer(config ContainerConfig) error {
 	args := []string{"run", "-d", "--name", config.Name}
+
+	// Add Gokku labels to identify this container
+	for _, label := range GetGokkuLabels() {
+		args = append(args, "--label", label)
+	}
 
 	// Add restart policy
 	if config.RestartPolicy != "" {

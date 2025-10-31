@@ -66,10 +66,19 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 			cmd.Args = append(cmd.Args, "--build-arg", fmt.Sprintf("%s=%s", key, value))
 		}
 
+		// Add Gokku labels to image
+		for _, label := range GetGokkuLabels() {
+			cmd.Args = append(cmd.Args, "--label", label)
+		}
+
 		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
 	} else {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "--progress=plain", "-t", imageTag, releaseDir)
+		// Add Gokku labels to image
+		for _, label := range GetGokkuLabels() {
+			cmd.Args = append(cmd.Args, "--label", label)
+		}
 	}
 
 	// Enable BuildKit for cache mounts support
