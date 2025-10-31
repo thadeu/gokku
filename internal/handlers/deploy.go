@@ -269,7 +269,7 @@ func executeDirectDeployment(appName string) error {
 		}
 	}
 
-	volumesDir := fmt.Sprintf("%s/volumes", app.Name)
+	volumesDir := fmt.Sprintf("/opt/gokku/volumes/%s", app.Name)
 	os.MkdirAll(volumesDir, 0755)
 
 	fmt.Println("-----> Build complete!")

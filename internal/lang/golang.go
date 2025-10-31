@@ -72,6 +72,8 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 		cmd = exec.Command("docker", "build", "--progress=plain", "-t", imageTag, releaseDir)
 	}
 
+	// Enable BuildKit for cache mounts support
+	cmd.Env = append(os.Environ(), "DOCKER_BUILDKIT=1")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -299,14 +301,20 @@ FROM %s AS builder
 
 WORKDIR /app
 
-# Copy project (entire project if workdir is subdirectory)
+# Copy only go.mod and go.sum first (for better Docker layer caching)
+COPY %s/go.mod %s/go.sum* ./
+
+# Download dependencies with cache mount (this layer will be cached if go.mod/go.sum don't change)
+RUN --mount=type=cache,target=/go/pkg/mod \
+  go mod download
+
+# Copy the rest of the application code
 COPY %s .
 
-# Download dependencies
-RUN go mod download
-
-# Build the application
-RUN CGO_ENABLED=%s GOOS=%s GOARCH=%s \
+# Build the application with cache mounts for faster builds
+RUN --mount=type=cache,target=/go/pkg/mod \
+  --mount=type=cache,target=/root/.cache/go-build \
+  CGO_ENABLED=%s GOOS=%s GOARCH=%s \
   go build -ldflags="-w -s" -o app %s
 
 # Final stage
@@ -323,7 +331,7 @@ COPY --from=builder /app/app .
 
 # Run the application
 CMD ["/root/app"]
-`, baseImage, workDir, cgoEnabled, goos, goarch, buildPath)
+`, baseImage, workDir, workDir, workDir, cgoEnabled, goos, goarch, buildPath)
 }
 
 // detectSystemArchitecture detects the current system architecture
