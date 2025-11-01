@@ -340,9 +340,9 @@ func (pm *PluginManager) UpdatePlugin(pluginName string) error {
 	}
 
 	// Remove existing plugin directory
-	if err := os.RemoveAll(pluginDir); err != nil {
-		return fmt.Errorf("failed to remove existing plugin: %v", err)
-	}
+	// if err := os.RemoveAll(pluginDir); err != nil {
+	// 	return fmt.Errorf("failed to remove existing plugin: %v", err)
+	// }
 
 	// Recreate plugin directory
 	if err := os.MkdirAll(pluginDir, 0755); err != nil {
@@ -352,7 +352,7 @@ func (pm *PluginManager) UpdatePlugin(pluginName string) error {
 	// Clone repository again
 	if err := pm.cloneRepository(gitURL, pluginDir); err != nil {
 		// Cleanup on error
-		os.RemoveAll(pluginDir)
+		// os.RemoveAll(pluginDir)
 		return fmt.Errorf("failed to clone repository: %v", err)
 	}
 
