@@ -4,6 +4,9 @@
 
 # Gokku Deployment System
 
+![Build Status](https://github.com/thadeu/gokku/actions/workflows/go-test.yml/badge.svg)
+[![Go Reference](https://pkg.go.dev/badge/github.com/thadeu/gokku.svg)](https://pkg.go.dev/github.com/thadeu/gokku)
+
 A **Docker-native** git-push deployment system for multi-language applications. No hard-coded app names, ports, or paths. Everything is configurable via `gokku.yml`.
 
 **Gokku** = Go + Dokku - A lightweight alternative to Dokku, focused on containerized deployments with multi-language support.
