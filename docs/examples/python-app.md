@@ -56,10 +56,10 @@ gunicorn==21.2.0
 
 ```bash
 # Add remote
-git remote add production ubuntu@server:flask-app
+gokku remote add flask-app-production ubuntu@server
 
 # Deploy (auto-setup happens on first push)
-git push production main
+git push flask-app-production main
 
 # Or use CLI
 gokku deploy -a flask-app-production

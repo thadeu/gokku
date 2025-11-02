@@ -47,30 +47,39 @@ The `-a/--app` flag uses your **git remote name**:
 
 ## Commands
 
-### Server Management
+### Remote Management
 
-#### `gokku server add <app_name> <user@server_ip>`
+#### `gokku remote setup <user@host> [-i|--identity <pem_file>]`
 
-Add a new server remote.
+Perform one-time server setup. Installs Gokku, essential plugins, and configures SSH.
 
 ```bash
-gokku server add stt ubuntu@54.233.138.116
+gokku remote setup ubuntu@192.168.105.3
+gokku remote setup ubuntu@ec2.example.com -i ~/.ssh/my-key.pem
 ```
 
-#### `gokku server list`
+#### `gokku remote add <app_name> <user@server_ip>`
+
+Add a new git remote.
+
+```bash
+gokku remote add api-production ubuntu@54.233.138.116
+```
+
+#### `gokku remote list`
 
 List all configured remotes.
 
 ```bash
-gokku server list
+gokku remote list
 ```
 
-#### `gokku server remove <remote_name>`
+#### `gokku remote remove <remote_name>`
 
-Remove a server remote.
+Remove a git remote.
 
 ```bash
-gokku server remove stt
+gokku remote remove api-production
 ```
 
 ### Application Management
@@ -245,21 +254,21 @@ gokku ssh -a api-production
 ### Basic Workflow
 
 ```bash
-# 1. Add server remote
-gokku server add api ubuntu@54.233.138.116
+# 1. Add remote
+gokku remote add api-production ubuntu@54.233.138.116
 
 # 2. Set environment variables
-gokku config set PORT=8080 -a api
-gokku config set DATABASE_URL="postgres://..." -a api
+gokku config set PORT=8080 -a api-production
+gokku config set DATABASE_URL="postgres://..." -a api-production
 
 # 3. Deploy application
-gokku deploy -a api
+gokku deploy -a api-production
 
 # 4. Check status
-gokku status -a api
+gokku status -a api-production
 
 # 5. View logs
-gokku logs -a api -f
+gokku logs -a api-production -f
 ```
 
 ### Rails Application

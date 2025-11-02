@@ -50,20 +50,20 @@ apps:
 
 ```bash
 # On local machine
-git remote add api-prod ubuntu@server:api
-git remote add worker-prod ubuntu@server:worker
-git remote add admin-prod ubuntu@server:admin
-git remote add ml-prod ubuntu@server:ml-service
+gokku remote add api-production ubuntu@server
+gokku remote add worker-production ubuntu@server
+gokku remote add admin-production ubuntu@server
+gokku remote add ml-service-production ubuntu@server
 ```
 
 ### Deploy
 
 ```bash
 # Deploy all to production
-git push api-prod main
-git push worker-prod main
-git push admin-prod main
-git push ml-prod main
+git push api-production main
+git push worker-production main
+git push admin-production main
+git push ml-service-production main
 ```
 
 ## Microservices Architecture
@@ -284,12 +284,12 @@ apps:
 
 ```bash
 # Production
-git remote add api-prod ubuntu@server:api
-git remote add worker-prod ubuntu@server:worker
+gokku remote add api-production ubuntu@server
+gokku remote add worker-production ubuntu@server
 
 # Staging
-git remote add api-staging ubuntu@server:api
-git remote add worker-staging ubuntu@server:worker
+gokku remote add api-staging ubuntu@server
+gokku remote add worker-staging ubuntu@server
 
 # Deploy to staging
 git push api-staging staging

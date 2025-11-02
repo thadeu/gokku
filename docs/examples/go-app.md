@@ -62,10 +62,10 @@ func main() {
 
 ```bash
 # Add remote
-git remote add production ubuntu@server:api
+gokku remote add api-production ubuntu@server
 
 # Deploy (auto-setup happens on first push)
-git push production main
+git push api-production main
 
 # Or use CLI
 gokku deploy -a api-production
@@ -126,20 +126,20 @@ apps:
 
 ```bash
 # Production
-git remote add production ubuntu@server:api
+gokku remote add api-production ubuntu@server
 
 # Staging
-git remote add staging ubuntu@server:api
+gokku remote add api-staging ubuntu@server
 ```
 
 ### Deploy
 
 ```bash
 # Deploy to staging
-git push staging staging
+git push api-staging staging
 
 # Deploy to production
-git push production main
+git push api-production main
 ```
 
 ## With Database

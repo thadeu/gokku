@@ -100,7 +100,7 @@ User configuration is **automatically detected** from your git remote URL.
 **Example:**
 ```bash
 # Git remote format: user@host:path
-git remote add production ubuntu@server:api
+gokku remote add api-production ubuntu@server
 # The user 'ubuntu' is automatically extracted and used
 ```
 

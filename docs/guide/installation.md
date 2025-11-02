@@ -119,7 +119,7 @@ On the server, setup your app:
 
 ```bash
 # Just push - setup happens automatically!
-git push production main
+git push api-production main
 ```
 
 The first push automatically creates:
@@ -133,10 +133,11 @@ The first push automatically creates:
 On your local machine:
 
 ```bash
-git remote add production ubuntu@your-server:api
+gokku remote add api-production ubuntu@your-server
 ```
 
 Replace:
+- `api-production` with your desired remote name
 - `ubuntu` with your SSH user
 - `your-server` with your server IP or hostname
 
@@ -185,7 +186,7 @@ Should connect without password prompt.
 Deploy your app:
 
 ```bash
-git push production main
+git push api-production main
 ```
 
 You should see:
@@ -220,14 +221,14 @@ Setup staging environment:
 
 ```bash
 # On local machine - just add remote and push
-git remote add staging ubuntu@your-server:api
-git push staging develop
+gokku remote add api-staging ubuntu@your-server
+git push api-staging develop
 ```
 
 Deploy to staging:
 
 ```bash
-git push staging develop
+git push api-staging develop
 ```
 
 ## Uninstall

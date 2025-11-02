@@ -10,6 +10,51 @@ A **Docker-native** git-push deployment system for multi-language applications. 
 
 <h1 style="z-index: 999; text-align: center;"></h1>
 
+## Quick Start
+
+Complete deployment in 4 steps:
+
+### 1. Setup Server
+
+From your local machine, run one-time command to setup everything:
+
+```bash
+gokku remote setup USER@SERVER_IP
+```
+
+This will:
+- Install Gokku on the server
+- Install essential plugins (nginx, letsencrypt, cron, postgres, redis)
+- Configure SSH keys
+- Verify installation
+
+### 2. Create App on Server
+
+SSH into your server and create the app:
+
+```bash
+ssh user@server_ip
+gokku apps create api-production
+```
+
+### 3. Add Remote on Client
+
+From your local machine:
+
+```bash
+gokku remote add api-production USER@SERVER_IP
+```
+
+### 4. Deploy
+
+```bash
+git push api-production main
+```
+
+That's it! Your app is live. 🎉
+
+---
+
 ## Key Features
 
 ✅ **Docker-Native** - All applications run in containers with blue-green deployment

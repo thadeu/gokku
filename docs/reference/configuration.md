@@ -190,7 +190,7 @@ User configuration is **automatically detected** from your git remote URL.
 **Example:**
 ```bash
 # Git remote format: user@host:path
-git remote add production ubuntu@server:api
+gokku remote add api-production ubuntu@server
 ```
 
 **No configuration needed** - Gokku automatically uses the user from your git remote.

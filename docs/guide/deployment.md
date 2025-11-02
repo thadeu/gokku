@@ -28,13 +28,13 @@ apps:
 On your local machine:
 
 ```bash
-git remote add production ubuntu@server:api
+gokku remote add api-production ubuntu@server
 ```
 
 ### 3. Deploy (Auto-Setup)
 
 ```bash
-git push production main
+git push api-production main
 ```
 
 The first push automatically creates:
@@ -202,13 +202,13 @@ Test before production:
 
 ```bash
 # 1. Deploy to staging
-git push staging main
+git push api-staging main
 
 # 2. Test
 ./test-staging.sh
 
 # 3. Deploy to production
-git push production main
+git push api-production main
 ```
 
 **Pros:**
@@ -230,7 +230,7 @@ Deploy branches to test:
 
 ```bash
 # Deploy feature branch to staging
-git push staging feature/new-ui
+git push api-staging feature/new-ui
 
 # Test
 curl https://staging.example.com
@@ -238,7 +238,7 @@ curl https://staging.example.com
 # Merge and deploy to production
 git checkout main
 git merge feature/new-ui
-git push production main
+git push api-production main
 ```
 
 ## Next Steps

@@ -60,13 +60,13 @@ git commit -m "Initial commit"
 
 ```bash
 # Add remote (replace with your server)
-git remote add production ubuntu@your-server:react-app
+gokku remote add react-app-production ubuntu@your-server
 ```
 
 ### 3. Deploy
 
 ```bash
-git push production main
+git push react-app-production main
 ```
 
 Gokku will automatically:

@@ -38,6 +38,60 @@ features:
 
 ## Quick Start
 
+Complete deployment in 4 steps:
+
+### 1. Setup Server
+
+From your local machine, run one command to setup everything:
+
+```bash
+gokku remote setup user@server_ip
+```
+
+This will:
+- Install Gokku on the server
+- Install essential plugins (nginx, letsencrypt, cron, postgres, redis)
+- Configure SSH keys
+- Verify installation
+
+### 2. Create App on Server
+
+SSH into your server and create the app:
+
+```bash
+ssh user@server_ip
+gokku apps create api-production
+```
+
+### 3. Add Remote on Client
+
+From your local machine:
+
+```bash
+gokku remote add api-production user@server_ip
+```
+
+### 4. Deploy
+
+```yaml
+apps:
+  api:
+    workdir: .
+    path: ./cmd/api
+```
+
+```bash
+git push api-production main
+```
+
+That's it! Your app is live. 🎉
+
+---
+
+### Alternative: Manual Installation
+
+If you prefer to install manually:
+
 Install Gokku on your server:
 
 ```bash
@@ -49,33 +103,6 @@ Install Gokku on your client:
 ```bash
 curl -fsSL https://gokku-vm.com/install | bash -s -- --client
 ```
-
-Check version
-
-```bash
-gokku version
-```
-
-Create a minimal `gokku.yml`:
-
-```yaml
-apps:
-  api:
-    path: ./cmd/api
-    binary_name: api
-    ports:
-      - 80:3000
-```
-
-Deploy your app:
-
-```bash
-git remote add production user@server:api 
-
-git push production main
-```
-
-That's it! Your app is live. 🎉
 
 ## Why Gokku?
 

@@ -2,9 +2,56 @@
 
 Get Gokku up and running in minutes.
 
-## Installation
+## Quick Start (Recommended)
 
-### Step 1: Install on Server
+### Step 1: Setup Server
+
+From your local machine, run one command to setup everything:
+
+```bash
+gokku remote setup user@server_ip
+```
+
+This will:
+- Install Gokku on the server
+- Install essential plugins (nginx, letsencrypt, cron, postgres, redis)
+- Configure SSH keys
+- Verify installation
+
+### Step 2: Create App on Server
+
+SSH into your server and create the app:
+
+```bash
+ssh user@server_ip
+gokku apps create api-production
+```
+
+### Step 3: Add Remote on Client
+
+From your local machine:
+
+```bash
+gokku remote add api-production user@server_ip
+```
+
+### Step 4: Deploy
+
+```bash
+git push api-production main
+```
+
+That's it! Your app is live. 🎉
+
+---
+
+## Detailed Guide
+
+### Alternative: Manual Installation
+
+If you prefer to install manually:
+
+#### Install on Server
 
 SSH into your server and run:
 
@@ -16,12 +63,12 @@ This installs:
 - Gokku scripts
 - Required dependencies
 
-### Step 2: Install CLI (Optional but Recommended)
+#### Install CLI (Optional but Recommended)
 
 Install the `gokku` CLI on your local machine:
 
 ```bash
-curl -fsSL https://gokku-vm.com/install | bash
+curl -fsSL https://gokku-vm.com/install | bash -s -- --client
 ```
 
 The CLI makes it easier to manage your deployments without SSH commands.
@@ -32,13 +79,7 @@ Verify installation:
 gokku version
 ```
 
-Add your server:
-
-```bash
-gokku server add production ubuntu@your-server
-```
-
-### Step 3: Create Configuration
+### Create Configuration
 
 In your project root, create `gokku.yml`:
 
@@ -53,18 +94,18 @@ apps:
     cgo_enabled: 0
 ```
 
-### Step 4: Create Application
+### Create Application
 
 Add a git remote for your application:
 
 ```bash
 # Add git remote
-git remote add production ubuntu@your-server:api
+gokku remote add api-production user@server_ip
 ```
 
 The application will be automatically created on first deployment.
 
-### Step 5: Deploy
+### Deploy
 
 Now deploy your application:
 
@@ -78,7 +119,7 @@ gokku deploy -a production
 
 ```bash
 # Push - deployment happens automatically!
-git push production main
+git push api-production main
 ```
 
 Watch the magic happen:
