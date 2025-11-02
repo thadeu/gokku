@@ -99,7 +99,7 @@ func (ss *ServerSetup) Execute() error {
 	fmt.Println("-----> Server is ready to receive deployments")
 	fmt.Println("")
 	fmt.Println("Next steps:")
-	fmt.Printf("  gokku apps create <app_name>\n")
+	fmt.Printf("  gokku apps create <app_name> [--remote]\n")
 	fmt.Println("")
 	fmt.Println("Example:")
 	fmt.Printf("  gokku apps create api-production\n")

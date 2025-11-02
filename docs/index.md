@@ -53,17 +53,17 @@ This will:
 - Install essential plugins (nginx, letsencrypt, cron, postgres, redis)
 - Configure SSH keys
 - Verify installation
+- Create default "gokku" remote for easy commands
 
 ### 2. Create App on Server
 
-SSH into your server and create the app:
+From your local machine (no SSH needed):
 
 ```bash
-ssh user@server_ip
-gokku apps create api-production
+gokku apps create api-production --remote
 ```
 
-### 3. Add Remote on Client
+### 3. Add Remote for Deployment
 
 From your local machine:
 
@@ -72,13 +72,6 @@ gokku remote add api-production user@server_ip
 ```
 
 ### 4. Deploy
-
-```yaml
-apps:
-  api:
-    workdir: .
-    path: ./cmd/api
-```
 
 ```bash
 git push api-production main
