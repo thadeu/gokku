@@ -31,8 +31,8 @@ The `-a/--app` flag uses your **git remote name**:
 
 1. You add a git remote (standard git command):
    ```bash
-   git remote add api-production ubuntu@server:api
-   git remote add vad-staging ubuntu@server:vad
+   gokku remote add api-production ubuntu@server:api
+   gokku remote add vad-staging ubuntu@server:vad
    ```
 
 2. Gokku parses the remote URL to extract:

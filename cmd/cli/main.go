@@ -88,6 +88,12 @@ func main() {
 		return
 	}
 
+	if strings.HasPrefix(command, "remote:") {
+		subcommand := strings.TrimPrefix(command, "remote:")
+		handlers.HandleRemote(append([]string{subcommand}, os.Args[2:]...))
+		return
+	}
+
 	// Execute command with panic recovery
 	switch command {
 	case "apps":
@@ -108,8 +114,8 @@ func main() {
 		handlers.HandleRollbackWithContext(ctx, args)
 	case "ssh":
 		handlers.HandleSSH(args)
-	case "server":
-		handlers.HandleServer(args)
+	case "remote":
+		handlers.HandleRemote(args)
 	case "tool":
 		handlers.HandleTool(os.Args[2:])
 	case "plugins":
@@ -120,6 +126,8 @@ func main() {
 		handlers.HandlePS(os.Args[2:])
 	case "au", "update", "auto-update":
 		handlers.HandleAutoUpdate(os.Args[2:])
+	case "uninstall":
+		handlers.HandleUninstall(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Printf("gokku version %s\n", version)
 	case "help", "--help", "-h":
@@ -150,8 +158,8 @@ Usage:
   gokku <command> [options]
 
 CLIENT COMMANDS (run from local machine):
-  server         Manage server connections
-  apps           List applications on remote server
+  remote        Manage git remotes (add, list, remove, setup)
+  apps          List applications on remote server
   config         Manage environment variables (use -a with git remote)
   run            Run arbitrary commands (use -a)
   logs           View application logs (use -a)
@@ -164,6 +172,7 @@ CLIENT COMMANDS (run from local machine):
   plugins        Manage plugins
   services       Manage services
   ps             Process management (scale, list, restart, stop)
+  uninstall      Remove Gokku installation
   version        Show version
   help           Show this help
 
@@ -175,11 +184,11 @@ SERVER COMMANDS (run directly on server):
   restart        Restart services locally
   rollback       Rollback to previous release locally
 
-Server Management:
-  gokku server add <name> <host>           Add a server
-  gokku server list                        List servers
-  gokku server remove <name>               Remove a server
-  gokku server set-default <name>          Set default server
+Remote Management:
+  gokku remote add <app_name> <user@host>                      Add a git remote
+  gokku remote list                                             List git remotes
+  gokku remote remove <name>                                    Remove a git remote
+  gokku remote setup <user@host> [-i|--identity <pem_file>]      One-time server setup
 
 Client Commands (always use -a with git remote):
   gokku config set KEY=VALUE -a <git-remote>

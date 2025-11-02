@@ -72,10 +72,17 @@ func HandleTool(args []string) {
 	})
 }
 
-// HandleServer manages server connections and remotes
-func HandleServer(args []string) {
+// HandleRemote manages git remote commands
+func HandleRemote(args []string) {
 	internal.TryCatch(func() {
-		handleServer(args)
+		handleRemote(args)
+	})
+}
+
+// HandleUninstall removes Gokku installation
+func HandleUninstall(args []string) {
+	internal.TryCatch(func() {
+		handleUninstall(args)
 	})
 }
 

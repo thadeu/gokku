@@ -414,3 +414,20 @@ func RunDockerBuildWithTimeout(cmd *exec.Cmd, timeoutMinutes int) error {
 		}
 	}
 }
+
+// ExtractIdentityFlag extracts the -i or --identity flag from arguments and returns the identity file path and remaining args
+func ExtractIdentityFlag(args []string) (string, []string) {
+	var identity string
+	var remaining []string
+
+	for i := 0; i < len(args); i++ {
+		if (args[i] == "-i" || args[i] == "--identity") && i+1 < len(args) {
+			identity = args[i+1]
+			i++ // Skip next arg
+		} else {
+			remaining = append(remaining, args[i])
+		}
+	}
+
+	return identity, remaining
+}

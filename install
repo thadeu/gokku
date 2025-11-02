@@ -161,7 +161,7 @@ download_binary() {
 
     # Use system temp directory for downloads to avoid HOME issues
     local temp_dir="/tmp/gokku-install"
-    mkdir -p $temp_dir
+    mkdir -p $temp_dir >/dev/null 2>&1 || true
     cd $temp_dir
 
     # Construct binary name based on OS and architecture
@@ -221,7 +221,7 @@ install_binary() {
 
     # Use the same temp directory as download_binary
     local temp_dir="/tmp/gokku-install"
-    cd $temp_dir
+    cd $temp_dir >/dev/null 2>&1 || true
 
     # Get the binary name (same as archive name without .tar.gz)
     local binary_name="gokku-$OS-$ARCH"
@@ -323,8 +323,8 @@ EOF
     fi
 
     # Download server scripts
-    mkdir -p $INSTALL_DIR/tmp
-    cd $INSTALL_DIR/tmp
+    mkdir -p $INSTALL_DIR/tmp >/dev/null 2>&1
+    cd $INSTALL_DIR/tmp >/dev/null 2>&1
 
     local scripts=(
         "scripts/docker-helpers.sh"
@@ -362,20 +362,20 @@ print_usage_client() {
     echo -e "${YELLOW}Quick Start:${NC}"
     echo ""
     echo "1. Add git remote for your app:"
-    echo -e "   ${CYAN}git remote add api-production ubuntu@server:api${NC}"
+    echo -e "   ${CYAN}gokku remote add api-production ubuntu@server${NC}"
     echo ""
     echo "2. Configure environment variables:"
-    echo -e "   ${CYAN}gokku config set PORT=80 --remote api-production${NC}"
-    echo -e "   ${CYAN}gokku config list --remote api-production${NC}"
+    echo -e "   ${CYAN}gokku config set PORT=80 -a api-production${NC}"
+    echo -e "   ${CYAN}gokku config list -a api-production${NC}"
     echo ""
     echo "3. Deploy:"
     echo -e "   ${CYAN}git push api-production main${NC}"
     echo ""
     echo "4. View logs:"
-    echo -e "   ${CYAN}gokku logs api production --remote api-production${NC}"
+    echo -e "   ${CYAN}gokku logs -a api-production${NC}"
     echo ""
     echo "5. Check status:"
-    echo -e "   ${CYAN}gokku status api production --remote api-production${NC}"
+    echo -e "   ${CYAN}gokku status -a api-production${NC}"
     echo ""
     echo -e "${CYAN}Configuration:${NC} $INSTALL_DIR/config.yml"
     echo -e "${CYAN}Binary:${NC} $BIN_DIR/gokku"
@@ -404,16 +404,16 @@ print_usage_server() {
     echo ""
     echo ""
     echo -e "${YELLOW}1. Create your app:${NC}"
-    echo -e "   ${CYAN}gokku apps create api --remote production${NC}"
+    echo -e "   ${CYAN}gokku apps create api -a api-production${NC}"
     echo ""
     echo -e "${YELLOW}2. On your local machine, add git remote:${NC}"
-    echo -e "   ${CYAN}git remote add api-production $USER@$server_ip:api${NC}"
+    echo -e "   ${CYAN}gokku remote add api-production $USER@$server_ip${NC}"
     echo ""
     echo -e "${YELLOW}3. Deploy:${NC}"
     echo -e "   ${CYAN}git push api-production main${NC}"
     echo ""
     echo -e "${CYAN}Management Commands:${NC}"
-    echo "  gokku config list -a api -e production"
+    echo "  gokku config list -a api-production"
     echo ""
 }
 
@@ -422,16 +422,20 @@ cleanup() {
     cd - 2>/dev/null || cd /tmp 2>/dev/null || true
 
     # Clean up temporary directory used for downloads
-    rm -rf /tmp/gokku-install
+    rm -rf /tmp/gokku-install >/dev/null 2>&1 || true
 }
 
 main() {
+    source /opt/gokku/scripts/docker-helpers.sh
+    source /opt/gokku/scripts/plugin-helpers.sh
+
     print_banner
     detect_mode
     detect_os
     check_requirements
     download_binary
     install_binary
+    install_docker
 
     if [ "$MODE" = "server" ]; then
         setup_server

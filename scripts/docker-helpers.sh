@@ -47,8 +47,9 @@ install_docker_debian() {
 
     # Add Docker GPG key
     echo "-----> Adding Docker GPG key..."
+    sudo rm -rf /usr/share/keyrings/docker-archive-keyring.gpg || true
     curl -fsSL https://download.docker.com/linux/$(lsb_release -si | tr '[:upper:]' '[:lower:]')/gpg | \
-        sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg > /dev/null 2>&1
+        sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg > /dev/null 2>&1
 
     # Add Docker repository
     echo "-----> Adding Docker repository..."
@@ -61,9 +62,7 @@ install_docker_debian() {
     echo "-----> Installing Docker CE..."
     sudo apt-get update -qq
     sudo apt-get install -y --no-install-recommends \
-        docker-ce \
-        docker-ce-cli \
-        containerd.io \
+        docker.io \
         docker-compose-plugin > /dev/null 2>&1
 
     if [ $? -eq 0 ]; then
