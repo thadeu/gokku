@@ -15,7 +15,29 @@ import (
 
 // handleApps manages applications on the server
 func handleApps(args []string) {
-	// Extract --remote flag first (if present)
+	// Check if we have a subcommand
+	if len(args) < 1 {
+		fmt.Println("Usage: gokku apps <command> [options]")
+		fmt.Println("")
+		fmt.Println("Commands:")
+		fmt.Println("  list, ls              List all applications")
+		fmt.Println("  create <app>          Create application and setup deployment")
+		fmt.Println("  destroy, rm <app>     Destroy application")
+		fmt.Println("")
+		fmt.Println("Options:")
+		fmt.Println("  -a, --app <app>       Use specific app")
+		fmt.Println("  --remote              Execute on remote server")
+		os.Exit(1)
+	}
+
+	// Special handling for destroy command - it needs to manage --remote flag itself
+	subcommand := args[0]
+	if subcommand == "destroy" || subcommand == "rm" {
+		handleAppsDestroy(args[1:])
+		return
+	}
+
+	// For other commands, extract --remote flag first
 	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -44,7 +66,7 @@ func handleApps(args []string) {
 		os.Exit(1)
 	}
 
-	subcommand := remainingArgs[0]
+	subcommand = remainingArgs[0]
 
 	// Check if subcommand is a flag (like --remote that wasn't caught)
 	if strings.HasPrefix(subcommand, "--") && subcommand != "--help" && subcommand != "--remote" {
@@ -63,8 +85,6 @@ func handleApps(args []string) {
 		handleAppsList(remainingArgs[1:])
 	case "create":
 		handleAppsCreate(remainingArgs[1:])
-	case "destroy", "rm":
-		handleAppsDestroy(remainingArgs[1:])
 	default:
 		fmt.Println("Usage: gokku apps <command> [options]")
 		fmt.Println("")
