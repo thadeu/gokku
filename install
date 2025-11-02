@@ -161,8 +161,8 @@ download_binary() {
 
     # Use system temp directory for downloads to avoid HOME issues
     local temp_dir="/tmp/gokku-install"
-    mkdir -p $temp_dir >/dev/null 2>&1 || true
-    cd $temp_dir
+    mkdir -p $temp_dir 2>/dev/null || true
+    cd $temp_dir 2>/dev/null || true
 
     # Construct binary name based on OS and architecture
     local binary_name="gokku-$OS-$ARCH"
@@ -221,7 +221,7 @@ install_binary() {
 
     # Use the same temp directory as download_binary
     local temp_dir="/tmp/gokku-install"
-    cd $temp_dir >/dev/null 2>&1 || true
+    cd $temp_dir 2>/dev/null || true
 
     # Get the binary name (same as archive name without .tar.gz)
     local binary_name="gokku-$OS-$ARCH"
@@ -236,7 +236,7 @@ install_binary() {
     fi
 
     # Change back to a safe directory
-    cd - 2>/dev/null || cd /tmp 2>/dev/null || true
+    cd - >/dev/null 2>&1 || cd /tmp >/dev/null 2>&1 || true
 
     log_success "Binary installed"
 }
@@ -347,7 +347,7 @@ EOF
     done
 
     # Change back to a safe directory
-    cd - 2>/dev/null || cd /tmp 2>/dev/null || true
+    cd - >/dev/null 2>&1 || cd /tmp >/dev/null 2>&1 || true
 
     log_success "Server setup complete"
 }
@@ -422,7 +422,7 @@ print_usage_server() {
 
 cleanup() {
     # Change to a safe directory before cleanup
-    cd - 2>/dev/null || cd /tmp 2>/dev/null || true
+    cd - >/dev/null 2>&1 || cd /tmp >/dev/null 2>&1 || true
 
     # Clean up temporary directory used for downloads
     rm -rf /tmp/gokku-install >/dev/null 2>&1 || true

@@ -112,8 +112,6 @@ install_docker_alpine() {
 install_docker() {
     # Check if already installed
     if is_docker_installed; then
-        echo "-----> Docker is already installed"
-
         # Start docker if not running
         if ! is_docker_running; then
             echo "-----> Starting Docker daemon..."
