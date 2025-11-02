@@ -429,23 +429,24 @@ cleanup() {
 }
 
 main() {
-    source /opt/gokku/scripts/docker-helpers.sh
-    source /opt/gokku/scripts/plugin-helpers.sh
-
     print_banner
     detect_mode
     detect_os
     check_requirements
     download_binary
     install_binary
-    install_docker
 
     if [ "$MODE" = "server" ]; then
-        setup_server
-        print_usage_server
+      if [ -f /opt/gokku/scripts/docker-helpers.sh ]; then
+        source /opt/gokku/scripts/docker-helpers.sh
+        install_docker
+      fi
+
+      setup_server
+      print_usage_server
     else
-        setup_client
-        print_usage_client
+      setup_client
+      print_usage_client
     fi
 
     cleanup

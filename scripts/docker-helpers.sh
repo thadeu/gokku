@@ -32,7 +32,6 @@ detect_distro() {
 # Install Docker on Ubuntu/Debian
 install_docker_debian() {
     echo "-----> Installing Docker on Debian/Ubuntu..."
-
     # Update package lists
     sudo apt-get update -qq
 
