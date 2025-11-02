@@ -15,7 +15,22 @@ import (
 
 // handleApps manages applications on the server
 func handleApps(args []string) {
-	if len(args) < 1 {
+	// Extract --remote flag first (if present)
+	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(remainingArgs) < 1 {
+		// Only --remote provided or no args, show help or list apps
+		if remoteInfo != nil {
+			cmd := "gokku apps list"
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
 		fmt.Println("Usage: gokku apps <command> [options]")
 		fmt.Println("")
 		fmt.Println("Commands:")
@@ -25,17 +40,31 @@ func handleApps(args []string) {
 		fmt.Println("")
 		fmt.Println("Options:")
 		fmt.Println("  -a, --app <app>       Use specific app")
+		fmt.Println("  --remote              Execute on remote server")
 		os.Exit(1)
 	}
 
-	subcommand := args[0]
+	subcommand := remainingArgs[0]
+
+	// Check if subcommand is a flag (like --remote that wasn't caught)
+	if strings.HasPrefix(subcommand, "--") && subcommand != "--help" && subcommand != "--remote" {
+		fmt.Printf("Unknown apps command: %s\n", subcommand)
+		fmt.Println("Usage: gokku apps <command> [options]")
+		fmt.Println("")
+		fmt.Println("Commands:")
+		fmt.Println("  list, ls              List all applications")
+		fmt.Println("  create <app>          Create application and setup deployment")
+		fmt.Println("  destroy, rm <app>     Destroy application")
+		os.Exit(1)
+	}
+
 	switch subcommand {
 	case "list", "ls":
-		handleAppsList(args[1:])
+		handleAppsList(remainingArgs[1:])
 	case "create":
-		handleAppsCreate(args[1:])
+		handleAppsCreate(remainingArgs[1:])
 	case "destroy", "rm":
-		handleAppsDestroy(args[1:])
+		handleAppsDestroy(remainingArgs[1:])
 	default:
 		fmt.Println("Usage: gokku apps <command> [options]")
 		fmt.Println("")
@@ -46,17 +75,23 @@ func handleApps(args []string) {
 		fmt.Println("")
 		fmt.Println("Options:")
 		fmt.Println("  -a, --app <app>       Use specific app")
+		fmt.Println("  --remote              Execute on remote server")
 		os.Exit(1)
 	}
+	_ = remoteInfo // handled in individual functions if needed
 }
 
 // handleAppsList lists applications on the server
 func handleAppsList(args []string) {
-	// Check if we're running on server
-	isServerMode := internal.IsServerMode()
+	// Get remote info (or nil if server mode)
+	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
 
-	if isServerMode {
-		// Server mode: list apps directly without needing -a flag
+	if remoteInfo == nil {
+		// Server mode: list apps directly
 		baseDir := "/opt/gokku"
 		appsService := services.NewAppsService(baseDir)
 		apps, err := appsService.ListApps()
@@ -72,34 +107,14 @@ func handleAppsList(args []string) {
 
 		renderAppsTable(apps)
 	} else {
-		// Client mode: require -a flag with git remote
-		app, _ := internal.ExtractAppFlag(args)
-
-		if app == "" {
-			fmt.Println("Usage: gokku apps ls -a <git-remote>")
-			fmt.Println("")
-			fmt.Println("Examples:")
-			fmt.Println("  gokku apps ls -a api-production")
-			fmt.Println("  gokku apps ls -a worker-staging")
-			os.Exit(1)
-		}
-
-		remoteInfo, err := internal.GetRemoteInfo(app)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		// Execute command remotely via SSH
-		cmd := exec.Command("ssh", remoteInfo.Host, "gokku apps list")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Run(); err != nil {
+		// Client mode: execute remotely via SSH
+		cmd := "gokku apps list"
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 			fmt.Printf("Error listing apps: %v\n", err)
 			os.Exit(1)
 		}
 	}
+	_ = remainingArgs // unused for now
 }
 
 // renderAppsTable renders the apps list using tablefy
@@ -145,9 +160,20 @@ func handleAppsCreate(args []string) {
 		return
 	}
 
+	// CLIENT MODE
+	// If no remote specified, try to use "gokku" as default
 	if remote == "" {
-		remote = appName
-		fmt.Printf("Using remote: %s\n", remote)
+		// Try to get "gokku" remote first
+		_, err := internal.GetRemoteInfo("gokku")
+		if err == nil {
+			// Remote "gokku" exists, use it
+			remote = "gokku"
+			// fmt.Printf("Using default remote 'gokku' -> %s\n", gokkuRemoteInfo.Host)
+		} else {
+			// No "gokku" remote, fall back to app name
+			remote = appName
+			fmt.Printf("No default remote 'gokku' found, using remote: %s\n", remote)
+		}
 	}
 
 	// Parse remote to get connection info
@@ -155,12 +181,29 @@ func handleAppsCreate(args []string) {
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		fmt.Println("")
-		fmt.Println("Make sure the git remote exists:")
-		fmt.Printf("  git remote add %s user@host:/opt/gokku/repos/%s.git\n", remote, appName)
+		if remote == "gokku" {
+			fmt.Println("Default remote 'gokku' not found.")
+			fmt.Println("Run 'gokku remote setup user@server_ip' first to create it.")
+		} else {
+			fmt.Println("Make sure the git remote exists:")
+			fmt.Printf("  gokku remote add %s user@host\n", remote)
+		}
 		os.Exit(1)
 	}
 
-	fmt.Printf("Creating app %s on %s...\n", appName, remoteInfo.Host)
+	// IMPORTANTE: Se o remote for "gokku", usar o appName fornecido
+	// porque o remote "gokku" aponta para um repositório dummy
+	actualAppName := appName
+	if remote == "gokku" {
+		// O remote "gokku" é apenas um marcador do servidor
+		// O app real será criado com o nome fornecido
+		actualAppName = appName
+	} else {
+		// Se for um remote específico, usar o app do remote
+		actualAppName = remoteInfo.App
+	}
+
+	fmt.Printf("Creating app %s on %s...\n", actualAppName, remoteInfo.Host)
 
 	// Load configuration to validate app exists
 	config, err := internal.LoadConfig()
@@ -171,8 +214,8 @@ func handleAppsCreate(args []string) {
 
 	// Validate app exists in config if available
 	if config != nil {
-		if !appExistsInConfig(config, appName) {
-			fmt.Printf("Warning: App '%s' not found in gokku.yml\n", appName)
+		if !appExistsInConfig(config, actualAppName) {
+			fmt.Printf("Warning: App '%s' not found in gokku.yml\n", actualAppName)
 			fmt.Println("This is normal if you haven't pushed your code yet.")
 			fmt.Println("The app will be configured automatically on first deployment.")
 			fmt.Println("Proceeding with basic repository setup...")
@@ -184,7 +227,14 @@ func handleAppsCreate(args []string) {
 	}
 
 	// Run complete setup directly in Go
-	if err := setupAppComplete(remoteInfo, appName, config); err != nil {
+	// Criar um RemoteInfo customizado com o appName correto
+	customRemoteInfo := &internal.RemoteInfo{
+		Host:    remoteInfo.Host,
+		BaseDir: remoteInfo.BaseDir,
+		App:     actualAppName, // Usar o actualAppName
+	}
+
+	if err := setupAppComplete(customRemoteInfo, actualAppName, config); err != nil {
 		fmt.Printf("Failed to setup app: %v\n", err)
 		os.Exit(1)
 	}
@@ -193,7 +243,12 @@ func handleAppsCreate(args []string) {
 	fmt.Println("")
 	fmt.Println("Next steps:")
 	fmt.Println("  1. Make sure your gokku.yml and Dockerfile are committed")
-	fmt.Println("  2. Deploy with: git push", remote, "main")
+	if remote == "gokku" {
+		fmt.Printf("  2. Add remote for deployment: gokku remote add %s %s\n", actualAppName, remoteInfo.Host)
+		fmt.Printf("  3. Deploy with: git push %s main\n", actualAppName)
+	} else {
+		fmt.Printf("  2. Deploy with: git push %s main\n", remote)
+	}
 	fmt.Println("     (This will automatically configure the app from your gokku.yml)")
 }
 

@@ -84,13 +84,27 @@ func (ss *ServerSetup) Execute() error {
 		fmt.Println("-----> Setup verification complete ✓")
 	}
 
+	// Phase 6: Create default remote "gokku" locally
+	fmt.Println("-----> Creating default remote 'gokku'...")
+	if err := ss.createDefaultRemote(); err != nil {
+		fmt.Printf("Note: Could not create default remote 'gokku': %v\n", err)
+		fmt.Println("You can create it manually with:")
+		fmt.Printf("  gokku remote add gokku %s\n", ss.config.ServerHost)
+	} else {
+		fmt.Println("-----> Created default remote 'gokku' for future use")
+	}
+
 	fmt.Println("")
 	fmt.Println("-----> Setup complete!")
 	fmt.Println("-----> Server is ready to receive deployments")
 	fmt.Println("")
 	fmt.Println("Next steps:")
-	fmt.Printf("  gokku remote add <app_name> %s\n", ss.config.ServerHost)
-	fmt.Println("  git push <app_name> main")
+	fmt.Printf("  gokku apps create <app_name>\n")
+	fmt.Println("")
+	fmt.Println("Example:")
+	fmt.Printf("  gokku apps create api-production\n")
+	fmt.Printf("  gokku remote add api-production %s\n", ss.config.ServerHost)
+	fmt.Printf("  git push api-production main\n")
 
 	return nil
 }
@@ -323,6 +337,30 @@ func (ss *ServerSetup) verifySetup() error {
 			fmt.Println("-----> Directories: Missing /opt/gokku")
 			return fmt.Errorf("base directory not found")
 		}
+	}
+
+	return nil
+}
+
+// createDefaultRemote creates a default "gokku" remote in the local git repository
+// This allows users to use "gokku apps create" without specifying --remote
+func (ss *ServerSetup) createDefaultRemote() error {
+	// Check if remote "gokku" already exists
+	checkCmd := exec.Command("git", "remote", "get-url", "gokku")
+	if err := checkCmd.Run(); err == nil {
+		// Remote already exists, skip
+		return nil
+	}
+
+	// Create a dummy remote URL (we only need the host info)
+	// The actual app will be determined later when creating apps
+	remoteURL := fmt.Sprintf("%s:/opt/gokku/repos/gokku.git", ss.config.ServerHost)
+
+	cmd := exec.Command("git", "remote", "add", "gokku", remoteURL)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// If not in git repo or other error, fail silently
+		return fmt.Errorf("failed to create remote: %v, output: %s", err, string(output))
 	}
 
 	return nil

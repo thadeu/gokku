@@ -58,13 +58,6 @@ func HandleDeploy(args []string) {
 	})
 }
 
-// HandleSSH establishes SSH connections to servers
-func HandleSSH(args []string) {
-	internal.TryCatch(func() {
-		handleSSH(args)
-	})
-}
-
 // HandleTool provides utility commands for scripts
 func HandleTool(args []string) {
 	internal.TryCatch(func() {

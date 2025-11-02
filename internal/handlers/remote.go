@@ -89,7 +89,6 @@ func handleRemoteAdd(args []string) {
 	}
 
 	fmt.Printf("Added remote '%s' -> %s\n", appName, remoteURL)
-	fmt.Printf("You can now use: gokku ssh --remote %s\n", appName)
 }
 
 // handleRemoteList lists all configured git remotes

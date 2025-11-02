@@ -9,7 +9,7 @@ import (
 	"gokku/internal/handlers"
 )
 
-const version = "1.0.98"
+const version = "1.0.99"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -112,8 +112,6 @@ func main() {
 		handlers.HandleDeploy(args)
 	case "rollback":
 		handlers.HandleRollbackWithContext(ctx, args)
-	case "ssh":
-		handlers.HandleSSH(args)
 	case "remote":
 		handlers.HandleRemote(args)
 	case "tool":
@@ -133,6 +131,21 @@ func main() {
 	case "help", "--help", "-h":
 		printHelp()
 	default:
+		// Check if --remote flag is present
+		remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+		if err == nil && remoteInfo != nil {
+			// If --remote is present, execute the command remotely
+			// This handles cases like "gokku nginx --remote" or "gokku nginx:reload nginx-lb --remote"
+			// Build command: "gokku" + command + remaining args (without --remote)
+			remoteCmd := []string{"gokku", command}
+			remoteCmd = append(remoteCmd, remainingArgs...)
+			cmd := strings.Join(remoteCmd, " ")
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+
 		// Check if it's a plugin command (format: plugin:command)
 		if strings.Contains(command, ":") {
 			// Pass the full command to plugin handler
@@ -167,7 +180,6 @@ CLIENT COMMANDS (run from local machine):
   restart        Restart services (use -a)
   deploy         Deploy applications
   rollback       Rollback to previous release
-  ssh            SSH to server
   tool           Utility commands for scripts
   plugins        Manage plugins
   services       Manage services

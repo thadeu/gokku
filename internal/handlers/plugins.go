@@ -25,8 +25,28 @@ func handlePlugins(args []string) {
 		return
 	}
 
+	// Extract --remote flag first (if present)
+	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(remainingArgs) == 0 {
+		// Only --remote provided, show help or list plugins
+		if remoteInfo != nil {
+			cmd := "gokku plugins list"
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+		showPluginHelp()
+		return
+	}
+
 	// Handle both "plugins add" and "plugins:add" formats
-	subcommand := args[0]
+	subcommand := remainingArgs[0]
 
 	// Check if it's in the format "plugins:command"
 	if strings.Contains(subcommand, ":") {
@@ -36,23 +56,49 @@ func handlePlugins(args []string) {
 		}
 	}
 
+	// Check if subcommand is a flag (like --remote that wasn't caught)
+	if strings.HasPrefix(subcommand, "--") && subcommand != "--help" && subcommand != "--remote" {
+		fmt.Printf("Unknown plugin command: %s\n", subcommand)
+		showPluginHelp()
+		os.Exit(1)
+	}
+
 	switch subcommand {
 	case "list", "ls":
-		handlePluginsList()
+		handlePluginsList(remainingArgs[1:], remoteInfo)
 	case "add", "install":
-		handlePluginsAdd(args[1:])
+		handlePluginsAdd(remainingArgs[1:], remoteInfo)
 	case "update":
-		handlePluginsUpdate(args[1:])
+		handlePluginsUpdate(remainingArgs[1:], remoteInfo)
 	case "remove":
-		handlePluginsRemove(args[1:])
+		handlePluginsRemove(remainingArgs[1:], remoteInfo)
 	default:
 		// Try to execute as plugin command
-		handlePluginCommand(args)
+		if remoteInfo != nil {
+			// Execute plugin command remotely
+			cmd := fmt.Sprintf("gokku plugins %s", strings.Join(remainingArgs, " "))
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+		handlePluginCommand(remainingArgs)
 	}
 }
 
 // handlePluginsList lists all installed plugins
-func handlePluginsList() {
+func handlePluginsList(args []string, remoteInfo *internal.RemoteInfo) {
+	if remoteInfo != nil {
+		// Client mode: execute remotely
+		cmd := "gokku plugins list"
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error listing plugins: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// Server mode: execute locally
 	pm := plugins.NewPluginManager()
 
 	pluginList, err := pm.ListPlugins()
@@ -77,26 +123,50 @@ func handlePluginsList() {
 	}
 
 	fmt.Print(table.Render())
+	_ = args // unused for now
 }
 
 // handlePluginsAdd adds a new plugin from official repository or Git URL
-func handlePluginsAdd(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: gokku plugins:add <plugin-name> [<git-url>]")
+func handlePluginsAdd(args []string, remoteInfo *internal.RemoteInfo) {
+	// Use args directly if remoteInfo is already set (from parent)
+	// The --remote flag was already extracted by handlePlugins
+	cleanArgs := args
+
+	if len(cleanArgs) < 1 {
+		fmt.Println("Usage: gokku plugins:add <plugin-name> [<git-url>] [--remote]")
 		fmt.Println("")
 		fmt.Println("Examples:")
 		fmt.Println("  gokku plugins:add nginx                              # Official plugin")
 		fmt.Println("  gokku plugins:add myplugin https://github.com/user/gokku-myplugin  # Community plugin")
+		fmt.Println("  gokku plugins:add nginx --remote                    # Install on remote server")
 		fmt.Println("")
 		fmt.Println("Official plugins are automatically fetched from gokku-vm organization")
 		fmt.Println("Community plugins require a git URL")
 		os.Exit(1)
 	}
 
-	pluginName := args[0]
+	pluginName := cleanArgs[0]
 	var gitURL string
-	if len(args) > 1 {
-		gitURL = args[1]
+	if len(cleanArgs) > 1 {
+		// Check if next arg is a flag, not a URL
+		nextArg := cleanArgs[1]
+		if !strings.HasPrefix(nextArg, "-") {
+			gitURL = nextArg
+		}
+	}
+
+	// If remote mode, execute remotely
+	if remoteInfo != nil {
+		cmdParts := []string{"gokku plugins:add", pluginName}
+		if gitURL != "" {
+			cmdParts = append(cmdParts, gitURL)
+		}
+		cmd := strings.Join(cmdParts, " ")
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error installing plugin: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	pm := plugins.NewPluginManager()
@@ -156,18 +226,41 @@ func handlePluginsAdd(args []string) {
 }
 
 // handlePluginsUpdate updates a plugin from its source repository
-func handlePluginsUpdate(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: gokku plugins:update <plugin-name>")
+func handlePluginsUpdate(args []string, remoteInfo *internal.RemoteInfo) {
+	// Use args directly if remoteInfo is already set (from parent)
+	cleanArgs := args
+	if remoteInfo == nil {
+		// Extract --remote flag if present
+		_, extractedArgs, err := internal.GetRemoteInfoOrDefault(args)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		cleanArgs = extractedArgs
+	}
+
+	if len(cleanArgs) < 1 {
+		fmt.Println("Usage: gokku plugins:update <plugin-name> [--remote]")
 		fmt.Println("")
 		fmt.Println("Examples:")
 		fmt.Println("  gokku plugins:update redis")
-		fmt.Println("  gokku plugins:update nginx")
+		fmt.Println("  gokku plugins:update redis --remote")
 		os.Exit(1)
 	}
 
-	pluginName := args[0]
+	pluginName := cleanArgs[0]
 
+	// If remote mode, execute remotely
+	if remoteInfo != nil {
+		cmd := fmt.Sprintf("gokku plugins:update %s", pluginName)
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error updating plugin: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// Server mode: execute locally
 	pm := plugins.NewPluginManager()
 
 	if !pm.PluginExists(pluginName) {
@@ -187,14 +280,41 @@ func handlePluginsUpdate(args []string) {
 }
 
 // handlePluginsRemove removes a plugin
-func handlePluginsRemove(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: gokku plugins:remove <plugin>")
+func handlePluginsRemove(args []string, remoteInfo *internal.RemoteInfo) {
+	// Use args directly if remoteInfo is already set (from parent)
+	cleanArgs := args
+	if remoteInfo == nil {
+		// Extract --remote flag if present
+		_, extractedArgs, err := internal.GetRemoteInfoOrDefault(args)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		cleanArgs = extractedArgs
+	}
+
+	if len(cleanArgs) < 1 {
+		fmt.Println("Usage: gokku plugins:remove <plugin-name> [--remote]")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  gokku plugins:remove nginx")
+		fmt.Println("  gokku plugins:remove nginx --remote")
 		os.Exit(1)
 	}
 
-	pluginName := args[0]
+	pluginName := cleanArgs[0]
 
+	// If remote mode, execute remotely
+	if remoteInfo != nil {
+		cmd := fmt.Sprintf("gokku plugins:remove %s", pluginName)
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error removing plugin: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// Server mode: execute locally
 	pm := plugins.NewPluginManager()
 
 	if !pm.PluginExists(pluginName) {

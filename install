@@ -331,8 +331,11 @@ EOF
         "scripts/plugin-helpers.sh"
     )
 
+    mkdir -p $BASE_DIR/apps
     mkdir -p $BASE_DIR/scripts
     mkdir -p $BASE_DIR/plugins
+    mkdir -p $BASE_DIR/repos
+    mkdir -p $BASE_DIR/services
     mkdir -p $BASE_DIR/volumes
 
     for script in "${scripts[@]}"; do

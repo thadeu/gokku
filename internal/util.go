@@ -53,6 +53,60 @@ func ExtractAppFlag(args []string) (string, []string) {
 	return app, remaining
 }
 
+// GetRemoteInfoOrDefault extracts remote info using --remote flag or defaults to "gokku"
+// Returns nil if in server mode (local execution)
+// Returns RemoteInfo if in client mode with valid remote
+// Uses RemoteInfo from config.go
+func GetRemoteInfoOrDefault(args []string) (*RemoteInfo, []string, error) {
+	// If in server mode, return nil (execute locally)
+	if IsServerMode() {
+		// Remove --remote from args if present
+		_, remainingArgs := ExtractRemoteFlag(args)
+		return nil, remainingArgs, nil
+	}
+
+	// Client mode: extract --remote flag
+	remote, remainingArgs := ExtractRemoteFlag(args)
+
+	// If no remote specified, try to use "gokku" as default
+	if remote == "" {
+		// Try to get "gokku" remote first
+		gokkuRemoteInfo, err := GetRemoteInfo("gokku")
+		if err == nil {
+			// Remote "gokku" exists, use it
+			return gokkuRemoteInfo, remainingArgs, nil
+		}
+		// No "gokku" remote found, return error
+		return nil, remainingArgs, fmt.Errorf("no remote specified and default remote 'gokku' not found. Run 'gokku remote setup user@server_ip' first")
+	}
+
+	// Remote specified, get its info
+	remoteInfo, err := GetRemoteInfo(remote)
+	if err != nil {
+		return nil, remainingArgs, fmt.Errorf("remote '%s' not found: %v. Add it with: gokku remote add %s user@host", remote, err, remote)
+	}
+
+	return remoteInfo, remainingArgs, nil
+}
+
+// ExecuteRemoteCommand executes a command on remote server via SSH
+// Automatically removes --remote flag from the command string
+func ExecuteRemoteCommand(remoteInfo *RemoteInfo, command string) error {
+	if remoteInfo == nil {
+		return fmt.Errorf("remoteInfo is nil")
+	}
+
+	// Remove --remote flag from command string before executing
+	cleanCommand := strings.Replace(command, " --remote", "", -1)
+	cleanCommand = strings.Replace(cleanCommand, "--remote", "", -1)
+
+	cmd := exec.Command("ssh", remoteInfo.Host, cleanCommand)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	return cmd.Run()
+}
+
 // IsRunningOnServer returns true if running on the server environment
 // Uses ~/.gokkurc file to determine mode, with fallback to client mode if file doesn't exist
 func IsRunningOnServer() bool {

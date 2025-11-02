@@ -19,31 +19,77 @@ func handleServices(args []string) {
 		return
 	}
 
-	subcommand := args[0]
+	// Extract --remote flag first (if present)
+	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(remainingArgs) == 0 {
+		// Only --remote provided, show help or list services
+		if remoteInfo != nil {
+			cmd := "gokku services list"
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+		showServicesHelp()
+		return
+	}
+
+	subcommand := remainingArgs[0]
+
+	// Check if subcommand is a flag (like --remote that wasn't caught)
+	if strings.HasPrefix(subcommand, "--") && subcommand != "--help" && subcommand != "--remote" {
+		fmt.Printf("Unknown service command: %s\n", subcommand)
+		showServicesHelp()
+		os.Exit(1)
+	}
 
 	switch subcommand {
 	case "list", "ls":
-		handleServicesList()
+		handleServicesList(remainingArgs[1:], remoteInfo)
 	case "create":
-		handleServicesCreate(args[1:])
+		handleServicesCreate(remainingArgs[1:], remoteInfo)
 	case "link":
-		handleServicesLink(args[1:])
+		handleServicesLink(remainingArgs[1:], remoteInfo)
 	case "unlink":
-		handleServicesUnlink(args[1:])
+		handleServicesUnlink(remainingArgs[1:], remoteInfo)
 	case "destroy":
-		handleServicesDestroy(args[1:])
+		handleServicesDestroy(remainingArgs[1:], remoteInfo)
 	case "info":
-		handleServicesInfo(args[1:])
+		handleServicesInfo(remainingArgs[1:], remoteInfo)
 	case "logs":
-		handleServicesLogs(args[1:])
+		handleServicesLogs(remainingArgs[1:], remoteInfo)
 	default:
 		// Try to execute as service command
-		handleServiceCommand(args)
+		if remoteInfo != nil {
+			// Execute service command remotely
+			cmd := fmt.Sprintf("gokku services %s", strings.Join(remainingArgs, " "))
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+		handleServiceCommand(remainingArgs)
 	}
 }
 
 // handleServicesList lists all services
-func handleServicesList() {
+func handleServicesList(args []string, remoteInfo *internal.RemoteInfo) {
+	if remoteInfo != nil {
+		// Client mode: execute remotely
+		cmd := "gokku services list"
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error listing services: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// Server mode: execute locally
 	sm := services.NewServiceManager()
 
 	serviceList, err := sm.ListServices()
@@ -79,22 +125,37 @@ func handleServicesList() {
 	}
 
 	fmt.Print(table.Render())
+	_ = args // unused for now
 }
 
 // handleServicesCreate creates a new service
-func handleServicesCreate(args []string) {
-	if len(args) < 2 {
-		fmt.Println("Usage: gokku services:create <plugin>[:<version>] --name <service-name>")
+func handleServicesCreate(args []string, remoteInfo *internal.RemoteInfo) {
+	// Use args directly if remoteInfo is already set (from parent)
+	cleanArgs := args
+
+	if len(cleanArgs) < 2 {
+		fmt.Println("Usage: gokku services:create <plugin>[:<version>] --name <service-name> [--remote]")
 		fmt.Println("")
 		fmt.Println("Examples:")
 		fmt.Println("  gokku services:create postgres --name postgres-api")
 		fmt.Println("  gokku services:create postgres:14 --name postgres-api")
 		fmt.Println("  gokku services:create redis:7 --name redis-cache")
+		fmt.Println("  gokku services:create postgres --name postgres-api --remote")
 		os.Exit(1)
 	}
 
-	pluginWithVersion := args[0]
-	serviceName := internal.ExtractFlagValue(args, "--name")
+	// If remote mode, execute remotely
+	if remoteInfo != nil {
+		cmd := fmt.Sprintf("gokku services:create %s", strings.Join(cleanArgs, " "))
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error creating service: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	pluginWithVersion := cleanArgs[0]
+	serviceName := internal.ExtractFlagValue(cleanArgs, "--name")
 
 	if serviceName == "" {
 		fmt.Println("Error: --name is required")
@@ -126,18 +187,32 @@ func handleServicesCreate(args []string) {
 }
 
 // handleServicesLink links a service to an app
-func handleServicesLink(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: gokku services:link <service> -a <app>")
+func handleServicesLink(args []string, remoteInfo *internal.RemoteInfo) {
+	// Use args directly if remoteInfo is already set (from parent)
+	cleanArgs := args
+
+	if len(cleanArgs) < 1 {
+		fmt.Println("Usage: gokku services:link <service> -a <app> [--remote]")
 		fmt.Println("")
 		fmt.Println("Examples:")
 		fmt.Println("  gokku services:link postgres-api -a api-production")
 		fmt.Println("  gokku services:link redis-cache -a api-production")
+		fmt.Println("  gokku services:link postgres-api -a api-production --remote")
 		os.Exit(1)
 	}
 
-	serviceName := args[0]
-	appName := internal.ExtractAppName(args[1:])
+	// If remote mode, execute remotely
+	if remoteInfo != nil {
+		cmd := fmt.Sprintf("gokku services:link %s", strings.Join(cleanArgs, " "))
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error linking service: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	serviceName := cleanArgs[0]
+	appName := internal.ExtractAppName(cleanArgs[1:])
 
 	sm := services.NewServiceManager()
 
@@ -153,14 +228,31 @@ func handleServicesLink(args []string) {
 }
 
 // handleServicesUnlink unlinks a service from an app
-func handleServicesUnlink(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: gokku services:unlink <service> -a <app>")
+func handleServicesUnlink(args []string, remoteInfo *internal.RemoteInfo) {
+	// Use args directly if remoteInfo is already set (from parent)
+	cleanArgs := args
+
+	if len(cleanArgs) < 1 {
+		fmt.Println("Usage: gokku services:unlink <service> -a <app> [--remote]")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  gokku services:unlink postgres-api -a api-production")
+		fmt.Println("  gokku services:unlink postgres-api -a api-production --remote")
 		os.Exit(1)
 	}
 
-	serviceName := args[0]
-	appName := internal.ExtractAppName(args[1:])
+	// If remote mode, execute remotely
+	if remoteInfo != nil {
+		cmd := fmt.Sprintf("gokku services:unlink %s", strings.Join(cleanArgs, " "))
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error unlinking service: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	serviceName := cleanArgs[0]
+	appName := internal.ExtractAppName(cleanArgs[1:])
 
 	sm := services.NewServiceManager()
 
@@ -175,25 +267,40 @@ func handleServicesUnlink(args []string) {
 }
 
 // handleServicesDestroy destroys a service
-func handleServicesDestroy(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: gokku services:destroy <service>")
+func handleServicesDestroy(args []string, remoteInfo *internal.RemoteInfo) {
+	// Use args directly if remoteInfo is already set (from parent)
+	cleanArgs := args
+
+	if len(cleanArgs) < 1 {
+		fmt.Println("Usage: gokku services:destroy <service> [--remote]")
 		fmt.Println("")
 		fmt.Println("Examples:")
 		fmt.Println("  gokku services:destroy postgres-api")
 		fmt.Println("  gokku services:destroy redis-cache")
+		fmt.Println("  gokku services:destroy postgres-api --remote")
 		os.Exit(1)
 	}
 
-	serviceName := args[0]
+	serviceName := cleanArgs[0]
 
 	// Handle help flag
 	if serviceName == "--help" || serviceName == "-h" {
-		fmt.Println("Usage: gokku services:destroy <service>")
+		fmt.Println("Usage: gokku services:destroy <service> [--remote]")
 		fmt.Println("")
 		fmt.Println("Examples:")
 		fmt.Println("  gokku services:destroy postgres-api")
 		fmt.Println("  gokku services:destroy redis-cache")
+		fmt.Println("  gokku services:destroy postgres-api --remote")
+		return
+	}
+
+	// If remote mode, execute remotely
+	if remoteInfo != nil {
+		cmd := fmt.Sprintf("gokku services:destroy %s", serviceName)
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error destroying service: %v\n", err)
+			os.Exit(1)
+		}
 		return
 	}
 
@@ -210,13 +317,30 @@ func handleServicesDestroy(args []string) {
 }
 
 // handleServicesInfo shows service information
-func handleServicesInfo(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: gokku services:info <service>")
+func handleServicesInfo(args []string, remoteInfo *internal.RemoteInfo) {
+	// Use args directly if remoteInfo is already set (from parent)
+	cleanArgs := args
+
+	if len(cleanArgs) < 1 {
+		fmt.Println("Usage: gokku services:info <service> [--remote]")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  gokku services:info postgres-api")
+		fmt.Println("  gokku services:info postgres-api --remote")
 		os.Exit(1)
 	}
 
-	serviceName := args[0]
+	// If remote mode, execute remotely
+	if remoteInfo != nil {
+		cmd := fmt.Sprintf("gokku services:info %s", strings.Join(cleanArgs, " "))
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error getting service info: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	serviceName := cleanArgs[0]
 
 	sm := services.NewServiceManager()
 
@@ -247,13 +371,31 @@ func handleServicesInfo(args []string) {
 }
 
 // handleServicesLogs shows service logs
-func handleServicesLogs(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: gokku services:logs <service>")
+func handleServicesLogs(args []string, remoteInfo *internal.RemoteInfo) {
+	// Use args directly if remoteInfo is already set (from parent)
+	cleanArgs := args
+
+	if len(cleanArgs) < 1 {
+		fmt.Println("Usage: gokku services:logs <service> [-f|--follow] [--remote]")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  gokku services:logs postgres-api")
+		fmt.Println("  gokku services:logs postgres-api -f")
+		fmt.Println("  gokku services:logs postgres-api --remote")
 		os.Exit(1)
 	}
 
-	serviceName := args[0]
+	// If remote mode, execute remotely
+	if remoteInfo != nil {
+		cmd := fmt.Sprintf("gokku services:logs %s", strings.Join(cleanArgs, " "))
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			fmt.Printf("Error getting service logs: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	serviceName := cleanArgs[0]
 
 	sm := services.NewServiceManager()
 
@@ -345,3 +487,4 @@ func showServicesHelp() {
 	fmt.Println("  gokku services:link postgres-api -a api-production")
 	fmt.Println("  gokku postgres:backup postgres-api > backup.sql")
 }
+

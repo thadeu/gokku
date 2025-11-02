@@ -239,16 +239,6 @@ gokku rollback -a api-production 2
 gokku rollback api production
 ```
 
-### SSH
-
-#### `gokku ssh [-a <app>]`
-
-SSH to server.
-
-```bash
-gokku ssh -a api-production
-```
-
 ## Examples
 
 ### Basic Workflow

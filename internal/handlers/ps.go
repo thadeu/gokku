@@ -20,35 +20,47 @@ func HandlePS(args []string) {
 		return
 	}
 
-	subcommand := args[0]
+	// Check if --remote flag is present (new pattern)
+	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// If only --remote flag provided (no subcommand), list all containers remotely
+	if len(remainingArgs) == 0 && remoteInfo != nil {
+		cmd := "gokku ps"
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			os.Exit(1)
+		}
+		return
+	}
+
+	// Determine subcommand from remaining args (skip flags like --remote)
+	var subcommand string
+	var subcommandIndex int
+	for i, arg := range remainingArgs {
+		if !strings.HasPrefix(arg, "-") || arg == "-a" || arg == "--app" {
+			subcommand = arg
+			subcommandIndex = i
+			break
+		}
+	}
 
 	// Check if first argument is a flag (-a or --app), treat as list command
-	if subcommand == "-a" || subcommand == "--app" {
-		appName, _ := internal.ExtractAppFlag(args)
+	if len(remainingArgs) > 0 && (remainingArgs[0] == "-a" || remainingArgs[0] == "--app") {
+		appName, _ := internal.ExtractAppFlag(remainingArgs)
 		if appName == "" {
 			fmt.Println("Error: App name is required")
-			fmt.Println("Usage: gokku ps -a <app>")
-			fmt.Println("   or: gokku ps:list -a <app>")
+			fmt.Println("Usage: gokku ps -a <app> [--remote]")
+			fmt.Println("   or: gokku ps:list -a <app> [--remote]")
 			os.Exit(1)
 		}
 
-		// Check if we're in client mode - if so, execute remotely
-		isClientMode := internal.IsClientMode()
-		if isClientMode {
-			// Get remote info to execute command remotely
-			remoteInfo, err := internal.GetRemoteInfo(appName)
-			if err != nil {
-				fmt.Printf("Error: %v\n", err)
-				os.Exit(1)
-			}
-
-			// Execute ps:list command remotely
-			cmd := fmt.Sprintf("gokku ps:list --app %s", remoteInfo.App)
-			sshCmd := exec.Command("ssh", remoteInfo.Host, cmd)
-			sshCmd.Stdout = os.Stdout
-			sshCmd.Stderr = os.Stderr
-			sshCmd.Stdin = os.Stdin
-			if err := sshCmd.Run(); err != nil {
+		if remoteInfo != nil {
+			// Client mode - execute remotely
+			cmd := fmt.Sprintf("gokku ps:list --app %s", appName)
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 				os.Exit(1)
 			}
 			return
@@ -59,22 +71,83 @@ func HandlePS(args []string) {
 		return
 	}
 
+	// If no subcommand and no -a flag, just list all containers
 	if subcommand == "" {
-		appName, _ := internal.ExtractAppFlag(args)
-		handlePSList([]string{"-a", appName})
+		if remoteInfo != nil {
+			// Client mode - execute remotely (should have been caught above)
+			cmd := "gokku ps"
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+		listAllContainers()
 		return
 	}
 
+	// Process remaining args for subcommands (skip the subcommand itself)
+	subcommandArgs := remainingArgs[subcommandIndex+1:]
+
 	switch subcommand {
 	case "scale":
-		handlePSScale(args[1:])
+		if remoteInfo != nil {
+			// Reconstruct command with all args including --remote handling
+			cmdArgs := []string{subcommand}
+			cmdArgs = append(cmdArgs, subcommandArgs...)
+			cmd := fmt.Sprintf("gokku ps:%s %s", subcommand, strings.Join(cmdArgs[1:], " "))
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+		handlePSScale(subcommandArgs)
 	case "report", "rs", "list":
-		handlePSList(args[1:])
+		if remoteInfo != nil {
+			cmdArgs := []string{subcommand}
+			cmdArgs = append(cmdArgs, subcommandArgs...)
+			cmd := fmt.Sprintf("gokku ps:%s %s", subcommand, strings.Join(cmdArgs[1:], " "))
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+		handlePSList(subcommandArgs)
 	case "restart":
-		handlePSRestart(args[1:])
+		if remoteInfo != nil {
+			cmdArgs := []string{subcommand}
+			cmdArgs = append(cmdArgs, subcommandArgs...)
+			cmd := fmt.Sprintf("gokku ps:%s %s", subcommand, strings.Join(cmdArgs[1:], " "))
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+		handlePSRestart(subcommandArgs)
 	case "stop":
-		handlePSStop(args[1:])
+		if remoteInfo != nil {
+			cmdArgs := []string{subcommand}
+			cmdArgs = append(cmdArgs, subcommandArgs...)
+			cmd := fmt.Sprintf("gokku ps:%s %s", subcommand, strings.Join(cmdArgs[1:], " "))
+			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+		handlePSStop(subcommandArgs)
 	default:
+		// Check if it's a flag we should ignore
+		if strings.HasPrefix(subcommand, "--") {
+			// It's a flag, not a subcommand - list all
+			if remoteInfo != nil {
+				cmd := "gokku ps"
+				if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+					os.Exit(1)
+				}
+				return
+			}
+			listAllContainers()
+			return
+		}
 		fmt.Printf("Unknown ps command: %s\n", subcommand)
 		showPSHelp()
 		os.Exit(1)
