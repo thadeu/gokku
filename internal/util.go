@@ -72,10 +72,12 @@ func GetRemoteInfoOrDefault(args []string) (*RemoteInfo, []string, error) {
 	if remote == "" {
 		// Try to get "gokku" remote first
 		gokkuRemoteInfo, err := GetRemoteInfo("gokku")
+
 		if err == nil {
 			// Remote "gokku" exists, use it
 			return gokkuRemoteInfo, remainingArgs, nil
 		}
+
 		// No "gokku" remote found, return error
 		return nil, remainingArgs, fmt.Errorf("no remote specified and default remote 'gokku' not found. Run 'gokku remote setup user@server_ip' first")
 	}

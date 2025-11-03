@@ -61,6 +61,7 @@ func SaveConfig(config *Config) error {
 func GetRemoteInfo(remoteName string) (*RemoteInfo, error) {
 	// Get remote URL
 	cmd := exec.Command("git", "remote", "get-url", remoteName)
+
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("git remote '%s' not found. Add it with: git remote add %s user@host:/opt/gokku/repos/<app>.git", remoteName, remoteName)
