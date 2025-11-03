@@ -332,7 +332,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates \
-  tzdata sox libsox-fmt-all lame \
+  tzdata sox lame \
   && rm -rf /var/cache/apk/*
 
 WORKDIR /root/

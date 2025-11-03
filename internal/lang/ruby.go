@@ -245,7 +245,7 @@ FROM %s
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache build-base sox libsox-fmt-all lame
+RUN apk add --no-cache build-base sox lame
 
 # Copy Gemfile
 COPY Gemfile* ./
