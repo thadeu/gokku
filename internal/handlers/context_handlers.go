@@ -74,9 +74,9 @@ func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFla
 	// Execute docker logs directly on server
 	var cmd *exec.Cmd
 	if follow {
-		cmd = exec.Command("docker", "logs", "-f", serviceName)
+		cmd = exec.Command("docker", "logs", "-f", "--tail", "500", serviceName)
 	} else {
-		cmd = exec.Command("docker", "logs", serviceName)
+		cmd = exec.Command("docker", "logs", "--tail", "500", serviceName)
 	}
 
 	cmd.Stdout = os.Stdout
