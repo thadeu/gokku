@@ -426,15 +426,33 @@ func handlePSRestart(args []string) {
 		os.Exit(1)
 	}
 
+	baseDir := "/opt/gokku"
+	containerService := services.NewContainerService(baseDir)
+
 	if len(allContainers) == 0 {
+		// Fallback: try to find containers directly by name for backwards compatibility
+		// This handles containers created before labels or not registered in the registry
+		filter := services.ContainerFilter{
+			AppName: appName,
+			All:     true,
+		}
+
+		containers, err := containerService.ListContainers(filter)
+		if err == nil && len(containers) > 0 {
+			fmt.Printf("Restarting processes for app '%s' (found %d container(s))...\n", appName, len(containers))
+			for _, container := range containers {
+				fmt.Printf("-----> Restarting %s\n", container.Names)
+				containerService.RestartContainer(container.Names) // Ignore errors for backwards compatibility
+			}
+			fmt.Printf("Restart complete for app '%s'\n", appName)
+			return
+		}
+
 		fmt.Printf("No processes running for app '%s'\n", appName)
 		return
 	}
 
 	fmt.Printf("Restarting processes for app '%s'...\n", appName)
-
-	baseDir := "/opt/gokku"
-	containerService := services.NewContainerService(baseDir)
 
 	for _, container := range allContainers {
 		fmt.Printf("-----> Restarting %s\n", container.Name)
