@@ -9,7 +9,7 @@ import (
 	"gokku/internal/handlers"
 )
 
-const version = "1.0.105"
+const version = "1.0.106"
 
 func main() {
 	if len(os.Args) < 2 {

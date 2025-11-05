@@ -19,10 +19,9 @@ func handleAutoUpdate(args []string) {
 		os.Exit(1)
 	}
 
-	IsClientMode := internal.IsClientMode()
 	hasRemoteFlag := strings.Contains(strings.Join(remainingArgs, " "), "--remote")
 
-	if IsClientMode && hasRemoteFlag {
+	if internal.IsClientMode() && hasRemoteFlag {
 		command += " --server"
 
 		cmd := fmt.Sprintf("bash -c '%s'", command)
@@ -36,8 +35,13 @@ func handleAutoUpdate(args []string) {
 		return
 	}
 
-	command += " --client"
-	fmt.Println("Executing command auto-update on client: ", command)
+	if internal.IsServerMode() {
+		command += " --server"
+	} else {
+		command += " --client"
+	}
+
+	fmt.Println("Executing command auto-update: ", command)
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Stdout = os.Stdout
