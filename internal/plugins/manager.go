@@ -302,7 +302,7 @@ func (pm *PluginManager) createPluginConfig(pluginDir, pluginName, gitURL string
 	return os.WriteFile(configPath, []byte(configJSON), 0644)
 }
 
-// UpdatePlugin updates a plugin by re-cloning from its source URL
+// UpdatePlugin updates a plugin by forcing an update without removing the directory
 func (pm *PluginManager) UpdatePlugin(pluginName string) error {
 	// Check if plugin exists
 	if !pm.pluginExists(pluginName) {
@@ -339,24 +339,25 @@ func (pm *PluginManager) UpdatePlugin(pluginName string) error {
 		return fmt.Errorf("plugin source URL not found in config.json")
 	}
 
-	// Remove existing plugin directory
-	// if err := os.RemoveAll(pluginDir); err != nil {
-	// 	return fmt.Errorf("failed to remove existing plugin: %v", err)
-	// }
+	// Clone to temporary directory and overlay files (works for both git and non-git)
+	tempDir := pluginDir + ".tmp"
+	defer os.RemoveAll(tempDir)
 
-	// Recreate plugin directory
-	if err := os.MkdirAll(pluginDir, 0755); err != nil {
-		return fmt.Errorf("failed to create plugin directory: %v", err)
-	}
-
-	// Clone repository again
-	if err := pm.cloneRepository(gitURL, pluginDir); err != nil {
-		// Cleanup on error
-		// os.RemoveAll(pluginDir)
+	// Clone to temp directory
+	if err := pm.cloneRepository(gitURL, tempDir); err != nil {
 		return fmt.Errorf("failed to clone repository: %v", err)
 	}
 
-	// Recreate plugin config.json
+	// Remove .git directory from temp to avoid conflicts
+	gitDir := filepath.Join(tempDir, ".git")
+	os.RemoveAll(gitDir)
+
+	// Copy all files from temp to plugin directory, overwriting existing
+	if err := pm.overlayDirectory(tempDir, pluginDir); err != nil {
+		return fmt.Errorf("failed to overlay files: %v", err)
+	}
+
+	// Recreate plugin config.json (overwrite)
 	if err := pm.createPluginConfig(pluginDir, pluginName, gitURL); err != nil {
 		return fmt.Errorf("failed to create plugin config: %v", err)
 	}
@@ -367,4 +368,49 @@ func (pm *PluginManager) UpdatePlugin(pluginName string) error {
 	}
 
 	return nil
+}
+
+// overlayDirectory copies all files and directories recursively from source to destination, overwriting existing files
+func (pm *PluginManager) overlayDirectory(srcDir, dstDir string) error {
+	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("error accessing path %s: %v", path, err)
+		}
+
+		// Calculate relative path from source
+		relPath, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return fmt.Errorf("failed to calculate relative path: %v", err)
+		}
+
+		// Skip if it's the source directory itself
+		if relPath == "." {
+			return nil
+		}
+
+		dstPath := filepath.Join(dstDir, relPath)
+
+		if info.IsDir() {
+			// Create directory with same permissions, including all parent directories
+			return os.MkdirAll(dstPath, info.Mode())
+		}
+
+		// Ensure parent directory exists
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			return fmt.Errorf("failed to create parent directory for %s: %v", dstPath, err)
+		}
+
+		// Read source file
+		srcData, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("failed to read source file %s: %v", path, err)
+		}
+
+		// Write file, overwriting if exists, preserving original permissions
+		if err := os.WriteFile(dstPath, srcData, info.Mode()); err != nil {
+			return fmt.Errorf("failed to write file %s: %v", dstPath, err)
+		}
+
+		return nil
+	})
 }
