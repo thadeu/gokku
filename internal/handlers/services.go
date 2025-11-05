@@ -111,7 +111,8 @@ func handleServicesList(args []string, remoteInfo *internal.RemoteInfo) {
 	for _, service := range serviceList {
 		status := "stopped"
 
-		if service.Running {
+		// Check actual container status from Docker
+		if internal.ContainerIsRunning(service.Name) {
 			status = "running"
 		}
 
@@ -487,4 +488,3 @@ func showServicesHelp() {
 	fmt.Println("  gokku services:link postgres-api -a api-production")
 	fmt.Println("  gokku postgres:backup postgres-api > backup.sql")
 }
-
