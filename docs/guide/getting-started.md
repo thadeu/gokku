@@ -19,6 +19,8 @@ This will:
 - Verify installation
 - Create default "gokku" remote for easy commands
 
+For a deeper walkthrough, see the dedicated [Remote Setup](/guide/remote-setup) guide.
+
 ### Step 2: Create App on Server
 
 From your local machine (no SSH needed):

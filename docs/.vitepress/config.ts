@@ -29,7 +29,8 @@ export default withMermaid(defineConfig({
           items: [
             { text: 'What is Gokku?', link: '/guide/what-is-gokku' },
             { text: 'Getting Started', link: '/guide/getting-started' },
-            { text: 'Installation', link: '/guide/installation' }
+            { text: 'Installation', link: '/guide/installation' },
+            { text: 'Remote Setup', link: '/guide/remote-setup' }
           ]
         },
         {
