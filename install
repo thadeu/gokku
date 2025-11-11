@@ -299,7 +299,12 @@ mode=server
 EOF
     log_success "Server mode configuration created at ~/.gokkurc"
 
-    sudo usermod -aG docker $(whoami)
+    if [ "$OS" = "linux" ]; then
+      if [ "$MODE" = "server" ]; then
+        sudo groupadd docker > /dev/null 2>&1 || true
+        sudo usermod -aG docker $(whoami)
+      fi
+    fi
 
     local BASE_DIR="/opt/gokku"
 
