@@ -62,7 +62,8 @@ install_docker_debian() {
     sudo apt-get update -qq
     sudo apt-get install -y --no-install-recommends \
         docker.io \
-        docker-compose-plugin > /dev/null 2>&1
+        docker-compose-plugin \
+        docker-buildx-plugin > /dev/null 2>&1
 
     if [ $? -eq 0 ]; then
         echo "-----> Docker installed successfully"
@@ -82,7 +83,7 @@ install_docker_rhel() {
 
     # Install Docker
     echo "-----> Installing Docker..."
-    sudo yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin > /dev/null 2>&1
+    sudo yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-buildx-plugin > /dev/null 2>&1
 
     if [ $? -eq 0 ]; then
         echo "-----> Docker installed successfully"
@@ -96,7 +97,7 @@ install_docker_rhel() {
 # Install Docker on Alpine
 install_docker_alpine() {
     echo "-----> Installing Docker on Alpine..."
-    sudo apk add --no-cache docker docker-compose
+    sudo apk add --no-cache docker docker-compose docker-buildx-plugin
 
     if [ $? -eq 0 ]; then
         echo "-----> Docker installed successfully"
