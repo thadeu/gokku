@@ -478,8 +478,6 @@ func DeployContainer(config DeploymentConfig) error {
 	}
 }
 
-// Helper functions
-
 func fileExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return !os.IsNotExist(err)
@@ -736,54 +734,4 @@ func BlueGreenRollback(appName string) error {
 	fmt.Printf("-----> Active container: %s\n", blueName)
 
 	return nil
-}
-
-// Legacy functions for backward compatibility
-
-func ListContainersLegacy(remoteInfo *RemoteInfo, format string) string {
-	containers, err := ListContainers(true)
-	if err != nil {
-		return fmt.Sprintf("Error listing containers: %v", err)
-	}
-
-	var result strings.Builder
-	for _, container := range containers {
-		result.WriteString(fmt.Sprintf("%s %s %s %s\n", container.ID, container.Names, container.Status, container.Ports))
-	}
-
-	return result.String()
-}
-
-func ListImages(remoteInfo *RemoteInfo, format string) string {
-	cmd := exec.Command("ssh", remoteInfo.Host, fmt.Sprintf("docker images --format %s", format))
-	output, err := cmd.Output()
-
-	if err != nil {
-		fmt.Printf("Error listing images: %v\n", err)
-		return ""
-	}
-
-	return string(output)
-}
-
-func RemoveContainerLegacy(remoteInfo *RemoteInfo, containerName string) string {
-	if err := RemoveContainer(containerName, true); err != nil {
-		return fmt.Sprintf("Error removing container: %v", err)
-	}
-
-	return "Container removed successfully"
-}
-
-func CreateContainerLegacy(remoteInfo *RemoteInfo, options map[string]string) string {
-	config := ContainerConfig{
-		Name:    options["name"],
-		Image:   options["image"],
-		Command: []string{options["command"]},
-	}
-
-	if err := CreateContainer(config); err != nil {
-		return fmt.Sprintf("Error creating container: %v", err)
-	}
-
-	return "Container created successfully"
 }
