@@ -23,11 +23,6 @@ func NewPluginManager() *PluginManager {
 	// For development, use local directory if /opt/gokku doesn't exist
 	pluginsDir := "/opt/gokku/plugins"
 
-	if _, err := os.Stat("/opt/gokku"); os.IsNotExist(err) {
-		pluginsDir = "dev-plugins"
-		os.MkdirAll(pluginsDir, 0755)
-	}
-
 	return &PluginManager{
 		pluginsDir: pluginsDir,
 	}
@@ -70,29 +65,12 @@ func (pm *PluginManager) InstallOfficialPlugin(pluginName string) error {
 	return nil
 }
 
-func (pm *PluginManager) afterInstallation(pluginDir string) error {
-	binInstallPath := filepath.Join(pluginDir, "bin", "install")
-
-	if fi, err := os.Stat(binInstallPath); err == nil && !fi.IsDir() && fi.Mode()&0111 != 0 {
-		cmd := exec.Command(binInstallPath)
-
-		cmd.Dir = pluginDir
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to execute bin/install: %v", err)
-		}
-	}
-
-	return nil
-}
-
 // ListPlugins returns a list of installed plugins
 func (pm *PluginManager) ListPlugins() ([]string, error) {
 	var plugins []string
 
 	entries, err := os.ReadDir(pm.pluginsDir)
+
 	if err != nil {
 		return nil, err
 	}
@@ -413,4 +391,22 @@ func (pm *PluginManager) overlayDirectory(srcDir, dstDir string) error {
 
 		return nil
 	})
+}
+
+func (pm *PluginManager) afterInstallation(pluginDir string) error {
+	binInstallPath := filepath.Join(pluginDir, "bin", "install")
+
+	if fi, err := os.Stat(binInstallPath); err == nil && !fi.IsDir() && fi.Mode()&0111 != 0 {
+		cmd := exec.Command(binInstallPath)
+
+		cmd.Dir = pluginDir
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to execute bin/install: %v", err)
+		}
+	}
+
+	return nil
 }

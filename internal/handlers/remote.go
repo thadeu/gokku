@@ -77,12 +77,13 @@ func handleRemoteAdd(args []string) {
 		os.Exit(1)
 	}
 
+	gitc := &internal.GitClient{}
+
 	// Create git remote URL
 	remoteURL := fmt.Sprintf("%s:%s", serverHost, remoteAppName)
 
 	// Check if remote already exists
-	checkCmd := fmt.Sprintf("git remote get-url %s 2>/dev/null", remoteAppName)
-	output, _ := internal.Bash(checkCmd)
+	output, _ := gitc.GetRemoteURL(remoteAppName)
 
 	if output != "" {
 		fmt.Printf("Error: remote '%s' already exists -> %s\n", remoteAppName, strings.TrimSpace(output))
@@ -91,7 +92,7 @@ func handleRemoteAdd(args []string) {
 	}
 
 	// Add git remote
-	_, err := internal.Bash(fmt.Sprintf("git remote add %s %s", label, remoteURL))
+	_, err := gitc.AddRemote(label, remoteURL)
 
 	if err != nil {
 		fmt.Printf("Error adding remote '%s' -> %s\n", label, remoteURL)
@@ -103,12 +104,15 @@ func handleRemoteAdd(args []string) {
 
 // handleRemoteList lists all configured git remotes
 func handleRemoteList() {
-	output, err := internal.Bash("git remote -v")
+	gitc := &internal.GitClient{}
+	outputBytes, err := gitc.ExecuteCommand("remote", "-v")
 
 	if err != nil {
 		fmt.Println("Error listing remotes")
 		os.Exit(1)
 	}
+
+	output := string(outputBytes)
 
 	if strings.TrimSpace(output) == "" {
 		fmt.Println("No remotes configured")
@@ -128,17 +132,19 @@ func handleRemoteRemove(args []string) {
 		os.Exit(1)
 	}
 
+	gitc := &internal.GitClient{}
+
 	remoteName := args[0]
 
 	// Check if remote exists
-	checkCmd := fmt.Sprintf("git remote get-url %s 2>/dev/null", remoteName)
-	output, _ := internal.Bash(checkCmd)
+	output, _ := gitc.GetRemoteURL(remoteName)
+
 	if output == "" {
 		fmt.Printf("Error: remote '%s' not found\n", remoteName)
 		os.Exit(1)
 	}
 
-	_, err := internal.Bash(fmt.Sprintf("git remote remove %s", remoteName))
+	_, err := gitc.RemoveRemote(remoteName)
 
 	if err != nil {
 		fmt.Printf("Error removing remote '%s'\n", remoteName)

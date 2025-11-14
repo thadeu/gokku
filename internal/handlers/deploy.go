@@ -150,6 +150,7 @@ func executeDirectDeployment(appName string) error {
 
 	// Check if app exists - if not, we'll create it during initial setup
 	appExists := true
+
 	if _, err := os.Stat(appDir); os.IsNotExist(err) {
 		appExists = false
 	}
@@ -204,12 +205,14 @@ func executeDirectDeployment(appName string) error {
 
 	// Load app configuration
 	app, err := internal.LoadAppConfig(appName)
+
 	if err != nil {
 		return fmt.Errorf("failed to load app config: %v", err)
 	}
 
 	// Create language handler
 	lang, err := lang.NewLang(app, releaseDir)
+
 	if err != nil {
 		return fmt.Errorf("failed to create language handler: %v", err)
 	}
@@ -218,21 +221,25 @@ func executeDirectDeployment(appName string) error {
 
 	// Update environment file if needed
 	envFile := filepath.Join(appDir, "shared", ".env")
+
 	if err := updateEnvironmentFile(envFile, appName); err != nil {
 		fmt.Printf("Warning: Failed to update environment file: %v\n", err)
 	}
 
 	// Link environment file to release
 	releaseEnvFile := filepath.Join(releaseDir, ".env")
+
 	if err := os.Symlink(envFile, releaseEnvFile); err != nil {
 		return fmt.Errorf("failed to link environment file: %v", err)
 	}
 
 	// Update current symlink
 	currentLink := filepath.Join(appDir, "current")
+
 	if err := os.Remove(currentLink); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove current symlink: %v", err)
 	}
+
 	if err := os.Symlink(releaseDir, currentLink); err != nil {
 		return fmt.Errorf("failed to create current symlink: %v", err)
 	}
@@ -246,25 +253,28 @@ func executeDirectDeployment(appName string) error {
 
 		if _, err := os.Stat(dockerfilePath); err == nil {
 			fmt.Println("-----> Forcing fresh Docker build (no cache)...")
+
 			// Remove any existing image with the same name
 			imageTag := fmt.Sprintf("%s:latest", appName)
 			exec.Command("docker", "rmi", imageTag).Run() // Ignore errors if image doesn't exist
 
 			// Build with no cache and progress output
 			cmd := exec.Command("docker", "build", "--progress=plain", "--no-cache", "-t", imageTag, releaseDir)
+
 			// Add Gokku labels to image
 			for _, label := range internal.GetGokkuLabels() {
 				cmd.Args = append(cmd.Args, "--label", label)
 			}
+
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 
 			// Use timeout wrapper for build (default 60 minutes)
 			if err := internal.RunDockerBuildWithTimeout(cmd, 60); err != nil {
-				// Check if it's a signal interruption
 				if internal.IsSignalInterruption(err) {
 					return fmt.Errorf("docker build interrupted by user")
 				}
+
 				return err
 			}
 		} else {
@@ -311,6 +321,8 @@ func hasCommits(repoDir string) bool {
 
 // extractCodeFromRepo extracts code from git repository to release directory
 func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
+	gitc := &internal.GitClient{}
+
 	// Check if repository has any commits
 	if !hasCommits(repoDir) {
 		return fmt.Errorf("repository has no commits yet - you need to push code first. Run: git push <remote> <branch>")
@@ -318,14 +330,12 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 
 	// Step 1: Extract only gokku.yml to read configuration
 	fmt.Println("-----> Reading app configuration...")
-	tmpCmd := exec.Command("git", "--git-dir", repoDir, "show", "HEAD:gokku.yml")
-	gokkuYmlContent, err := tmpCmd.Output()
+	gokkuYmlContent, err := gitc.ExecuteCommand("--git-dir", repoDir, "show", "HEAD:gokku.yml")
 
 	if err != nil {
 		// No gokku.yml in repo, do full checkout
 		fmt.Println("-----> No gokku.yml found, extracting full repository...")
-		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
-		output, err := cmd.CombinedOutput()
+		output, err := gitc.ExecuteCommand("--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
 
 		if err != nil {
 			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
@@ -337,14 +347,14 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 	// Parse config directly from the extracted content
 	var serverConfig internal.ServerConfig
 
-	if err := yaml.Unmarshal(gokkuYmlContent, &serverConfig); err != nil {
+	if err := yaml.Unmarshal([]byte(gokkuYmlContent), &serverConfig); err != nil {
 		fmt.Printf("-----> Error parsing app config: %v, extracting full repository...\n", err)
-		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
-		output, err := cmd.CombinedOutput()
+		output, err := gitc.ExecuteCommand("--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
 
 		if err != nil {
 			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
 		}
+
 		return nil
 	}
 
@@ -356,8 +366,7 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 
 	if app == nil {
 		fmt.Printf("-----> App '%s' not found in config, extracting full repository...\n", appName)
-		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
-		output, err := cmd.CombinedOutput()
+		output, err := gitc.ExecuteCommand("--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
 
 		if err != nil {
 			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
@@ -367,13 +376,12 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 	}
 
 	if app.WorkDir == "" {
-		// No workdir specified, do full checkout
 		fmt.Println("-----> No workdir specified, extracting full repository...")
 
-		os.RemoveAll(releaseDir) // Clean temp files
+		os.RemoveAll(releaseDir)
 		os.MkdirAll(releaseDir, 0755)
-		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
-		output, err := cmd.CombinedOutput()
+
+		output, err := gitc.ExecuteCommand("--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
 
 		if err != nil {
 			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
@@ -394,7 +402,7 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 	os.MkdirAll(releaseDir, 0755)
 
 	// Extract gokku.yml and workdir using git archive
-	archiveCmd := exec.Command("git", "--git-dir", repoDir, "archive", "HEAD", "gokku.yml", workdir)
+	archiveCmd := exec.Command("--git-dir", repoDir, "archive", "HEAD", "gokku.yml", workdir)
 	untar := exec.Command("tar", "-x", "-C", releaseDir)
 
 	// Pipe git archive output to tar
@@ -420,8 +428,6 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 	if err := untar.Wait(); err != nil {
 		return fmt.Errorf("tar extraction failed: %v", err)
 	}
-
-	// Initial setup is now handled in executeDirectDeployment
 
 	return nil
 }

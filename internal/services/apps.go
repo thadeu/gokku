@@ -66,6 +66,7 @@ func (s *AppsService) GetApp(name string) (*AppDetail, error) {
 	}
 
 	var appInfo *AppInfo
+
 	for i := range apps {
 		if apps[i].Name == name {
 			appInfo = &apps[i]
@@ -162,18 +163,4 @@ func (s *AppsService) getAppContainers(appName string) ([]internal.ContainerInfo
 func (s *AppsService) getAppEnvVars(appName string) map[string]string {
 	envFile := filepath.Join(s.baseDir, "apps", appName, "shared", ".env")
 	return internal.LoadEnvFile(envFile)
-}
-
-// contains checks if s contains substr
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || indexOfSubstring(s, substr) >= 0)
-}
-
-func indexOfSubstring(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }

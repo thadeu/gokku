@@ -7,6 +7,8 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+
+	. "gokku/internal"
 )
 
 // SetupConfig holds configuration for server setup
@@ -205,9 +207,11 @@ func (ss *ServerSetup) installGokku() error {
 func (ss *ServerSetup) installPlugin(pluginName string) error {
 	// Check if plugin already exists first
 	checkCmd := fmt.Sprintf(`test -d /opt/gokku/plugins/%s && echo 'exists' || echo 'missing'`, pluginName)
+
 	args := ss.buildSSHArgs(checkCmd)
 	cmd := exec.Command("ssh", args...)
 	output, err := cmd.Output()
+
 	if err == nil && strings.Contains(string(output), "exists") {
 		// Plugin already installed, skip
 		return nil
@@ -215,6 +219,7 @@ func (ss *ServerSetup) installPlugin(pluginName string) error {
 
 	// Install plugin via SSH (non-interactive)
 	installCmd := fmt.Sprintf(`gokku plugins:add %s 2>&1`, pluginName)
+
 	args = ss.buildSSHArgs(installCmd)
 	sshCmd := exec.Command("ssh", args...)
 	output, err = sshCmd.CombinedOutput()
@@ -351,22 +356,21 @@ func (ss *ServerSetup) verifySetup() error {
 // This allows users to use "gokku apps create" without specifying --remote
 func (ss *ServerSetup) createDefaultRemote() error {
 	// Check if remote "gokku" already exists
-	checkCmd := exec.Command("git", "remote", "get-url", "gokku")
+	client := &GitClient{}
 
-	if err := checkCmd.Run(); err == nil {
+	if _, err := client.GetRemoteURL("gokku"); err == nil {
 		// Remote already exists, skip
 		return nil
 	}
 
 	// Create a dummy remote URL (we only need the host info)
 	// The actual app will be determined later when creating apps
-	remoteURL := fmt.Sprintf("%s:/opt/gokku/repos/gokku.git", ss.config.ServerHost)
+	remoteURL := fmt.Sprintf("%s:gokku.git", ss.config.ServerHost)
 
-	cmd := exec.Command("git", "remote", "add", "gokku", remoteURL)
-	output, err := cmd.CombinedOutput()
+	_, err := client.AddRemote("gokku", remoteURL)
+
 	if err != nil {
-		// If not in git repo or other error, fail silently
-		return fmt.Errorf("failed to create remote: %v, output: %s", err, string(output))
+		return fmt.Errorf("failed to add remote: %v", err)
 	}
 
 	return nil

@@ -19,12 +19,18 @@ vet: ## Run go vet
 lint: ## Run golangci-lint
 	golangci-lint run
 
-test: ## Run tests
-	go test -v ./...
+test:
+	gotestsum --format=short-verbose
 
 # Build commands
 build: ## Build the binary
 	go build -o bin/gokku ./cmd/cli
+
+bench:
+	go test ./... -bench=. -benchmem -v
+
+check: fmt lint vet test
+	@echo "All checks passed"
 
 build-binaries: ## Build binaries for all platforms
 	chmod +x scripts/build-binaries.sh
