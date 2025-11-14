@@ -68,11 +68,14 @@ func handleServices(args []string) {
 		if remoteInfo != nil {
 			// Execute service command remotely
 			cmd := fmt.Sprintf("gokku services %s", strings.Join(remainingArgs, " "))
+
 			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 				os.Exit(1)
 			}
+
 			return
 		}
+
 		handleServiceCommand(remainingArgs)
 	}
 }
@@ -82,10 +85,12 @@ func handleServicesList(args []string, remoteInfo *internal.RemoteInfo) {
 	if remoteInfo != nil {
 		// Client mode: execute remotely
 		cmd := "gokku services list"
+
 		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 			fmt.Printf("Error listing services: %v\n", err)
 			os.Exit(1)
 		}
+
 		return
 	}
 
@@ -93,6 +98,7 @@ func handleServicesList(args []string, remoteInfo *internal.RemoteInfo) {
 	sm := services.NewServiceManager()
 
 	serviceList, err := sm.ListServices()
+
 	if err != nil {
 		fmt.Printf("Error listing services: %v\n", err)
 		os.Exit(1)
@@ -148,10 +154,12 @@ func handleServicesCreate(args []string, remoteInfo *internal.RemoteInfo) {
 	// If remote mode, execute remotely
 	if remoteInfo != nil {
 		cmd := fmt.Sprintf("gokku services:create %s", strings.Join(cleanArgs, " "))
+
 		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 			fmt.Printf("Error creating service: %v\n", err)
 			os.Exit(1)
 		}
+
 		return
 	}
 
@@ -430,6 +438,7 @@ func handleServicesLogs(args []string, remoteInfo *internal.RemoteInfo) {
 func handleServiceCommand(args []string) {
 	// Parse: gokku postgres:export postgres-api
 	parts := strings.Split(args[0], ":")
+
 	if len(parts) != 2 {
 		fmt.Printf("Unknown command: %s\n", args[0])
 		showServicesHelp()

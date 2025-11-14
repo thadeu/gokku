@@ -18,7 +18,6 @@ gokku-<plugin-name>/
 │   ├── logs
 │   └── [custom-commands]
 └── hooks/
-    ├── scale-change
     └── [other-hooks]
 ```
 
@@ -220,23 +219,6 @@ Gokku provides helper functions in `/opt/gokku/scripts/plugin-helpers.sh`:
 ## Plugin Hooks
 
 Hooks allow plugins to react to Gokku events automatically. Hooks are optional but recommended for plugins that need to integrate with core Gokku functionality.
-
-### Available Hooks
-
-#### `hooks/scale-change`
-**Purpose**: React to application scaling events
-**Arguments**: `$1` = app name, `$2` = process type
-**When called**: After `gokku ps:scale` operations
-
-```bash
-#!/bin/bash
-APP_NAME="$1"
-PROCESS_TYPE="$2"
-
-# Your plugin logic here
-# Example: Update load balancer configuration
-echo "-----> Updating load balancer for $APP_NAME $PROCESS_TYPE"
-```
 
 ### Hook Execution
 - Hooks are executed automatically by Gokku core

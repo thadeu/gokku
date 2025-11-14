@@ -89,18 +89,6 @@ func HandlePS(args []string) {
 	subcommandArgs := remainingArgs[subcommandIndex+1:]
 
 	switch subcommand {
-	case "scale":
-		if remoteInfo != nil {
-			// Reconstruct command with all args including --remote handling
-			cmdArgs := []string{subcommand}
-			cmdArgs = append(cmdArgs, subcommandArgs...)
-			cmd := fmt.Sprintf("gokku ps:%s %s", subcommand, strings.Join(cmdArgs[1:], " "))
-			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
-				os.Exit(1)
-			}
-			return
-		}
-		handlePSScale(subcommandArgs)
 	case "report", "rs", "list":
 		if remoteInfo != nil {
 			cmdArgs := []string{subcommand}
@@ -176,99 +164,6 @@ func extractAppNameForPS(args []string) string {
 		// Client mode: require -a flag
 		return internal.ExtractAppName(args)
 	}
-}
-
-// handlePSScale handles the ps:scale command
-func handlePSScale(args []string) {
-	// Parse: gokku ps:scale web=4 worker=2 -a api (client)
-	//        gokku ps:scale web=4 worker=2 APP_NAME (server)
-	appName := extractAppNameForPS(args)
-	if appName == "" {
-		isServerMode := internal.IsServerMode()
-		if isServerMode {
-			fmt.Println("Error: App name is required")
-			fmt.Println("Usage: gokku ps:scale <process=count>... <app>")
-			fmt.Println("")
-			fmt.Println("Examples:")
-			fmt.Println("  gokku ps:scale web=4 worker=2 api")
-			os.Exit(1)
-		} else {
-			fmt.Println("Error: -a <app> is required")
-			fmt.Println("Usage: gokku ps:scale <process=count>... -a <app>")
-			fmt.Println("")
-			fmt.Println("Examples:")
-			fmt.Println("  gokku ps:scale web=4 worker=2 -a api-production")
-			os.Exit(1)
-		}
-	}
-
-	isServerMode := internal.IsServerMode()
-
-	// Parse scale arguments
-	scales := make(map[string]int)
-	for _, arg := range args {
-		if strings.HasPrefix(arg, "-a") {
-			continue // Skip app flag (client mode)
-		}
-
-		// Skip app name (server mode - it's the last non-scale argument)
-		if isServerMode && arg == appName {
-			continue
-		}
-
-		processType, count, err := containers.ParseScaleArgument(arg)
-		if err != nil {
-			fmt.Printf("Error parsing scale argument '%s': %v\n", arg, err)
-			os.Exit(1)
-		}
-
-		scales[processType] = count
-	}
-
-	if len(scales) == 0 {
-		fmt.Println("Error: No scale arguments provided (e.g., web=4 worker=2)")
-		os.Exit(1)
-	}
-
-	fmt.Printf("Scaling app '%s'...\n", appName)
-
-	baseDir := "/opt/gokku"
-	if !isServerMode {
-		baseDir = "/opt/gokku" // Will be executed on server via SSH
-	}
-
-	containerService := services.NewContainerService(baseDir)
-
-	// Get current counts for display
-	registry := containers.NewContainerRegistry()
-	for processType, count := range scales {
-		currentContainers, err := registry.GetContainers(appName, processType)
-		if err != nil {
-			fmt.Printf("Error getting current containers: %v\n", err)
-			continue
-		}
-
-		currentCount := len(currentContainers)
-		fmt.Printf("-----> Scaling %s from %d to %d instances\n", processType, currentCount, count)
-
-		if count == currentCount {
-			fmt.Printf("       %s already at %d instances\n", processType, count)
-			continue
-		}
-	}
-
-	// Perform scaling
-	if err := containerService.ScaleProcesses(appName, scales); err != nil {
-		fmt.Printf("Error scaling app: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Notify plugins about scale change
-	for processType := range scales {
-		notifyPluginsOfScaleChange(appName, processType)
-	}
-
-	fmt.Printf("Scaling complete for app '%s'\n", appName)
 }
 
 // handlePSList handles the ps:list command
@@ -617,33 +512,6 @@ func handlePSStop(args []string) {
 	fmt.Printf("Stop complete for app '%s'\n", appName)
 }
 
-// notifyPluginsOfScaleChange notifies all plugins about scale changes
-func notifyPluginsOfScaleChange(appName, processType string) {
-	// Get all installed plugins
-	pluginsDir := "/opt/gokku/plugins"
-
-	plugins, err := os.ReadDir(pluginsDir)
-	if err != nil {
-		return // No plugins directory, skip
-	}
-
-	for _, plugin := range plugins {
-		if !plugin.IsDir() {
-			continue
-		}
-
-		pluginName := plugin.Name()
-
-		// Check if plugin has a scale-change hook
-		hookPath := fmt.Sprintf("%s/%s/hooks/scale-change", pluginsDir, pluginName)
-		if _, err := os.Stat(hookPath); err == nil {
-			// Execute plugin hook
-			cmd := exec.Command("bash", hookPath, appName, processType)
-			cmd.Run() // Don't fail if plugin hook fails
-		}
-	}
-}
-
 // showPSHelp shows help for ps commands
 func showPSHelp() {
 	isServerMode := internal.IsServerMode()
@@ -652,7 +520,6 @@ func showPSHelp() {
 		fmt.Println("Process management commands (server mode):")
 		fmt.Println("")
 		fmt.Println("  gokku ps                                  List all running containers")
-		fmt.Println("  gokku ps:scale <process=count>... <app>    Scale app processes")
 		fmt.Println("  gokku ps:report <app>                      List running processes")
 		fmt.Println("  gokku ps:list [<app>]                       List running processes (all if no app)")
 		fmt.Println("  gokku ps:restart <app>                     Restart all processes")
@@ -660,7 +527,6 @@ func showPSHelp() {
 		fmt.Println("")
 		fmt.Println("Examples:")
 		fmt.Println("  gokku ps")
-		fmt.Println("  gokku ps:scale web=4 worker=2 api")
 		fmt.Println("  gokku ps:report api")
 		fmt.Println("  gokku ps:list api")
 		fmt.Println("  gokku ps:list")
@@ -670,14 +536,12 @@ func showPSHelp() {
 	} else {
 		fmt.Println("Process management commands (client mode):")
 		fmt.Println("")
-		fmt.Println("  gokku ps:scale <process=count>... -a <app>    Scale app processes")
 		fmt.Println("  gokku ps:report -a <app>                       List running processes")
 		fmt.Println("  gokku ps:list -a <app>                         List running processes")
 		fmt.Println("  gokku ps:restart -a <app>                     Restart all processes")
 		fmt.Println("  gokku ps:stop [<process>] -a <app>             Stop processes")
 		fmt.Println("")
 		fmt.Println("Examples:")
-		fmt.Println("  gokku ps:scale web=4 worker=2 -a api-production")
 		fmt.Println("  gokku ps:report -a api-production")
 		fmt.Println("  gokku ps:restart -a api-production")
 		fmt.Println("  gokku ps:stop web -a api-production")

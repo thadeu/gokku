@@ -27,6 +27,7 @@ func handlePlugins(args []string) {
 
 	// Extract --remote flag first (if present)
 	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -36,9 +37,11 @@ func handlePlugins(args []string) {
 		// Only --remote provided, show help or list plugins
 		if remoteInfo != nil {
 			cmd := "gokku plugins list"
+
 			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 				os.Exit(1)
 			}
+
 			return
 		}
 		showPluginHelp()

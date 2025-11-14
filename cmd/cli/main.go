@@ -39,7 +39,9 @@ func main() {
 	if needsContext {
 		// Extract app flag to create context
 		appName, _ := internal.ExtractAppFlag(args)
+
 		ctx, err = internal.NewExecutionContext(appName)
+
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -133,16 +135,19 @@ func main() {
 	default:
 		// Check if --remote flag is present
 		remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+
 		if err == nil && remoteInfo != nil {
 			// If --remote is present, execute the command remotely
-			// This handles cases like "gokku nginx --remote" or "gokku nginx:reload nginx-lb --remote"
+			// This handles cases like "gokku --remote nginx" or "gokku --remote nginx:reload nginx-lb"
 			// Build command: "gokku" + command + remaining args (without --remote)
 			remoteCmd := []string{"gokku", command}
 			remoteCmd = append(remoteCmd, remainingArgs...)
 			cmd := strings.Join(remoteCmd, " ")
+
 			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 				os.Exit(1)
 			}
+
 			return
 		}
 
@@ -183,7 +188,7 @@ CLIENT COMMANDS (run from local machine):
   tool           Utility commands for scripts
   plugins        Manage plugins
   services       Manage services
-  ps             Process management (scale, list, restart, stop)
+  ps             Process management (list, restart, stop)
   uninstall      Remove Gokku installation
   version        Show version
   help           Show this help
@@ -217,7 +222,6 @@ Client Commands (always use -a with git remote):
   gokku deploy -a <git-remote>
   gokku rollback -a <git-remote>
 
-  gokku ps:scale web=4 worker=2 -a <git-remote>
   gokku ps:list -a <git-remote>
   gokku ps:restart -a <git-remote>
   gokku ps:stop -a <git-remote>

@@ -16,6 +16,8 @@ apps:
       keep_releases: 5
       restart_policy: always
       restart_delay: 5
+      post_deploy:
+        - "echo 'Hello, World!'"
 
   voice-agent:
     path: ./cmd/voice-agent

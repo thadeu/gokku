@@ -15,6 +15,7 @@ func LoadConfig() (*Config, error) {
 	configPath := GetConfigPath()
 
 	data, err := os.ReadFile(configPath)
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			return &Config{Apps: make(map[string]App)}, nil
@@ -63,6 +64,7 @@ func GetRemoteInfo(remoteName string) (*RemoteInfo, error) {
 	cmd := exec.Command("git", "remote", "get-url", remoteName)
 
 	output, err := cmd.Output()
+
 	if err != nil {
 		return nil, fmt.Errorf("git remote '%s' not found. Add it with: git remote add %s user@host:/opt/gokku/repos/<app>.git", remoteName, remoteName)
 	}

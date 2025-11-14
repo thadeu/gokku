@@ -49,9 +49,11 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 	if app.Dockerfile != "" {
 		// Use custom Dockerfile path
 		dockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
+
 		// Check if Dockerfile exists in workdir
 		if app.WorkDir != "" {
 			workdirDockerfilePath := filepath.Join(releaseDir, app.WorkDir, app.Dockerfile)
+
 			if _, err := os.Stat(workdirDockerfilePath); err == nil {
 				dockerfilePath = workdirDockerfilePath
 			}

@@ -29,9 +29,11 @@ func (s *ConfigService) SetEnvVar(appName string, keyValues []string) error {
 	// Parse and update env vars
 	for _, pair := range keyValues {
 		parts := strings.SplitN(pair, "=", 2)
+
 		if len(parts) != 2 {
 			return fmt.Errorf("invalid format '%s', expected KEY=VALUE", pair)
 		}
+
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 		envVars[key] = value
@@ -45,6 +47,7 @@ func (s *ConfigService) GetEnvVar(appName, key string) (string, error) {
 	envVars := s.ListEnvVars(appName)
 
 	value, ok := envVars[key]
+
 	if !ok {
 		return "", fmt.Errorf("variable '%s' not found", key)
 	}
@@ -55,6 +58,7 @@ func (s *ConfigService) GetEnvVar(appName, key string) (string, error) {
 // ListEnvVars lists all environment variables
 func (s *ConfigService) ListEnvVars(appName string) map[string]string {
 	envFile := s.getEnvFilePath(appName)
+
 	return internal.LoadEnvFile(envFile)
 }
 

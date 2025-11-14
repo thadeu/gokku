@@ -75,7 +75,7 @@ func (t *Table) calculateWidths() []int {
 			maxAllowedWidth = int(float64(terminalWidth) * 0.80)
 		}
 
-		// Only scale down if total significantly exceeds terminal width
+		// Only down if total significantly exceeds terminal width
 		// Truncate only the largest column that exceeds space
 		if totalWidth > maxAllowedWidth {
 			// Find the largest column

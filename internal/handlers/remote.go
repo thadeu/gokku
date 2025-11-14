@@ -47,16 +47,25 @@ func handleRemote(args []string) {
 // handleRemoteAdd adds a new git remote
 func handleRemoteAdd(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: gokku remote add <app_name> <user@server_ip>")
+		fmt.Println("Usage: gokku remote add <label> <remote_app_name[optional]> <user@server_ip>")
 		fmt.Println("Example: gokku remote add api user@hostname")
 		os.Exit(1)
 	}
 
-	appName := args[0]
-	serverHost := args[1]
+	var remoteAppName, serverHost, label string
+
+	label = args[0]
+	remoteAppName = label
+
+	if len(args) == 2 {
+		serverHost = args[1]
+	} else if len(args) == 3 {
+		remoteAppName = args[1]
+		serverHost = args[2]
+	}
 
 	// Validate app name
-	if appName == "" {
+	if remoteAppName == "" {
 		fmt.Println("Error: app name cannot be empty")
 		os.Exit(1)
 	}
@@ -69,26 +78,27 @@ func handleRemoteAdd(args []string) {
 	}
 
 	// Create git remote URL
-	remoteURL := fmt.Sprintf("%s:/opt/gokku/repos/%s.git", serverHost, appName)
+	remoteURL := fmt.Sprintf("%s:%s", serverHost, remoteAppName)
 
 	// Check if remote already exists
-	checkCmd := fmt.Sprintf("git remote get-url %s 2>/dev/null", appName)
+	checkCmd := fmt.Sprintf("git remote get-url %s 2>/dev/null", remoteAppName)
 	output, _ := internal.Bash(checkCmd)
+
 	if output != "" {
-		fmt.Printf("Error: remote '%s' already exists -> %s\n", appName, strings.TrimSpace(output))
-		fmt.Printf("Remove it first with: gokku remote remove %s\n", appName)
+		fmt.Printf("Error: remote '%s' already exists -> %s\n", remoteAppName, strings.TrimSpace(output))
+		fmt.Printf("Remove it first with: gokku remote remove %s\n", remoteAppName)
 		os.Exit(1)
 	}
 
 	// Add git remote
-	_, err := internal.Bash(fmt.Sprintf("git remote add %s %s", appName, remoteURL))
+	_, err := internal.Bash(fmt.Sprintf("git remote add %s %s", label, remoteURL))
 
 	if err != nil {
-		fmt.Printf("Error adding remote '%s' -> %s\n", appName, remoteURL)
+		fmt.Printf("Error adding remote '%s' -> %s\n", label, remoteURL)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Added remote '%s' -> %s\n", appName, remoteURL)
+	fmt.Printf("Added remote '%s' -> %s\n", label, remoteURL)
 }
 
 // handleRemoteList lists all configured git remotes
@@ -170,6 +180,7 @@ func handleRemoteSetup(args []string) {
 
 	// Create setup service and execute
 	setup := services.NewServerSetup(serverHost, identityFile)
+
 	if err := setup.Execute(); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)

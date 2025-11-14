@@ -232,15 +232,19 @@ func GetContainerPort(envFile string, defaultPort int) int {
 	}
 
 	content, err := os.ReadFile(envFile)
+
 	if err != nil {
 		return defaultPort
 	}
 
 	lines := strings.Split(string(content), "\n")
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
+
 		if strings.HasPrefix(line, "PORT=") {
 			portStr := strings.TrimSpace(strings.TrimPrefix(line, "PORT="))
+
 			if port, err := strconv.Atoi(portStr); err == nil {
 				return port
 			}
@@ -257,15 +261,19 @@ func IsZeroDowntimeEnabled(envFile string) bool {
 	}
 
 	content, err := os.ReadFile(envFile)
+
 	if err != nil {
 		return true
 	}
 
 	lines := strings.Split(string(content), "\n")
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
+
 		if strings.HasPrefix(line, "ZERO_DOWNTIME=") {
 			value := strings.TrimSpace(strings.TrimPrefix(line, "ZERO_DOWNTIME="))
+
 			switch strings.ToLower(value) {
 			case "0", "false", "no", "off", "n":
 				return false
@@ -385,6 +393,7 @@ func StandardDeploy(config DeploymentConfig) error {
 
 	// Create new container
 	fmt.Printf("-----> Starting new container: %s\n", containerName)
+
 	if err := CreateContainer(containerConfig); err != nil {
 		return fmt.Errorf("failed to start container: %v", err)
 	}
@@ -430,6 +439,7 @@ func BlueGreenDeploy(config DeploymentConfig) error {
 
 	// Check if we have an existing container
 	activeContainerName := config.AppName
+
 	if ContainerExists(activeContainerName) {
 		// Switch traffic: active → green
 		if err := switchTrafficBlueToGreen(config.AppName, containerPort); err != nil {
@@ -596,6 +606,7 @@ func updateContainerRestartPolicy(containerName, policy string) {
 func RecreateActiveContainer(appName, envFile, appDir string) error {
 	// Determine which container is active
 	var activeContainer string
+
 	if ContainerExists(appName) {
 		activeContainer = appName
 	} else if ContainerExists(appName + "-green") {
@@ -608,10 +619,13 @@ func RecreateActiveContainer(appName, envFile, appDir string) error {
 
 	// Load server config for the app
 	serverConfig, err := LoadServerConfigByApp(appName)
+
 	if err != nil {
 		return fmt.Errorf("failed to load server config: %v", err)
 	}
+
 	appConfig, err := serverConfig.GetApp(appName)
+
 	if err != nil {
 		return fmt.Errorf("failed to get app config: %v", err)
 	}
@@ -619,6 +633,7 @@ func RecreateActiveContainer(appName, envFile, appDir string) error {
 	// Get current image
 	cmd := exec.Command("docker", "inspect", activeContainer, "--format", "{{.Config.Image}}")
 	output, err := cmd.Output()
+
 	if err != nil {
 		return fmt.Errorf("could not determine container image: %v", err)
 	}
@@ -639,6 +654,7 @@ func RecreateActiveContainer(appName, envFile, appDir string) error {
 
 	// Stop and remove old container
 	fmt.Println("       Stopping old container...")
+
 	StopContainer(activeContainer)
 	RemoveContainer(activeContainer, true)
 
@@ -677,6 +693,7 @@ func RecreateActiveContainer(appName, envFile, appDir string) error {
 
 	// Start new container with same name and updated env
 	fmt.Println("       Starting new container with updated configuration...")
+
 	if err := CreateContainer(containerConfig); err != nil {
 		return fmt.Errorf("failed to recreate container: %v", err)
 	}

@@ -53,12 +53,14 @@ func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFla
 	// Check if container exists
 	checkCmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
 	output, err := checkCmd.Output()
+
 	if err != nil {
 		fmt.Printf("Error checking containers: %v\n", err)
 		os.Exit(1)
 	}
 
 	containerExists := false
+
 	for _, name := range strings.Split(string(output), "\n") {
 		if strings.TrimSpace(name) == serviceName {
 			containerExists = true
@@ -73,6 +75,7 @@ func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFla
 
 	// Execute docker logs directly on server
 	var cmd *exec.Cmd
+
 	if follow {
 		cmd = exec.Command("docker", "logs", "-f", "--tail", "500", serviceName)
 	} else {
@@ -93,6 +96,7 @@ func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFla
 				os.Exit(0)
 			}
 		}
+
 		fmt.Printf("Error executing docker logs: %v\n", err)
 		os.Exit(1)
 	}

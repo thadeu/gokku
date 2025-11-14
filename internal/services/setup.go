@@ -37,6 +37,7 @@ func (ss *ServerSetup) Execute() error {
 
 	// Phase 1: Check prerequisites
 	fmt.Println("-----> Checking prerequisites...")
+
 	if err := ss.checkSSHConnection(); err != nil {
 		return fmt.Errorf("%v\n\nMake sure you can SSH to the server without password.\nYou can use: ssh-copy-id %s", err, ss.config.ServerHost)
 	}
@@ -58,6 +59,7 @@ func (ss *ServerSetup) Execute() error {
 
 	for _, pluginName := range essentialPlugins {
 		fmt.Printf("-----> Installing %s...", pluginName)
+
 		if err := ss.installPlugin(pluginName); err != nil {
 			fmt.Printf(" failed: %v\n", err)
 		} else {
@@ -70,6 +72,7 @@ func (ss *ServerSetup) Execute() error {
 
 	// Phase 4: Configure SSH keys (if needed)
 	fmt.Println("-----> Configuring SSH keys...")
+
 	if err := ss.configureSSHKeys(); err != nil {
 		fmt.Printf("Warning: Could not configure SSH keys: %v\n", err)
 	} else {
@@ -78,6 +81,7 @@ func (ss *ServerSetup) Execute() error {
 
 	// Phase 5: Final verification
 	fmt.Println("-----> Verifying setup...")
+
 	if err := ss.verifySetup(); err != nil {
 		fmt.Printf("Warning: Verification failed: %v\n", err)
 	} else {
@@ -86,6 +90,7 @@ func (ss *ServerSetup) Execute() error {
 
 	// Phase 6: Create default remote "gokku" locally
 	fmt.Println("-----> Creating default remote 'gokku'...")
+
 	if err := ss.createDefaultRemote(); err != nil {
 		fmt.Printf("Note: Could not create default remote 'gokku': %v\n", err)
 		fmt.Println("You can create it manually with:")
@@ -127,6 +132,7 @@ func (ss *ServerSetup) buildSSHArgs(extraArgs ...string) []string {
 	var commands []string
 
 	i := 0
+
 	for i < len(extraArgs) {
 		arg := extraArgs[i]
 
@@ -161,9 +167,11 @@ func (ss *ServerSetup) checkSSHConnection() error {
 	args := ss.buildSSHArgs("-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "echo OK")
 	cmd := exec.Command("ssh", args...)
 	output, err := cmd.CombinedOutput()
+
 	if err != nil {
 		// Include SSH output in error message for debugging
 		outputStr := strings.TrimSpace(string(output))
+
 		if outputStr != "" {
 			return fmt.Errorf("SSH connection failed: %v\nOutput: %s", err, outputStr)
 		}
@@ -176,19 +184,6 @@ func (ss *ServerSetup) checkSSHConnection() error {
 	}
 
 	return nil
-}
-
-// checkGokkuInstalled checks if Gokku is already installed on the server
-func (ss *ServerSetup) checkGokkuInstalled() (bool, error) {
-	args := ss.buildSSHArgs("command -v gokku >/dev/null 2>&1 && echo 'installed' || echo 'not_installed'")
-	cmd := exec.Command("ssh", args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return false, err
-	}
-
-	result := strings.TrimSpace(string(output))
-	return result == "installed", nil
 }
 
 // installGokku installs Gokku on the remote server
@@ -246,6 +241,7 @@ func (ss *ServerSetup) configureSSHKeys() error {
 
 	// Get local SSH public key
 	localUser, err := user.Current()
+
 	if err != nil {
 		return fmt.Errorf("could not get current user: %v", err)
 	}
@@ -279,9 +275,11 @@ func (ss *ServerSetup) configureSSHKeys() error {
 
 	// Check if key already exists on server
 	checkCmd := fmt.Sprintf(`grep -Fx "%s" ~/.ssh/authorized_keys >/dev/null 2>&1 && echo 'exists' || echo 'missing'`, publicKey)
+
 	args := ss.buildSSHArgs(checkCmd)
 	cmd := exec.Command("ssh", args...)
 	output, err := cmd.Output()
+
 	if err == nil && strings.Contains(string(output), "exists") {
 		// Key already exists
 		return nil
@@ -291,6 +289,7 @@ func (ss *ServerSetup) configureSSHKeys() error {
 	addKeyCmd := fmt.Sprintf(`mkdir -p ~/.ssh && echo "%s" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys`, publicKey)
 	args = ss.buildSSHArgs(addKeyCmd)
 	addCmd := exec.Command("ssh", args...)
+
 	if err := addCmd.Run(); err != nil {
 		return fmt.Errorf("could not add SSH key: %v", err)
 	}
@@ -302,9 +301,11 @@ func (ss *ServerSetup) configureSSHKeys() error {
 func (ss *ServerSetup) verifySetup() error {
 	// Check Docker
 	fmt.Println("-----> Checking Docker...")
+
 	args := ss.buildSSHArgs("docker ps >/dev/null 2>&1 && echo 'OK' || echo 'FAIL'")
 	dockerCmd := exec.Command("ssh", args...)
 	dockerOutput, err := dockerCmd.Output()
+
 	if err == nil {
 		dockerStatus := strings.TrimSpace(string(dockerOutput))
 		if dockerStatus == "OK" {
@@ -316,9 +317,11 @@ func (ss *ServerSetup) verifySetup() error {
 
 	// Check plugins
 	fmt.Println("-----> Checking plugins...")
+
 	args = ss.buildSSHArgs("ls -1 /opt/gokku/plugins 2>/dev/null | wc -l")
 	pluginsCmd := exec.Command("ssh", args...)
 	pluginsOutput, err := pluginsCmd.Output()
+
 	if err == nil {
 		pluginCount := strings.TrimSpace(string(pluginsOutput))
 		fmt.Printf("-----> Plugins installed: %s\n", pluginCount)
@@ -326,9 +329,11 @@ func (ss *ServerSetup) verifySetup() error {
 
 	// Check directories
 	fmt.Println("-----> Checking directories...")
+
 	args = ss.buildSSHArgs(`test -d /opt/gokku && echo 'OK' || echo 'FAIL'`)
 	dirsCmd := exec.Command("ssh", args...)
 	dirsOutput, err := dirsCmd.Output()
+
 	if err == nil {
 		dirsStatus := strings.TrimSpace(string(dirsOutput))
 		if dirsStatus == "OK" {
@@ -347,6 +352,7 @@ func (ss *ServerSetup) verifySetup() error {
 func (ss *ServerSetup) createDefaultRemote() error {
 	// Check if remote "gokku" already exists
 	checkCmd := exec.Command("git", "remote", "get-url", "gokku")
+
 	if err := checkCmd.Run(); err == nil {
 		// Remote already exists, skip
 		return nil

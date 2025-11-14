@@ -263,6 +263,7 @@ func handleAppsCreate(args []string) {
 	fmt.Println("")
 	fmt.Println("Next steps:")
 	fmt.Println("  1. Make sure your gokku.yml and Dockerfile are committed")
+
 	if remote == "gokku" {
 		fmt.Printf("  2. Add remote for deployment: gokku remote add %s %s\n", actualAppName, remoteInfo.Host)
 		fmt.Printf("  3. Deploy with: git push %s main\n", actualAppName)

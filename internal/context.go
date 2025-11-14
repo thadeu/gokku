@@ -35,9 +35,11 @@ func NewExecutionContext(appName string) (*ExecutionContext, error) {
 		if appName != "" {
 			// Client mode with app - use git remote
 			remoteInfo, err := GetRemoteInfo(appName)
+
 			if err != nil {
 				return nil, fmt.Errorf("failed to get remote info: %v", err)
 			}
+
 			ctx.RemoteInfo = remoteInfo
 			ctx.Host = remoteInfo.Host
 			ctx.BaseDir = remoteInfo.BaseDir
@@ -64,6 +66,7 @@ func (ctx *ExecutionContext) ValidateAppRequired() error {
 			return fmt.Errorf("server mode requires -a flag to specify app")
 		}
 	}
+
 	return nil
 }
 
@@ -72,6 +75,7 @@ func (ctx *ExecutionContext) GetAppName() string {
 	if ctx.Mode == "client" && ctx.RemoteInfo != nil {
 		return ctx.RemoteInfo.App
 	}
+
 	return ctx.AppName
 }
 

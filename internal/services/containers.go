@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"gokku/internal"
-	"gokku/internal/containers"
 )
 
 // ContainerService provides operations for managing containers
@@ -101,114 +100,6 @@ func (s *ContainerService) GetContainerInfo(name string) (*internal.ContainerInf
 	return nil, &ContainerNotFoundError{ContainerName: name}
 }
 
-// ScaleProcesses scales app processes
-func (s *ContainerService) ScaleProcesses(appName string, scales map[string]int) error {
-	registry := containers.NewContainerRegistry()
-
-	for processType, count := range scales {
-		// Get current containers
-		currentContainers, err := registry.GetContainers(appName, processType)
-		if err != nil {
-			return fmt.Errorf("failed to get current containers for %s: %w", processType, err)
-		}
-
-		currentCount := len(currentContainers)
-
-		if count > currentCount {
-			// Scale up
-			if err := s.scaleUp(appName, processType, count-currentCount, registry); err != nil {
-				return fmt.Errorf("failed to scale up %s: %w", processType, err)
-			}
-		} else if count < currentCount {
-			// Scale down
-			if err := s.scaleDown(appName, processType, currentCount-count, registry); err != nil {
-				return fmt.Errorf("failed to scale down %s: %w", processType, err)
-			}
-		}
-	}
-
-	return nil
-}
-
-// scaleUp creates new containers
-func (s *ContainerService) scaleUp(appName, processType string, count int, registry *containers.ContainerRegistry) error {
-	for i := 0; i < count; i++ {
-		containerNum := registry.GetNextContainerNumber(appName, processType)
-		containerName := fmt.Sprintf("%s-%s-%d", appName, processType, containerNum)
-
-		hostPort, err := containers.GetNextAvailablePort()
-		if err != nil {
-			return fmt.Errorf("failed to get port for %s: %w", containerName, err)
-		}
-
-		// Check if app image exists
-		appImage := fmt.Sprintf("%s:latest", appName)
-		if !s.imageExists(appImage) {
-			return fmt.Errorf("image %s not found, deploy the app first", appImage)
-		}
-
-		// Create container
-		envFile := fmt.Sprintf("%s/apps/%s/shared/.env", s.baseDir, appName)
-		if err := s.createContainer(containerName, appImage, envFile, hostPort); err != nil {
-			return fmt.Errorf("failed to create container %s: %w", containerName, err)
-		}
-
-		// Save container info
-		info := containers.CreateContainerInfo(appName, processType, containerNum, hostPort, hostPort)
-		if err := registry.SaveContainerInfo(info); err != nil {
-			return fmt.Errorf("failed to save container info: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// scaleDown removes containers
-func (s *ContainerService) scaleDown(appName, processType string, count int, registry *containers.ContainerRegistry) error {
-	containerList, err := registry.GetContainers(appName, processType)
-	if err != nil {
-		return fmt.Errorf("failed to get containers: %w", err)
-	}
-
-	// Remove last N containers (highest numbers first)
-	toRemove := count
-	if toRemove > len(containerList) {
-		toRemove = len(containerList)
-	}
-
-	for i := len(containerList) - toRemove; i < len(containerList); i++ {
-		container := containerList[i]
-		containerName := container.Name
-
-		// Stop and remove container
-		if err := internal.StopContainer(containerName); err != nil {
-			return fmt.Errorf("failed to stop container %s: %w", containerName, err)
-		}
-
-		if err := internal.RemoveContainer(containerName, false); err != nil {
-			return fmt.Errorf("failed to remove container %s: %w", containerName, err)
-		}
-
-		// Remove container info
-		if err := registry.RemoveContainerInfo(appName, processType, container.Number); err != nil {
-			return fmt.Errorf("failed to remove container info: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// createContainer creates a Docker container
-func (s *ContainerService) createContainer(name, image, envFile string, port int) error {
-	return internal.CreateContainer(internal.ContainerConfig{
-		Name:          name,
-		Image:         image,
-		Ports:         []string{fmt.Sprintf("%d", port)},
-		EnvFile:       envFile,
-		RestartPolicy: "always",
-	})
-}
-
 // containsContainerName checks if container name contains the app name
 func containsContainerName(names, appName string) bool {
 	return strings.Contains(names, appName)
@@ -217,10 +108,4 @@ func containsContainerName(names, appName string) bool {
 // containsProcessType checks if container name contains the process type
 func containsProcessType(names, processType string) bool {
 	return strings.Contains(names, processType)
-}
-
-// imageExists checks if a Docker image exists
-func (s *ContainerService) imageExists(imageName string) bool {
-	cmd := exec.Command("docker", "image", "inspect", imageName)
-	return cmd.Run() == nil
 }

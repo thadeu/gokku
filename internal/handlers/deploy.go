@@ -33,10 +33,12 @@ func handleDeploy(args []string) {
 		} else {
 			// Client mode: -a flag means git remote
 			remoteInfo, err := internal.GetRemoteInfo(app)
+
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
+
 			appName = remoteInfo.App
 			remoteName = app
 			isDirectDeploy = false
@@ -58,6 +60,7 @@ func handleDeploy(args []string) {
 		// Check if repository exists and has commits
 		baseDir := "/opt/gokku"
 		reposDir := filepath.Join(baseDir, "repos", appName+".git")
+
 		if _, err := os.Stat(reposDir); os.IsNotExist(err) {
 			fmt.Printf("Error: Repository for app '%s' not found at %s\n", appName, reposDir)
 			fmt.Printf("Make sure the repository exists on the server.\n")
@@ -79,6 +82,7 @@ func handleDeploy(args []string) {
 			fmt.Printf("Deploy failed: %v\n", err)
 			os.Exit(1)
 		}
+
 		fmt.Println("\n✓ Deploy complete!")
 		return
 	}
@@ -89,6 +93,7 @@ func handleDeploy(args []string) {
 
 	// Check if remote exists
 	checkCmd := exec.Command("git", "remote", "get-url", remoteName)
+
 	if err := checkCmd.Run(); err != nil {
 		fmt.Printf("Error: git remote '%s' not found\n", remoteName)
 		fmt.Println("\nAdd it with:")
@@ -98,6 +103,7 @@ func handleDeploy(args []string) {
 
 	// Get remote info for auto-setup
 	remoteInfo, err := internal.GetRemoteInfo(remoteName)
+
 	if err != nil {
 		fmt.Printf("Warning: Could not parse remote info: %v\n", err)
 		fmt.Println("Proceeding without auto-setup...")
@@ -128,6 +134,7 @@ func handleDeploy(args []string) {
 			fmt.Printf("\nDeploy interrupted by user\n")
 			os.Exit(0)
 		}
+
 		fmt.Printf("\nDeploy failed: %v\n", err)
 		os.Exit(1)
 	}
@@ -162,6 +169,7 @@ func executeDirectDeployment(appName string) error {
 	releaseDir := filepath.Join(appDir, "releases", releaseTag)
 
 	fmt.Printf("-----> Creating release: %s\n", releaseTag)
+
 	if err := os.MkdirAll(releaseDir, 0755); err != nil {
 		return fmt.Errorf("failed to create release directory: %v", err)
 	}
@@ -312,23 +320,28 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 	fmt.Println("-----> Reading app configuration...")
 	tmpCmd := exec.Command("git", "--git-dir", repoDir, "show", "HEAD:gokku.yml")
 	gokkuYmlContent, err := tmpCmd.Output()
+
 	if err != nil {
 		// No gokku.yml in repo, do full checkout
 		fmt.Println("-----> No gokku.yml found, extracting full repository...")
 		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
 		output, err := cmd.CombinedOutput()
+
 		if err != nil {
 			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
 		}
+
 		return nil
 	}
 
 	// Parse config directly from the extracted content
 	var serverConfig internal.ServerConfig
+
 	if err := yaml.Unmarshal(gokkuYmlContent, &serverConfig); err != nil {
 		fmt.Printf("-----> Error parsing app config: %v, extracting full repository...\n", err)
 		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
 		output, err := cmd.CombinedOutput()
+
 		if err != nil {
 			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
 		}
@@ -345,24 +358,26 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 		fmt.Printf("-----> App '%s' not found in config, extracting full repository...\n", appName)
 		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
 		output, err := cmd.CombinedOutput()
+
 		if err != nil {
 			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
 		}
+
 		return nil
 	}
 
 	if app.WorkDir == "" {
 		// No workdir specified, do full checkout
 		fmt.Println("-----> No workdir specified, extracting full repository...")
+
 		os.RemoveAll(releaseDir) // Clean temp files
 		os.MkdirAll(releaseDir, 0755)
 		cmd := exec.Command("git", "--git-dir", repoDir, "--work-tree", releaseDir, "checkout", "-f", "HEAD")
 		output, err := cmd.CombinedOutput()
+
 		if err != nil {
 			return fmt.Errorf("git checkout failed: %v, output: %s", err, string(output))
 		}
-
-		// Initial setup is now handled in executeDirectDeployment
 
 		return nil
 	}
@@ -384,6 +399,7 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 
 	// Pipe git archive output to tar
 	pipe, err := archiveCmd.StdoutPipe()
+
 	if err != nil {
 		return fmt.Errorf("failed to create pipe: %v", err)
 	}
@@ -430,6 +446,7 @@ func handleInitialSetup(appName string, gokkuYmlPath, releaseDir string) error {
 
 	// Copy gokku.yml to app-specific config location
 	appConfigPath := filepath.Join("/opt/gokku", "apps", appName, "gokku.yml")
+
 	if err := copyFile(gokkuYmlPath, appConfigPath); err != nil {
 		return fmt.Errorf("failed to copy gokku.yml to app config: %v", err)
 	}
@@ -448,9 +465,11 @@ func handleInitialSetup(appName string, gokkuYmlPath, releaseDir string) error {
 // copyFile copies a file from src to dst
 func copyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
+
 	if err != nil {
 		return err
 	}
+
 	defer sourceFile.Close()
 
 	// Create destination directory if it doesn't exist
@@ -459,18 +478,22 @@ func copyFile(src, dst string) error {
 	}
 
 	destFile, err := os.Create(dst)
+
 	if err != nil {
 		return err
 	}
+
 	defer destFile.Close()
 
 	_, err = io.Copy(destFile, sourceFile)
+
 	if err != nil {
 		return err
 	}
 
 	// Copy permissions
 	sourceInfo, err := os.Stat(src)
+
 	if err != nil {
 		return err
 	}

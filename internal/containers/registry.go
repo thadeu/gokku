@@ -7,8 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -260,24 +258,4 @@ func CreateContainerInfo(appName, processType string, number int, hostPort, inte
 		Status:       "running",
 		CreatedAt:    time.Now().Format(time.RFC3339),
 	}
-}
-
-// ParseScaleArgument parses scale arguments like "web=4" or "worker=2"
-func ParseScaleArgument(arg string) (processType string, count int, err error) {
-	parts := strings.Split(arg, "=")
-	if len(parts) != 2 {
-		return "", 0, fmt.Errorf("invalid scale format: %s (expected: process=count)", arg)
-	}
-
-	processType = parts[0]
-	count, err = strconv.Atoi(parts[1])
-	if err != nil {
-		return "", 0, fmt.Errorf("invalid count: %s", parts[1])
-	}
-
-	if count < 0 {
-		return "", 0, fmt.Errorf("count must be non-negative: %d", count)
-	}
-
-	return processType, count, nil
 }

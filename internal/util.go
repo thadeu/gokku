@@ -319,6 +319,7 @@ func GetCustomRegistries(appName string) []string {
 func DetectRubyVersion(releaseDir string) string {
 	// Try .ruby-version first
 	rubyVersionPath := filepath.Join(releaseDir, ".ruby-version")
+
 	if data, err := os.ReadFile(rubyVersionPath); err == nil {
 		version := strings.TrimSpace(string(data))
 		if version != "" {
@@ -328,11 +329,14 @@ func DetectRubyVersion(releaseDir string) string {
 
 	// Try Gemfile
 	gemfilePath := filepath.Join(releaseDir, "Gemfile")
+
 	if data, err := os.ReadFile(gemfilePath); err == nil {
 		content := string(data)
+
 		// Look for ruby version in Gemfile
 		re := regexp.MustCompile(`ruby\s+["']([^"']+)["']`)
 		matches := re.FindStringSubmatch(content)
+
 		if len(matches) > 1 {
 			version := matches[1]
 			// Convert version format (e.g., "3.1" -> "3.1")
@@ -347,8 +351,10 @@ func DetectRubyVersion(releaseDir string) string {
 // DetectGoVersion detects Go version from go.mod
 func DetectGoVersion(releaseDir string) string {
 	goModPath := filepath.Join(releaseDir, "go.mod")
+
 	if data, err := os.ReadFile(goModPath); err == nil {
 		content := string(data)
+
 		// Look for go version in go.mod
 		re := regexp.MustCompile(`go\s+(\d+\.\d+)`)
 		matches := re.FindStringSubmatch(content)
@@ -367,8 +373,10 @@ func DetectGoVersion(releaseDir string) string {
 func DetectNodeVersion(releaseDir string) string {
 	// Try .nvmrc first
 	nvmrcPath := filepath.Join(releaseDir, ".nvmrc")
+
 	if data, err := os.ReadFile(nvmrcPath); err == nil {
 		version := strings.TrimSpace(string(data))
+
 		if version != "" {
 			// Remove 'v' prefix if present
 			version = strings.TrimPrefix(version, "v")
@@ -378,15 +386,19 @@ func DetectNodeVersion(releaseDir string) string {
 
 	// Try package.json
 	packageJsonPath := filepath.Join(releaseDir, "package.json")
+
 	if data, err := os.ReadFile(packageJsonPath); err == nil {
 		content := string(data)
+
 		// Look for engines.node in package.json
 		re := regexp.MustCompile(`"engines"\s*:\s*{[^}]*"node"\s*:\s*"([^"]+)"`)
 		matches := re.FindStringSubmatch(content)
+
 		if len(matches) > 1 {
 			version := matches[1]
 			// Remove version constraints (e.g., ">=18.0.0" -> "18")
 			re2 := regexp.MustCompile(`(\d+)`)
+
 			if versionMatch := re2.FindStringSubmatch(version); len(versionMatch) > 1 {
 				return fmt.Sprintf("node:%s", versionMatch[1])
 			}
@@ -464,6 +476,7 @@ func RunDockerBuildWithTimeout(cmd *exec.Cmd, timeoutMinutes int) error {
 			// Log progress every 30 seconds
 			elapsed := time.Since(buildStartTime)
 			remaining := timeout - elapsed
+
 			if remaining > 0 {
 				fmt.Printf("-----> Build still running... (elapsed: %s, remaining: %s)\n", elapsed.Round(time.Second), remaining.Round(time.Second))
 			}
@@ -486,4 +499,64 @@ func ExtractIdentityFlag(args []string) (string, []string) {
 	}
 
 	return identity, remaining
+}
+
+// LoadEnvFile loads environment variables from a file
+func LoadEnvFile(envFile string) map[string]string {
+	envVars := make(map[string]string)
+
+	content, err := os.ReadFile(envFile)
+
+	if err != nil {
+		if os.IsNotExist(err) {
+			return envVars // Return empty map if file doesn't exist
+		}
+
+		fmt.Printf("Error reading file: %v\n", err)
+		os.Exit(1)
+	}
+
+	lines := strings.Split(string(content), "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		parts := strings.SplitN(line, "=", 2)
+
+		if len(parts) == 2 {
+			envVars[parts[0]] = parts[1]
+		}
+	}
+
+	return envVars
+}
+
+// SaveEnvFile saves environment variables to a file
+func SaveEnvFile(envFile string, envVars map[string]string) error {
+	// Sort keys
+	keys := make([]string, 0, len(envVars))
+
+	for k := range envVars {
+		keys = append(keys, k)
+	}
+
+	for i := 0; i < len(keys); i++ {
+		for j := i + 1; j < len(keys); j++ {
+			if keys[i] > keys[j] {
+				keys[i], keys[j] = keys[j], keys[i]
+			}
+		}
+	}
+
+	var content strings.Builder
+
+	for _, key := range keys {
+		content.WriteString(fmt.Sprintf("%s=%s\n", key, envVars[key]))
+	}
+
+	return os.WriteFile(envFile, []byte(content.String()), 0600)
 }
