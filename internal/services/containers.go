@@ -84,7 +84,6 @@ func (s *ContainerService) StartContainer(name string) error {
 	return nil
 }
 
-// GetContainerInfo gets information about a specific container
 func (s *ContainerService) GetContainerInfo(name string) (*internal.ContainerInfo, error) {
 	containers, err := internal.ListContainers(true)
 	if err != nil {

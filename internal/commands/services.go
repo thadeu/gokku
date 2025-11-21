@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 )
 
 // handleServices manages service-related commands
-func handleServices(args []string) {
+func useServices(args []string) {
 	if len(args) == 0 {
 		showServicesHelp()
 		return

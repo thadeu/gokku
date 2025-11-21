@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"fmt"
@@ -9,8 +9,7 @@ import (
 	"gokku/internal/services"
 )
 
-// handleConfigWithContext manages environment variable configuration using context
-func handleConfigWithContext(ctx *internal.ExecutionContext, args []string) {
+func useConfigWithContext(ctx *internal.ExecutionContext, args []string) {
 	if len(args) < 1 {
 		fmt.Println("Usage: gokku config <set|get|list|unset> [KEY[=VALUE]] [options]")
 		fmt.Println("")
@@ -28,14 +27,12 @@ func handleConfigWithContext(ctx *internal.ExecutionContext, args []string) {
 		os.Exit(1)
 	}
 
-	// Validate context is not nil
 	if ctx == nil {
 		fmt.Println("Error: Execution context is required")
 		fmt.Println("Usage: gokku config <set|get|list|unset> [args...] -a <app>")
 		os.Exit(1)
 	}
 
-	// Validate that app is required
 	if err := ctx.ValidateAppRequired(); err != nil {
 		ctx.PrintUsageError("config", err.Error())
 	}
@@ -50,17 +47,13 @@ func handleConfigWithContext(ctx *internal.ExecutionContext, args []string) {
 
 	subcommand := remainingArgs[0]
 
-	// Check if we're running locally on server or remotely
 	if ctx.ServerExecution {
-		// Server mode - use internal functions directly
 		executeAsServerMode(ctx, subcommand, remainingArgs[1:])
 	} else {
-		// Client mode - execute command on remote server
 		executeAsClientMode(ctx, subcommand, remainingArgs[1:])
 	}
 }
 
-// handleexecuteAsServerMode handles config commands when running on server
 func executeAsServerMode(ctx *internal.ExecutionContext, subcommand string, args []string) {
 	appName := ctx.GetAppName()
 	configService := services.NewConfigService(ctx.BaseDir)
@@ -164,9 +157,7 @@ func executeAsServerMode(ctx *internal.ExecutionContext, subcommand string, args
 	}
 }
 
-// executeAsClientMode handles config commands when running from client
 func executeAsClientMode(ctx *internal.ExecutionContext, subcommand string, args []string) {
-	// Build command to execute
 	var cmd string
 
 	if subcommand == "" {
@@ -212,10 +203,8 @@ func executeAsClientMode(ctx *internal.ExecutionContext, subcommand string, args
 		os.Exit(1)
 	}
 
-	// Print connection info for remote execution
 	ctx.PrintConnectionInfo()
 
-	// Execute command (server will handle restart automatically for set/unset)
 	if err := ctx.ExecuteCommand(cmd); err != nil {
 		os.Exit(1)
 	}

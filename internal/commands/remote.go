@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"fmt"
@@ -9,8 +9,7 @@ import (
 	"gokku/internal/services"
 )
 
-// handleRemote manages git remote commands
-func handleRemote(args []string) {
+func useRemote(args []string) {
 	if len(args) < 1 {
 		printRemoteHelp()
 		os.Exit(1)
@@ -44,7 +43,6 @@ func handleRemote(args []string) {
 	}
 }
 
-// handleRemoteAdd adds a new git remote
 func handleRemoteAdd(args []string) {
 	if len(args) < 2 {
 		fmt.Println("Usage: gokku remote add <label> <remote_app_name[optional]> <user@server_ip>")

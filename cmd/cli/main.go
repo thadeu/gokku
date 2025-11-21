@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"gokku/internal"
-	"gokku/internal/handlers"
+	"gokku/internal/commands"
 )
 
 const version = "1.0.112"
@@ -50,84 +50,84 @@ func main() {
 
 	if strings.HasPrefix(command, "ps:") {
 		subcommand := strings.TrimPrefix(command, "ps:")
-		handlers.HandlePS(append([]string{subcommand}, os.Args[2:]...))
+		commands.Processes(append([]string{subcommand}, os.Args[2:]...))
 		return
 	}
 
 	if strings.HasPrefix(command, "plugin:") {
 		subcommand := strings.TrimPrefix(command, "plugin:")
-		handlers.HandlePlugins(append([]string{subcommand}, os.Args[2:]...))
+		commands.Plugins(append([]string{subcommand}, os.Args[2:]...))
 		return
 	}
 
 	if strings.HasPrefix(command, "plugins:") {
 		subcommand := strings.TrimPrefix(command, "plugins:")
-		handlers.HandlePlugins(append([]string{subcommand}, os.Args[2:]...))
+		commands.Plugins(append([]string{subcommand}, os.Args[2:]...))
 		return
 	}
 
 	if strings.HasPrefix(command, "service:") {
 		subcommand := strings.TrimPrefix(command, "service:")
-		handlers.HandleServices(append([]string{subcommand}, os.Args[2:]...))
+		commands.Services(append([]string{subcommand}, os.Args[2:]...))
 		return
 	}
 
 	if strings.HasPrefix(command, "services:") {
 		subcommand := strings.TrimPrefix(command, "services:")
-		handlers.HandleServices(append([]string{subcommand}, os.Args[2:]...))
+		commands.Services(append([]string{subcommand}, os.Args[2:]...))
 		return
 	}
 
 	if strings.HasPrefix(command, "config:") {
 		subcommand := strings.TrimPrefix(command, "config:")
-		handlers.HandleConfigWithContext(ctx, append([]string{subcommand}, os.Args[2:]...))
+		commands.ConfigWithContext(ctx, append([]string{subcommand}, os.Args[2:]...))
 		return
 	}
 
 	if strings.HasPrefix(command, "apps:") {
 		subcommand := strings.TrimPrefix(command, "apps:")
-		handlers.HandleApps(append([]string{subcommand}, os.Args[2:]...))
+		commands.Apps(append([]string{subcommand}, os.Args[2:]...))
 		return
 	}
 
 	if strings.HasPrefix(command, "remote:") {
 		subcommand := strings.TrimPrefix(command, "remote:")
-		handlers.HandleRemote(append([]string{subcommand}, os.Args[2:]...))
+		commands.Remote(append([]string{subcommand}, os.Args[2:]...))
 		return
 	}
 
 	// Execute command with panic recovery
 	switch command {
 	case "apps":
-		handlers.HandleApps(args)
+		commands.Apps(args)
 	case "config":
-		handlers.HandleConfigWithContext(ctx, args)
+		commands.ConfigWithContext(ctx, args)
 	case "run":
-		handlers.HandleRunWithContext(ctx, args)
+		commands.RunWithContext(ctx, args)
 	case "logs":
-		handlers.HandleLogsWithContext(ctx, args)
+		commands.LogsWithContext(ctx, args)
 	case "status":
-		handlers.HandleStatusWithContext(ctx, args)
+		commands.StatusWithContext(ctx, args)
 	case "restart":
-		handlers.HandleRestartWithContext(ctx, args)
+		commands.RestartWithContext(ctx, args)
 	case "deploy":
-		handlers.HandleDeploy(args)
+		commands.Deploy(args)
 	case "rollback":
-		handlers.HandleRollbackWithContext(ctx, args)
+		commands.RollbackWithContext(ctx, args)
 	case "remote":
-		handlers.HandleRemote(args)
+		commands.Remote(args)
 	case "tool":
-		handlers.HandleTool(os.Args[2:])
+		commands.Tool(os.Args[2:])
 	case "plugins":
-		handlers.HandlePlugins(os.Args[2:])
+		commands.Plugins(os.Args[2:])
 	case "services":
-		handlers.HandleServices(os.Args[2:])
+		commands.Services(os.Args[2:])
 	case "ps":
-		handlers.HandlePS(os.Args[2:])
+		commands.Processes(os.Args[2:])
 	case "au", "update", "auto-update":
-		handlers.HandleAutoUpdate(os.Args[2:])
+		commands.AutoUpdate(os.Args[2:])
 	case "uninstall":
-		handlers.HandleUninstall(os.Args[2:])
+		commands.Uninstall(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Printf("gokku version %s\n", version)
 	case "help", "--help", "-h":
@@ -154,12 +154,12 @@ func main() {
 		// Check if it's a plugin command (format: plugin:command)
 		if strings.Contains(command, ":") {
 			// Pass the full command to plugin handler
-			handlers.HandlePlugins(os.Args[1:])
+			commands.Plugins(os.Args[1:])
 		} else {
 			// Check if it's an installed plugin and show help
-			if handlers.IsPluginInstalled(command) {
+			if commands.IsPluginInstalled(command) {
 				// Show plugin help by default
-				handlers.HandlePlugins([]string{command + ":help"})
+				commands.Plugins([]string{command + ":help"})
 			} else {
 				fmt.Printf("Unknown command: %s\n", command)
 				fmt.Println("Run 'gokku --help' for usage")

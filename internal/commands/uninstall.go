@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 )
 
 // handleUninstall removes Gokku installation
-func handleUninstall(args []string) {
+func useUninstall(args []string) {
 	// Check if running on server or client
 	isServerMode := internal.IsServerMode()
 

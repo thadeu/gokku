@@ -130,6 +130,7 @@ func (s *ContainerServiceTestSuite) TestListContainers_WithAllFlag() {
 
 func (s *ContainerServiceTestSuite) TestGetContainerInfo_WhenContainerNotFound() {
 	_, err := s.service.GetContainerInfo("non-existent-container-12345")
+
 	Expect(err).ToNot(BeNil())
 	Expect(err).To(BeAssignableToTypeOf(&ContainerNotFoundError{}))
 

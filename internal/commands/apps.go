@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"fmt"
@@ -13,9 +13,7 @@ import (
 	"gokku/tui"
 )
 
-// handleApps manages applications on the server
-func handleApps(args []string) {
-	// Check if we have a subcommand
+func useApps(args []string) {
 	if len(args) < 1 {
 		fmt.Println("Usage: gokku apps <command> [options]")
 		fmt.Println("")
@@ -32,13 +30,15 @@ func handleApps(args []string) {
 
 	// Special handling for destroy command - it needs to manage --remote flag itself
 	subcommand := args[0]
+
 	if subcommand == "destroy" || subcommand == "rm" {
-		handleAppsDestroy(args[1:])
+		destroyApp(args[1:])
 		return
 	}
 
 	// For other commands, extract --remote flag first
 	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -48,11 +48,13 @@ func handleApps(args []string) {
 		// Only --remote provided or no args, show help or list apps
 		if remoteInfo != nil {
 			cmd := "gokku apps list"
+
 			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 				os.Exit(1)
 			}
 			return
 		}
+
 		fmt.Println("Usage: gokku apps <command> [options]")
 		fmt.Println("")
 		fmt.Println("Commands:")
@@ -82,9 +84,9 @@ func handleApps(args []string) {
 
 	switch subcommand {
 	case "list", "ls":
-		handleAppsList(remainingArgs[1:])
+		listAll(remainingArgs[1:])
 	case "create":
-		handleAppsCreate(remainingArgs[1:])
+		createApp(remainingArgs[1:])
 	default:
 		fmt.Println("Usage: gokku apps <command> [options]")
 		fmt.Println("")
@@ -101,8 +103,8 @@ func handleApps(args []string) {
 	_ = remoteInfo // handled in individual functions if needed
 }
 
-// handleAppsList lists applications on the server
-func handleAppsList(args []string) {
+// listAll lists applications on the server
+func listAll(args []string) {
 	// Get remote info (or nil if server mode)
 	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
 	if err != nil {
@@ -154,8 +156,8 @@ func renderAppsTable(apps []services.AppInfo) {
 	fmt.Print(table.Render())
 }
 
-// handleAppsCreate creates an application and sets up deployment
-func handleAppsCreate(args []string) {
+// createApp creates an application and sets up deployment
+func createApp(args []string) {
 	remote, remainingArgs := internal.ExtractRemoteFlag(args)
 
 	if len(remainingArgs) < 1 {
@@ -273,8 +275,8 @@ func handleAppsCreate(args []string) {
 	fmt.Println("     (This will automatically configure the app from your gokku.yml)")
 }
 
-// handleAppsDestroy destroys an application
-func handleAppsDestroy(args []string) {
+// destroyApp destroys an application
+func destroyApp(args []string) {
 	remote, remainingArgs := internal.ExtractRemoteFlag(args)
 
 	if len(remainingArgs) < 1 {

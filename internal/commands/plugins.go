@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"fmt"
@@ -12,16 +12,9 @@ import (
 	"gokku/tui"
 )
 
-// IsPluginInstalled checks if a plugin is installed
-func IsPluginInstalled(pluginName string) bool {
-	pm := plugins.NewPluginManager()
-	return pm.PluginExists(pluginName)
-}
-
-// handlePlugins manages plugin-related commands
-func handlePlugins(args []string) {
+func usePlugins(args []string) {
 	if len(args) == 0 {
-		showPluginHelp()
+		showHelp()
 		return
 	}
 
@@ -44,7 +37,8 @@ func handlePlugins(args []string) {
 
 			return
 		}
-		showPluginHelp()
+
+		showHelp()
 		return
 	}
 
@@ -62,35 +56,37 @@ func handlePlugins(args []string) {
 	// Check if subcommand is a flag (like --remote that wasn't caught)
 	if strings.HasPrefix(subcommand, "--") && subcommand != "--help" && subcommand != "--remote" {
 		fmt.Printf("Unknown plugin command: %s\n", subcommand)
-		showPluginHelp()
+		showHelp()
 		os.Exit(1)
 	}
 
 	switch subcommand {
 	case "list", "ls":
-		handlePluginsList(remainingArgs[1:], remoteInfo)
+		list(remainingArgs[1:], remoteInfo)
 	case "add", "install":
-		handlePluginsAdd(remainingArgs[1:], remoteInfo)
+		add(remainingArgs[1:], remoteInfo)
 	case "update":
-		handlePluginsUpdate(remainingArgs[1:], remoteInfo)
+		update(remainingArgs[1:], remoteInfo)
 	case "remove":
-		handlePluginsRemove(remainingArgs[1:], remoteInfo)
+		remove(remainingArgs[1:], remoteInfo)
 	default:
-		// Try to execute as plugin command
 		if remoteInfo != nil {
 			// Execute plugin command remotely
 			cmd := fmt.Sprintf("gokku plugins %s", strings.Join(remainingArgs, " "))
+
 			if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 				os.Exit(1)
 			}
+
 			return
 		}
-		handlePluginCommand(remainingArgs)
+
+		wildcard(remainingArgs)
 	}
 }
 
-// handlePluginsList lists all installed plugins
-func handlePluginsList(args []string, remoteInfo *internal.RemoteInfo) {
+// lists all installed plugins
+func list(args []string, remoteInfo *internal.RemoteInfo) {
 	if remoteInfo != nil {
 		// Client mode: execute remotely
 		cmd := "gokku plugins list"
@@ -129,8 +125,8 @@ func handlePluginsList(args []string, remoteInfo *internal.RemoteInfo) {
 	_ = args // unused for now
 }
 
-// handlePluginsAdd adds a new plugin from official repository or Git URL
-func handlePluginsAdd(args []string, remoteInfo *internal.RemoteInfo) {
+// adds a new plugin from official repository or Git URL
+func add(args []string, remoteInfo *internal.RemoteInfo) {
 	// Use args directly if remoteInfo is already set (from parent)
 	// The --remote flag was already extracted by handlePlugins
 	cleanArgs := args
@@ -228,8 +224,8 @@ func handlePluginsAdd(args []string, remoteInfo *internal.RemoteInfo) {
 	os.Exit(1)
 }
 
-// handlePluginsUpdate updates a plugin from its source repository
-func handlePluginsUpdate(args []string, remoteInfo *internal.RemoteInfo) {
+// updates a plugin from its source repository
+func update(args []string, remoteInfo *internal.RemoteInfo) {
 	// Use args directly if remoteInfo is already set (from parent)
 	cleanArgs := args
 	if remoteInfo == nil {
@@ -282,8 +278,8 @@ func handlePluginsUpdate(args []string, remoteInfo *internal.RemoteInfo) {
 	fmt.Printf("Plugin '%s' updated successfully\n", pluginName)
 }
 
-// handlePluginsRemove removes a plugin
-func handlePluginsRemove(args []string, remoteInfo *internal.RemoteInfo) {
+// removes a plugin
+func remove(args []string, remoteInfo *internal.RemoteInfo) {
 	// Use args directly if remoteInfo is already set (from parent)
 	cleanArgs := args
 	if remoteInfo == nil {
@@ -335,13 +331,15 @@ func handlePluginsRemove(args []string, remoteInfo *internal.RemoteInfo) {
 	fmt.Printf("Plugin '%s' removed successfully\n", pluginName)
 }
 
-// handlePluginCommand executes a plugin command
-func handlePluginCommand(args []string) {
+// runs a dynamic plugin command and subcommand
+func wildcard(args []string) {
 	// Parse: gokku postgres:export postgres-api
 	parts := strings.Split(args[0], ":")
+
 	if len(parts) != 2 {
 		fmt.Printf("Unknown command: %s\n", args[0])
-		showPluginHelp()
+		showHelp()
+
 		os.Exit(1)
 	}
 
@@ -394,8 +392,13 @@ func handlePluginCommand(args []string) {
 	})
 }
 
+func IsPluginInstalled(pluginName string) bool {
+	pm := plugins.NewPluginManager()
+	return pm.PluginExists(pluginName)
+}
+
 // showPluginHelp shows plugin help
-func showPluginHelp() {
+func showHelp() {
 	fmt.Println("Plugin management commands:")
 	fmt.Println("")
 	fmt.Println("  gokku plugins:list                    List all installed plugins")

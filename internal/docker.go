@@ -11,13 +11,10 @@ import (
 )
 
 const (
-	// GokkuLabelKey is the label key used to identify resources created by Gokku
-	GokkuLabelKey = "createdby"
-	// GokkuLabelValue is the label value used to identify resources created by Gokku
+	GokkuLabelKey   = "createdby"
 	GokkuLabelValue = "gokku"
 )
 
-// GetGokkuLabels returns the standard labels to identify Gokku resources
 func GetGokkuLabels() []string {
 	return []string{fmt.Sprintf("%s=%s", GokkuLabelKey, GokkuLabelValue)}
 }
@@ -33,7 +30,6 @@ type ContainerInfo struct {
 	Created string `json:"CreatedAt"`
 }
 
-// ContainerConfig represents configuration for creating a container
 type ContainerConfig struct {
 	Name          string
 	Image         string
@@ -46,7 +42,6 @@ type ContainerConfig struct {
 	Command       []string
 }
 
-// DeploymentConfig represents configuration for deployment
 type DeploymentConfig struct {
 	AppName       string
 	ImageTag      string
@@ -70,6 +65,7 @@ func ListContainers(all bool) ([]ContainerInfo, error) {
 
 	cmd := exec.Command("docker", args...)
 	output, err := cmd.Output()
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %v", err)
 	}

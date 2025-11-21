@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"fmt"
@@ -12,16 +12,15 @@ import (
 	"gokku/tui"
 )
 
-// HandlePS handles ps-related commands
-func HandlePS(args []string) {
+func useProcesses(args []string) {
 	if len(args) == 0 {
-		// List all containers when no arguments provided
 		listAllContainers()
 		return
 	}
 
-	// Check if --remote flag is present (new pattern)
+	// --remote flag
 	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)

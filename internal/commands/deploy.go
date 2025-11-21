@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"fmt"
@@ -15,8 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// handleDeploy deploys applications directly or via git push
-func handleDeploy(args []string) {
+func useDeploy(args []string) {
 	app, remainingArgs := internal.ExtractAppFlag(args)
 
 	var appName, remoteName string
@@ -188,7 +187,7 @@ func executeDirectDeployment(appName string) error {
 	if !appExists {
 		if _, err := os.Stat(releaseConfigPath); err == nil {
 			fmt.Println("-----> Initial setup detected - configuring application...")
-			if err := handleInitialSetup(appName, releaseConfigPath, releaseDir); err != nil {
+			if err := initialSetup(appName, releaseConfigPath, releaseDir); err != nil {
 				return fmt.Errorf("failed to setup initial configuration: %v", err)
 			}
 		} else {
@@ -432,8 +431,8 @@ func extractCodeFromRepo(appName string, repoDir, releaseDir string) error {
 	return nil
 }
 
-// handleInitialSetup handles the initial setup when gokku.yml is found in the project
-func handleInitialSetup(appName string, gokkuYmlPath, releaseDir string) error {
+// initialSetup handles the initial setup when gokku.yml is found in the project
+func initialSetup(appName string, gokkuYmlPath, releaseDir string) error {
 	fmt.Println("-----> Initial setup detected - configuring application...")
 
 	// Create app directories

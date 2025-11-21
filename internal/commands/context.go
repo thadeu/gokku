@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"fmt"
@@ -9,9 +9,7 @@ import (
 	"gokku/internal"
 )
 
-// handleLogsWithContext shows application logs using context
-func handleLogsWithContext(ctx *internal.ExecutionContext, args []string) {
-	// Validate that app is required
+func useLogsWithContext(ctx *internal.ExecutionContext, args []string) {
 	if err := ctx.ValidateAppRequired(); err != nil {
 		ctx.PrintUsageError("logs", err.Error())
 	}
@@ -21,6 +19,7 @@ func handleLogsWithContext(ctx *internal.ExecutionContext, args []string) {
 
 	// Check for -f flag
 	follow := false
+
 	for _, arg := range remainingArgs {
 		if arg == "-f" {
 			follow = true
@@ -35,22 +34,16 @@ func handleLogsWithContext(ctx *internal.ExecutionContext, args []string) {
 		followFlag = "-f"
 	}
 
-	// Print connection info for remote execution
 	ctx.PrintConnectionInfo()
 
-	// Check if we're running locally on server or remotely
 	if ctx.ServerExecution {
-		// Server mode - execute docker logs directly
-		handleLogsServerMode(ctx, serviceName, followFlag, follow)
+		useLogsServerMode(serviceName, follow)
 	} else {
-		// Client mode - execute via SSH with proper signal handling
-		handleLogsClientMode(ctx, serviceName, followFlag, follow)
+		useLogsClientMode(ctx, serviceName, followFlag)
 	}
 }
 
-// handleLogsServerMode handles logs when running on server
-func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFlag string, follow bool) {
-	// Check if container exists
+func useLogsServerMode(serviceName string, follow bool) {
 	checkCmd := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}")
 	output, err := checkCmd.Output()
 
@@ -73,7 +66,6 @@ func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFla
 		os.Exit(1)
 	}
 
-	// Execute docker logs directly on server
 	var cmd *exec.Cmd
 
 	if follow {
@@ -102,9 +94,7 @@ func handleLogsServerMode(ctx *internal.ExecutionContext, serviceName, followFla
 	}
 }
 
-// handleLogsClientMode handles logs when running from client
-func handleLogsClientMode(ctx *internal.ExecutionContext, serviceName, followFlag string, follow bool) {
-	// Execute via SSH
+func useLogsClientMode(ctx *internal.ExecutionContext, serviceName, followFlag string) {
 	sshCmd := fmt.Sprintf(`
   if docker ps | grep -q %s; then
     docker logs %s %s
@@ -115,17 +105,16 @@ func handleLogsClientMode(ctx *internal.ExecutionContext, serviceName, followFla
 `, serviceName, serviceName, followFlag, serviceName)
 
 	cmd := exec.Command("ssh", "-t", ctx.Host, sshCmd)
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
+
 	cmd.Run()
 }
 
-// handleStatusWithContext shows service/container status using context
-func handleStatusWithContext(ctx *internal.ExecutionContext, args []string) {
-	// Handle all services status (no specific app)
+func useStatusWithContext(ctx *internal.ExecutionContext, args []string) {
 	if ctx.AppName == "" {
-		// Show all services
 		dockerCmd := `docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"`
 
 		if ctx.ServerExecution {
@@ -140,7 +129,6 @@ func handleStatusWithContext(ctx *internal.ExecutionContext, args []string) {
 		return
 	}
 
-	// Handle specific app status
 	serviceName := ctx.GetAppName()
 
 	// Print connection info for remote execution
@@ -162,8 +150,7 @@ func handleStatusWithContext(ctx *internal.ExecutionContext, args []string) {
 	}
 }
 
-// handleRestartWithContext restarts services/containers using context
-func handleRestartWithContext(ctx *internal.ExecutionContext, args []string) {
+func useRestartWithContext(ctx *internal.ExecutionContext, args []string) {
 	// Validate that app is required
 	if err := ctx.ValidateAppRequired(); err != nil {
 		ctx.PrintUsageError("restart", err.Error())
@@ -185,31 +172,7 @@ func handleRestartWithContext(ctx *internal.ExecutionContext, args []string) {
 	}
 }
 
-// executeRestartServerMode recreates container on server with updated environment
-func executeRestartServerMode(ctx *internal.ExecutionContext, appName string) {
-	envFile := fmt.Sprintf("%s/apps/%s/shared/.env", ctx.BaseDir, appName)
-	appDir := fmt.Sprintf("%s/apps/%s/current", ctx.BaseDir, appName)
-
-	// Use RecreateActiveContainer to properly reload env vars
-	if err := internal.RecreateActiveContainer(appName, envFile, appDir); err != nil {
-		fmt.Printf("Error restarting app: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-// executeRestartClientMode executes restart via SSH
-func executeRestartClientMode(ctx *internal.ExecutionContext, appName string) {
-	// Call gokku restart on the server (which will use RecreateActiveContainer)
-	restartCmd := fmt.Sprintf("gokku restart -a %s", appName)
-
-	if err := ctx.ExecuteCommand(restartCmd); err != nil {
-		fmt.Printf("Error restarting app: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-// handleRollbackWithContext rolls back to a previous release using context
-func handleRollbackWithContext(ctx *internal.ExecutionContext, args []string) {
+func useRollbackWithContext(ctx *internal.ExecutionContext, args []string) {
 	// Validate that app is required
 	if err := ctx.ValidateAppRequired(); err != nil {
 		ctx.PrintUsageError("rollback", err.Error())
@@ -269,8 +232,7 @@ func handleRollbackWithContext(ctx *internal.ExecutionContext, args []string) {
 	}
 }
 
-// handleRunWithContext executes arbitrary commands using context
-func handleRunWithContext(ctx *internal.ExecutionContext, args []string) {
+func useRunWithContext(ctx *internal.ExecutionContext, args []string) {
 	if err := ctx.ValidateAppRequired(); err != nil {
 		ctx.PrintUsageError("run", err.Error())
 	}
@@ -293,6 +255,25 @@ func handleRunWithContext(ctx *internal.ExecutionContext, args []string) {
 
 	// Execute command
 	if err := ctx.ExecuteCommand(dockerCommand); err != nil {
+		os.Exit(1)
+	}
+}
+
+func executeRestartServerMode(ctx *internal.ExecutionContext, appName string) {
+	envFile := fmt.Sprintf("%s/apps/%s/shared/.env", ctx.BaseDir, appName)
+	appDir := fmt.Sprintf("%s/apps/%s/current", ctx.BaseDir, appName)
+
+	if err := internal.RecreateActiveContainer(appName, envFile, appDir); err != nil {
+		fmt.Printf("Error restarting app: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func executeRestartClientMode(ctx *internal.ExecutionContext, appName string) {
+	restartCmd := fmt.Sprintf("gokku restart -a %s", appName)
+
+	if err := ctx.ExecuteCommand(restartCmd); err != nil {
+		fmt.Printf("Error restarting app: %v\n", err)
 		os.Exit(1)
 	}
 }

@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"gokku/internal"
 )
 
-func handleAutoUpdate(args []string) {
+func useAutoUpdate(args []string) {
 	command := "curl -fsSL https://gokku-vm.com/install | bash -s --"
 
 	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
@@ -51,5 +51,4 @@ func handleAutoUpdate(args []string) {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
-	_ = remainingArgs // unused for now
 }

@@ -1,4 +1,4 @@
-package handlers
+package commands
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"gokku/internal"
 )
 
-func handleTool(args []string) {
+func useTool(args []string) {
 	if len(args) == 0 {
 		fmt.Println("Usage: gokku tool <command> [args...]")
 		fmt.Println("Commands:")
