@@ -84,7 +84,7 @@ func useApps(args []string) {
 
 	switch subcommand {
 	case "list", "ls":
-		listAll(remainingArgs[1:])
+		listAllApps(remainingArgs[1:])
 	case "create":
 		createApp(remainingArgs[1:])
 	default:
@@ -104,7 +104,7 @@ func useApps(args []string) {
 }
 
 // listAll lists applications on the server
-func listAll(args []string) {
+func listAllApps(args []string) {
 	// Get remote info (or nil if server mode)
 	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
 	if err != nil {
