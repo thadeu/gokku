@@ -8,27 +8,27 @@ import (
 	"runtime"
 	"strings"
 
-	. "gokku/internal"
+	"gokku/internal"
 )
 
 type Golang struct {
-	app *App
+	app *internal.App
 }
 
-func (l *Golang) Build(appName string, app *App, releaseDir string) error {
+func (l *Golang) Build(appName string, app *internal.App, releaseDir string) error {
 	fmt.Println("-----> Building Go application...")
 
 	// Check if using pre-built image from registry
-	if app.Image != "" && IsRegistryImage(app.Image, GetCustomRegistries(appName)) {
+	if app.Image != "" && internal.IsRegistryImage(app.Image, internal.GetCustomRegistries(appName)) {
 		fmt.Println("-----> Using pre-built image from registry...")
 
 		// Pull the pre-built image
-		if err := PullRegistryImage(app.Image); err != nil {
+		if err := internal.PullRegistryImage(app.Image); err != nil {
 			return fmt.Errorf("failed to pull pre-built image: %v", err)
 		}
 
 		// Tag the image for the app
-		if err := TagImageForApp(app.Image, appName); err != nil {
+		if err := internal.TagImageForApp(app.Image, appName); err != nil {
 			return fmt.Errorf("failed to tag image: %v", err)
 		}
 
@@ -69,7 +69,7 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 		}
 
 		// Add Gokku labels to image
-		for _, label := range GetGokkuLabels() {
+		for _, label := range internal.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
 		}
 
@@ -78,7 +78,7 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "--progress=plain", "-t", imageTag, releaseDir)
 		// Add Gokku labels to image
-		for _, label := range GetGokkuLabels() {
+		for _, label := range internal.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
 		}
 	}
@@ -89,7 +89,7 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 	cmd.Stderr = os.Stderr
 
 	// Use timeout wrapper for build (default 60 minutes for Go builds)
-	if err := RunDockerBuildWithTimeout(cmd, 60); err != nil {
+	if err := internal.RunDockerBuildWithTimeout(cmd, 60); err != nil {
 		return err
 	}
 
@@ -97,7 +97,7 @@ func (l *Golang) Build(appName string, app *App, releaseDir string) error {
 	return nil
 }
 
-func (l *Golang) Deploy(appName string, app *App, releaseDir string) error {
+func (l *Golang) Deploy(appName string, app *internal.App, releaseDir string) error {
 	fmt.Println("-----> Deploying Go application...")
 
 	// Get environment file
@@ -117,7 +117,7 @@ func (l *Golang) Deploy(appName string, app *App, releaseDir string) error {
 		volumes = append(volumes, app.Volumes...)
 	}
 
-	return DeployContainer(DeploymentConfig{
+	return internal.DeployContainer(internal.DeploymentConfig{
 		AppName:     appName,
 		ImageTag:    "latest",
 		EnvFile:     envFile,
@@ -128,16 +128,16 @@ func (l *Golang) Deploy(appName string, app *App, releaseDir string) error {
 	})
 }
 
-func (l *Golang) Restart(appName string, app *App) error {
+func (l *Golang) Restart(appName string, app *internal.App) error {
 	fmt.Printf("-----> Restarting %s...\n", appName)
 
 	// Find active container
 	containerName := appName
-	if !ContainerExists(containerName) {
+	if !internal.ContainerExists(containerName) {
 		containerName = appName + "-green"
 	}
 
-	if !ContainerExists(containerName) {
+	if !internal.ContainerExists(containerName) {
 		return fmt.Errorf("no active container found for %s", appName)
 	}
 
@@ -146,7 +146,7 @@ func (l *Golang) Restart(appName string, app *App) error {
 	return cmd.Run()
 }
 
-func (l *Golang) Cleanup(appName string, app *App) error {
+func (l *Golang) Cleanup(appName string, app *internal.App) error {
 	fmt.Printf("-----> Cleaning up old releases for %s...\n", appName)
 
 	appDir := filepath.Join("/opt/gokku/apps", appName)
@@ -186,7 +186,7 @@ func (l *Golang) DetectLanguage(releaseDir string) (string, error) {
 	return "", fmt.Errorf("not a Go project")
 }
 
-func (l *Golang) EnsureDockerfile(releaseDir string, appName string, app *App) error {
+func (l *Golang) EnsureDockerfile(releaseDir string, appName string, app *internal.App) error {
 	fmt.Printf("-----> EnsureDockerfile called for app: %s\n", appName)
 
 	// Check if custom Dockerfile is specified
@@ -248,15 +248,15 @@ func (l *Golang) EnsureDockerfile(releaseDir string, appName string, app *App) e
 	return os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644)
 }
 
-func (l *Golang) GetDefaultConfig() *App {
-	return &App{
+func (l *Golang) GetDefaultConfig() *internal.App {
+	return &internal.App{
 		// Default configuration for Go apps
 		Path:    "",
 		WorkDir: ".",
 	}
 }
 
-func (l *Golang) generateDockerfile(build *App, appName string, app *App) string {
+func (l *Golang) generateDockerfile(build *internal.App, appName string, app *internal.App) string {
 	// Determine build path
 	buildPath := build.Path
 
@@ -271,7 +271,7 @@ func (l *Golang) generateDockerfile(build *App, appName string, app *App) string
 
 	if baseImage == "" {
 		// Try to detect Go version from go.mod
-		baseImage = DetectGoVersion(".")
+		baseImage = internal.DetectGoVersion(".")
 		fmt.Printf("-----> Detected Go version: %s\n", baseImage)
 	}
 
@@ -384,7 +384,7 @@ func (l *Golang) detectSystemArchitecture() (goos, goarch string) {
 }
 
 // getDockerBuildArgs returns build arguments for Docker build command
-func (l *Golang) getDockerBuildArgs(app *App) map[string]string {
+func (l *Golang) getDockerBuildArgs(app *internal.App) map[string]string {
 	// Detect system architecture
 	detectedGoos, detectedGoarch := l.detectSystemArchitecture()
 	fmt.Printf("-----> Detected system: %s/%s\n", detectedGoos, detectedGoarch)

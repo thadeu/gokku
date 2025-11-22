@@ -1,4 +1,4 @@
-package commands
+package v1
 
 import (
 	"fmt"
@@ -11,8 +11,25 @@ import (
 	"gokku/internal"
 )
 
+type RunUninstallCommand struct {
+	output  Output
+	baseDir string
+}
+
+func NewRunUninstallCommand(output Output) *RunUninstallCommand {
+	baseDir := os.Getenv("GOKKU_ROOT")
+	if baseDir == "" {
+		baseDir = "/opt/gokku"
+	}
+
+	return &RunUninstallCommand{
+		output:  output,
+		baseDir: baseDir,
+	}
+}
+
 // handleUninstall removes Gokku installation
-func useUninstall(args []string) {
+func (c *RunUninstallCommand) UseUninstall(args []string) {
 	// Check if running on server or client
 	isServerMode := internal.IsServerMode()
 
@@ -20,14 +37,14 @@ func useUninstall(args []string) {
 	fmt.Println("")
 
 	if isServerMode {
-		handleServerUninstall()
+		c.handleServerUninstall()
 	} else {
-		handleClientUninstall()
+		c.handleClientUninstall()
 	}
 }
 
 // handleServerUninstall removes Gokku from server
-func handleServerUninstall() {
+func (c *RunUninstallCommand) handleServerUninstall() {
 	fmt.Println("This will remove:")
 	fmt.Println("  - Gokku binary from /usr/local/bin/gokku")
 	fmt.Println("  - All applications in /opt/gokku/apps/")
@@ -64,7 +81,7 @@ func handleServerUninstall() {
 
 	// Also remove containers from /opt/gokku/apps (by name)
 	fmt.Println("-----> Stopping and removing application containers...")
-	if appsDir := filepath.Join(baseDir, "apps"); filepathExists(appsDir) {
+	if appsDir := filepath.Join(baseDir, "apps"); c.filepathExists(appsDir) {
 		apps, _ := filepath.Glob(filepath.Join(appsDir, "*"))
 		for _, appDir := range apps {
 			appName := filepath.Base(appDir)
@@ -79,7 +96,7 @@ func handleServerUninstall() {
 
 	// Remove service containers from /opt/gokku/services
 	fmt.Println("-----> Stopping and removing service containers...")
-	if servicesDir := filepath.Join(baseDir, "services"); filepathExists(servicesDir) {
+	if servicesDir := filepath.Join(baseDir, "services"); c.filepathExists(servicesDir) {
 		services, _ := filepath.Glob(filepath.Join(servicesDir, "*"))
 		for _, serviceDir := range services {
 			serviceName := filepath.Base(serviceDir)
@@ -133,7 +150,7 @@ func handleServerUninstall() {
 }
 
 // handleClientUninstall removes Gokku from client machine
-func handleClientUninstall() {
+func (c *RunUninstallCommand) handleClientUninstall() {
 	fmt.Println("This will remove:")
 	fmt.Println("  - Gokku binary from /usr/local/bin/gokku")
 	fmt.Println("  - Configuration directory ~/.gokku/")
@@ -191,7 +208,7 @@ func handleClientUninstall() {
 }
 
 // filepathExists checks if a file path exists
-func filepathExists(path string) bool {
+func (c *RunUninstallCommand) filepathExists(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
 }

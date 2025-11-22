@@ -1,4 +1,4 @@
-package commands
+package v1
 
 import (
 	"fmt"
@@ -6,12 +6,29 @@ import (
 	"strings"
 
 	"gokku/internal"
-	"gokku/internal/services"
 )
 
-func useRemote(args []string) {
+type RunRemoteCommand struct {
+	output  Output
+	baseDir string
+}
+
+func NewRunRemoteCommand(output Output) *RunRemoteCommand {
+	baseDir := os.Getenv("GOKKU_ROOT")
+
+	if baseDir == "" {
+		baseDir = "/opt/gokku"
+	}
+
+	return &RunRemoteCommand{
+		output:  output,
+		baseDir: baseDir,
+	}
+}
+
+func (c *RunRemoteCommand) Use(args []string) {
 	if len(args) < 1 {
-		printRemoteHelp()
+		c.printRemoteHelp()
 		os.Exit(1)
 	}
 
@@ -27,23 +44,23 @@ func useRemote(args []string) {
 
 	switch subcommand {
 	case "add":
-		handleRemoteAdd(args[1:])
+		c.handleRemoteAdd(args[1:])
 	case "list", "ls":
-		handleRemoteList()
+		c.handleRemoteList()
 	case "remove", "rm":
-		handleRemoteRemove(args[1:])
+		c.handleRemoteRemove(args[1:])
 	case "setup":
-		handleRemoteSetup(args[1:])
+		c.handleRemoteSetup(args[1:])
 	case "help", "--help", "-h":
-		printRemoteHelp()
+		c.printRemoteHelp()
 	default:
 		fmt.Printf("Unknown remote command: %s\n", subcommand)
-		printRemoteHelp()
+		c.printRemoteHelp()
 		os.Exit(1)
 	}
 }
 
-func handleRemoteAdd(args []string) {
+func (c *RunRemoteCommand) handleRemoteAdd(args []string) {
 	if len(args) < 2 {
 		fmt.Println("Usage: gokku remote add <label> <remote_app_name[optional]> <user@server_ip>")
 		fmt.Println("Example: gokku remote add api user@hostname")
@@ -101,7 +118,7 @@ func handleRemoteAdd(args []string) {
 }
 
 // handleRemoteList lists all configured git remotes
-func handleRemoteList() {
+func (c *RunRemoteCommand) handleRemoteList() {
 	gitc := &internal.GitClient{}
 	outputBytes, err := gitc.ExecuteCommand("remote", "-v")
 
@@ -123,7 +140,7 @@ func handleRemoteList() {
 }
 
 // handleRemoteRemove removes a git remote
-func handleRemoteRemove(args []string) {
+func (c *RunRemoteCommand) handleRemoteRemove(args []string) {
 	if len(args) < 1 {
 		fmt.Println("Usage: gokku remote remove <remote_name>")
 		fmt.Println("Example: gokku remote remove api")
@@ -153,7 +170,7 @@ func handleRemoteRemove(args []string) {
 }
 
 // handleRemoteSetup performs one-time server setup
-func handleRemoteSetup(args []string) {
+func (c *RunRemoteCommand) handleRemoteSetup(args []string) {
 	// Extract identity flag (-i or --identity)
 	identityFile, remainingArgs := internal.ExtractIdentityFlag(args)
 
@@ -183,7 +200,7 @@ func handleRemoteSetup(args []string) {
 	}
 
 	// Create setup service and execute
-	setup := services.NewServerSetup(serverHost, identityFile)
+	setup := NewSetupCommand(c.output, serverHost, identityFile)
 
 	if err := setup.Execute(); err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -191,7 +208,7 @@ func handleRemoteSetup(args []string) {
 	}
 }
 
-func printRemoteHelp() {
+func (c *RunRemoteCommand) printRemoteHelp() {
 	fmt.Println(`Remote Management Commands:
 
 Usage:

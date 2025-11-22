@@ -6,27 +6,27 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	. "gokku/internal"
+	"gokku/internal"
 )
 
 type Python struct {
-	app *App
+	app *internal.App
 }
 
-func (l *Python) Build(appName string, app *App, releaseDir string) error {
+func (l *Python) Build(appName string, app *internal.App, releaseDir string) error {
 	fmt.Println("-----> Building Python application...")
 
 	// Check if using pre-built image from registry
-	if app.Image != "" && IsRegistryImage(app.Image, GetCustomRegistries(appName)) {
+	if app.Image != "" && internal.IsRegistryImage(app.Image, internal.GetCustomRegistries(appName)) {
 		fmt.Println("-----> Using pre-built image from registry...")
 
 		// Pull the pre-built image
-		if err := PullRegistryImage(app.Image); err != nil {
+		if err := internal.PullRegistryImage(app.Image); err != nil {
 			return fmt.Errorf("failed to pull pre-built image: %v", err)
 		}
 
 		// Tag the image for the app
-		if err := TagImageForApp(app.Image, appName); err != nil {
+		if err := internal.TagImageForApp(app.Image, appName); err != nil {
 			return fmt.Errorf("failed to tag image: %v", err)
 		}
 
@@ -57,14 +57,14 @@ func (l *Python) Build(appName string, app *App, releaseDir string) error {
 		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
 		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
 		// Add Gokku labels to image
-		for _, label := range GetGokkuLabels() {
+		for _, label := range internal.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
 		}
 	} else {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
 		// Add Gokku labels to image
-		for _, label := range GetGokkuLabels() {
+		for _, label := range internal.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
 		}
 	}
@@ -80,7 +80,7 @@ func (l *Python) Build(appName string, app *App, releaseDir string) error {
 	return nil
 }
 
-func (l *Python) Deploy(appName string, app *App, releaseDir string) error {
+func (l *Python) Deploy(appName string, app *internal.App, releaseDir string) error {
 	fmt.Println("-----> Deploying Python application...")
 
 	// Get environment file
@@ -100,7 +100,7 @@ func (l *Python) Deploy(appName string, app *App, releaseDir string) error {
 		volumes = append(volumes, app.Volumes...)
 	}
 
-	return DeployContainer(DeploymentConfig{
+	return internal.DeployContainer(internal.DeploymentConfig{
 		AppName:     appName,
 		ImageTag:    "latest",
 		EnvFile:     envFile,
@@ -111,16 +111,16 @@ func (l *Python) Deploy(appName string, app *App, releaseDir string) error {
 	})
 }
 
-func (l *Python) Restart(appName string, app *App) error {
+func (l *Python) Restart(appName string, app *internal.App) error {
 	fmt.Printf("-----> Restarting %s...\n", appName)
 
 	// Find active container
 	containerName := appName
-	if !ContainerExists(containerName) {
+	if !internal.ContainerExists(containerName) {
 		containerName = appName + "-green"
 	}
 
-	if !ContainerExists(containerName) {
+	if !internal.ContainerExists(containerName) {
 		return fmt.Errorf("no active container found for %s", appName)
 	}
 
@@ -129,7 +129,7 @@ func (l *Python) Restart(appName string, app *App) error {
 	return cmd.Run()
 }
 
-func (l *Python) Cleanup(appName string, app *App) error {
+func (l *Python) Cleanup(appName string, app *internal.App) error {
 	fmt.Printf("-----> Cleaning up old releases for %s...\n", appName)
 
 	appDir := filepath.Join("/opt/gokku/apps", appName)
@@ -172,7 +172,7 @@ func (l *Python) DetectLanguage(releaseDir string) (string, error) {
 	return "", fmt.Errorf("not a Python project")
 }
 
-func (l *Python) EnsureDockerfile(releaseDir string, appName string, app *App) error {
+func (l *Python) EnsureDockerfile(releaseDir string, appName string, app *internal.App) error {
 	// Check if custom Dockerfile is specified
 	if app.Dockerfile != "" {
 		customDockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
@@ -216,15 +216,15 @@ func (l *Python) EnsureDockerfile(releaseDir string, appName string, app *App) e
 	return os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644)
 }
 
-func (l *Python) GetDefaultConfig() *App {
-	return &App{
+func (l *Python) GetDefaultConfig() *internal.App {
+	return &internal.App{
 		// Default configuration for Python apps
 		Entrypoint: "main.py",
 		WorkDir:    ".",
 	}
 }
 
-func (l *Python) generateDockerfile(build *App, appName string, app *App) string {
+func (l *Python) generateDockerfile(build *internal.App, appName string, app *internal.App) string {
 	// Determine entrypoint
 	entrypoint := build.Entrypoint
 	if entrypoint == "" {
@@ -235,7 +235,7 @@ func (l *Python) generateDockerfile(build *App, appName string, app *App) string
 	baseImage := build.Image
 	if baseImage == "" {
 		// Use latest Python as fallback
-		baseImage = DetectPythonVersion(".")
+		baseImage = internal.DetectPythonVersion(".")
 		fmt.Printf("-----> Using Python fallback: %s\n", baseImage)
 	}
 

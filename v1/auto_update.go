@@ -1,0 +1,68 @@
+package v1
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
+	"gokku/internal"
+)
+
+// AutoUpdateCommand gerencia auto-atualização do gokku
+type AutoUpdateCommand struct {
+	output Output
+}
+
+// NewAutoUpdateCommand cria uma nova instância de AutoUpdateCommand
+func NewAutoUpdateCommand(output Output) *AutoUpdateCommand {
+	return &AutoUpdateCommand{
+		output: output,
+	}
+}
+
+// Execute executa a atualização automática
+func (c *AutoUpdateCommand) Execute(args []string) error {
+	command := "curl -fsSL https://gokku-vm.com/install | bash -s --"
+
+	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+	if err != nil {
+		c.output.Error(fmt.Sprintf("Error: %v", err))
+		return err
+	}
+
+	hasRemoteFlag := strings.Contains(strings.Join(remainingArgs, " "), "--remote")
+
+	if internal.IsClientMode() && hasRemoteFlag {
+		command += " --server"
+
+		cmd := fmt.Sprintf("bash -c '%s'", command)
+		c.output.Print(fmt.Sprintf("Executing command auto-update on server: %s", cmd))
+
+		if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+			c.output.Error(fmt.Sprintf("Error: %v", err))
+			return err
+		}
+
+		return nil
+	}
+
+	if internal.IsServerMode() {
+		command += " --server"
+	} else {
+		command += " --client"
+	}
+
+	c.output.Print(fmt.Sprintf("Executing command auto-update: %s", command))
+
+	cmd := exec.Command("bash", "-c", command)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		c.output.Error(fmt.Sprintf("Error: %v", err))
+		return err
+	}
+
+	return nil
+}

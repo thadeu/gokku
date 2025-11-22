@@ -72,14 +72,18 @@ func ListContainers(all bool) ([]ContainerInfo, error) {
 
 	var containers []ContainerInfo
 	lines := strings.Split(string(output), "\n")
+
 	for _, line := range lines {
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
+
 		var container ContainerInfo
+
 		if err := json.Unmarshal([]byte(line), &container); err != nil {
 			continue // Skip invalid JSON lines
 		}
+
 		containers = append(containers, container)
 	}
 

@@ -1,4 +1,4 @@
-package services
+package v1
 
 import (
 	"encoding/json"
@@ -10,24 +10,24 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestServiceManagerTestSuite(t *testing.T) {
+func TestServicesCommandTestSuite(t *testing.T) {
 	RegisterTestingT(t)
-	suite.Run(t, new(ServiceManagerTestSuite))
+	suite.Run(t, new(ServicesCommandTestSuite))
 }
 
-type ServiceManagerTestSuite struct {
+type ServicesCommandTestSuite struct {
 	suite.Suite
 	tempDir     string
 	servicesDir string
 	pluginsDir  string
-	manager     *ServiceManager
+	command     *ServicesCommand
 }
 
-func (s *ServiceManagerTestSuite) SetupSuite() {
+func (s *ServicesCommandTestSuite) SetupSuite() {
 	// Suite-level setup if needed
 }
 
-func (s *ServiceManagerTestSuite) SetupTest() {
+func (s *ServicesCommandTestSuite) SetupTest() {
 	var err error
 	s.tempDir, err = os.MkdirTemp("", "gokku-test-*")
 	s.Require().NoError(err)
@@ -40,85 +40,89 @@ func (s *ServiceManagerTestSuite) SetupTest() {
 	err = os.MkdirAll(s.pluginsDir, 0755)
 	s.Require().NoError(err)
 
-	s.manager = &ServiceManager{
+	output := NewOutput(OutputFormatStdout)
+	s.command = &ServicesCommand{
+		output:      output,
+		baseDir:     s.tempDir,
 		servicesDir: s.servicesDir,
 		pluginsDir:  s.pluginsDir,
 	}
 }
 
-func (s *ServiceManagerTestSuite) TearDownTest() {
+func (s *ServicesCommandTestSuite) TearDownTest() {
 	if s.tempDir != "" {
 		os.RemoveAll(s.tempDir)
 	}
 }
 
-func (s *ServiceManagerTestSuite) TestNewServiceManager() {
-	manager := NewServiceManager()
+func (s *ServicesCommandTestSuite) TestNewServicesCommand() {
+	output := NewOutput(OutputFormatStdout)
+	command := NewServicesCommand(output)
 
-	Expect(manager).ToNot(BeNil())
-	Expect(manager.servicesDir).To(Equal("/opt/gokku/services"))
-	Expect(manager.pluginsDir).To(Equal("/opt/gokku/plugins"))
+	Expect(command).ToNot(BeNil())
+	Expect(command.servicesDir).To(Equal("/opt/gokku/services"))
+	Expect(command.pluginsDir).To(Equal("/opt/gokku/plugins"))
 }
 
-func (s *ServiceManagerTestSuite) TestPluginExists_WhenPluginExists() {
+func (s *ServicesCommandTestSuite) TestPluginExists_WhenPluginExists() {
 	pluginDir := filepath.Join(s.pluginsDir, "test-plugin")
 	err := os.MkdirAll(pluginDir, 0755)
 	s.Require().NoError(err)
 
-	exists := s.manager.pluginExists("test-plugin")
+	exists := s.command.pluginExists("test-plugin")
 	Expect(exists).To(BeTrue())
 }
 
-func (s *ServiceManagerTestSuite) TestPluginExists_WhenPluginDoesNotExist() {
-	exists := s.manager.pluginExists("non-existent-plugin")
+func (s *ServicesCommandTestSuite) TestPluginExists_WhenPluginDoesNotExist() {
+	exists := s.command.pluginExists("non-existent-plugin")
 	Expect(exists).To(BeFalse())
 }
 
-func (s *ServiceManagerTestSuite) TestServiceExists_WhenServiceExists() {
+func (s *ServicesCommandTestSuite) TestServiceExists_WhenServiceExists() {
 	serviceDir := filepath.Join(s.servicesDir, "test-service")
 	err := os.MkdirAll(serviceDir, 0755)
 	s.Require().NoError(err)
 
-	exists := s.manager.serviceExists("test-service")
+	exists := s.command.serviceExists("test-service")
 	Expect(exists).To(BeTrue())
 }
 
-func (s *ServiceManagerTestSuite) TestServiceExists_WhenServiceDoesNotExist() {
-	exists := s.manager.serviceExists("non-existent-service")
+func (s *ServicesCommandTestSuite) TestServiceExists_WhenServiceDoesNotExist() {
+	exists := s.command.serviceExists("non-existent-service")
 	Expect(exists).To(BeFalse())
 }
 
-func (s *ServiceManagerTestSuite) TestAppExists_WhenAppDoesNotExist() {
-	exists := s.manager.appExists("non-existent-app", "")
+func (s *ServicesCommandTestSuite) TestAppExists_WhenAppDoesNotExist() {
+	exists := s.command.appExists("non-existent-app", "")
 	Expect(exists).To(BeFalse())
 }
 
-func (s *ServiceManagerTestSuite) TestIsAppLinked_WhenAppIsLinked() {
+func (s *ServicesCommandTestSuite) TestIsAppLinked_WhenAppIsLinked() {
 	linkedApps := []string{"app1", "app2", "app3"}
-	result := s.manager.isAppLinked(linkedApps, "app2", "")
+	result := s.command.isAppLinked(linkedApps, "app2", "")
 	Expect(result).To(BeTrue())
 }
 
-func (s *ServiceManagerTestSuite) TestIsAppLinked_WhenAppIsNotLinked() {
+func (s *ServicesCommandTestSuite) TestIsAppLinked_WhenAppIsNotLinked() {
 	linkedApps := []string{"app1", "app2", "app3"}
-	result := s.manager.isAppLinked(linkedApps, "app4", "")
+	result := s.command.isAppLinked(linkedApps, "app4", "")
 	Expect(result).To(BeFalse())
 }
 
-func (s *ServiceManagerTestSuite) TestIsAppLinked_WhenListIsEmpty() {
+func (s *ServicesCommandTestSuite) TestIsAppLinked_WhenListIsEmpty() {
 	linkedApps := []string{}
-	result := s.manager.isAppLinked(linkedApps, "app1", "")
+	result := s.command.isAppLinked(linkedApps, "app1", "")
 	Expect(result).To(BeFalse())
 }
 
-func (s *ServiceManagerTestSuite) TestSaveServiceConfig() {
+func (s *ServicesCommandTestSuite) TestSaveServiceConfig() {
 	// Create service directory first
 	serviceDir := filepath.Join(s.servicesDir, "test-service")
 
 	err := os.MkdirAll(serviceDir, 0755)
 	s.Require().NoError(err)
 
-	service := Service{
+	svc := service{
 		Name:       "test-service",
 		Plugin:     "postgres",
 		Running:    false,
@@ -126,20 +130,20 @@ func (s *ServiceManagerTestSuite) TestSaveServiceConfig() {
 		Config:     make(map[string]string),
 	}
 
-	err = s.manager.saveServiceConfig("test-service", service)
+	err = s.command.saveServiceConfig("test-service", svc)
 	Expect(err).To(BeNil())
 
 	configPath := filepath.Join(s.servicesDir, "test-service", "config.json")
 	Expect(configPath).To(BeAnExistingFile())
 }
 
-func (s *ServiceManagerTestSuite) TestGetServiceConfig_WhenServiceExists() {
+func (s *ServicesCommandTestSuite) TestGetServiceConfig_WhenServiceExists() {
 	// Create service directory first
 	serviceDir := filepath.Join(s.servicesDir, "test-service")
 	err := os.MkdirAll(serviceDir, 0755)
 	s.Require().NoError(err)
 
-	service := Service{
+	svc := service{
 		Name:       "test-service",
 		Plugin:     "postgres",
 		Running:    false,
@@ -147,10 +151,10 @@ func (s *ServiceManagerTestSuite) TestGetServiceConfig_WhenServiceExists() {
 		Config:     map[string]string{"version": "14"},
 	}
 
-	err = s.manager.saveServiceConfig("test-service", service)
+	err = s.command.saveServiceConfig("test-service", svc)
 	s.Require().NoError(err)
 
-	retrieved, err := s.manager.getServiceConfig("test-service")
+	retrieved, err := s.command.getServiceConfig("test-service")
 
 	Expect(err).To(BeNil())
 	Expect(retrieved.Name).To(Equal("test-service"))
@@ -159,12 +163,12 @@ func (s *ServiceManagerTestSuite) TestGetServiceConfig_WhenServiceExists() {
 	Expect(retrieved.Config["version"]).To(Equal("14"))
 }
 
-func (s *ServiceManagerTestSuite) TestGetServiceConfig_WhenServiceDoesNotExist() {
-	_, err := s.manager.getServiceConfig("non-existent-service")
+func (s *ServicesCommandTestSuite) TestGetServiceConfig_WhenServiceDoesNotExist() {
+	_, err := s.command.getServiceConfig("non-existent-service")
 	Expect(err).ToNot(BeNil())
 }
 
-func (s *ServiceManagerTestSuite) TestGetServiceEnvVars_Postgres() {
+func (s *ServicesCommandTestSuite) TestGetServiceEnvVars_Postgres() {
 	config := map[string]string{
 		"port":     "5432",
 		"user":     "postgres",
@@ -172,7 +176,7 @@ func (s *ServiceManagerTestSuite) TestGetServiceEnvVars_Postgres() {
 		"database": "mydb",
 	}
 
-	envVars := s.manager.getServiceEnvVars("test-service", config, "postgres")
+	envVars := s.command.getServiceEnvVars("test-service", config, "postgres")
 
 	Expect(envVars).ToNot(BeEmpty())
 	Expect(envVars["DATABASE_URL"]).To(ContainSubstring("postgres://"))
@@ -183,23 +187,23 @@ func (s *ServiceManagerTestSuite) TestGetServiceEnvVars_Postgres() {
 	Expect(envVars["POSTGRES_DB"]).To(Equal("mydb"))
 }
 
-func (s *ServiceManagerTestSuite) TestGetServiceEnvVars_Postgres_IncompleteConfig() {
+func (s *ServicesCommandTestSuite) TestGetServiceEnvVars_Postgres_IncompleteConfig() {
 	config := map[string]string{
 		"port": "5432",
 		// Missing user, password, database
 	}
 
-	envVars := s.manager.getServiceEnvVars("test-service", config, "postgres")
+	envVars := s.command.getServiceEnvVars("test-service", config, "postgres")
 	Expect(envVars).To(BeEmpty())
 }
 
-func (s *ServiceManagerTestSuite) TestGetServiceEnvVars_Redis() {
+func (s *ServicesCommandTestSuite) TestGetServiceEnvVars_Redis() {
 	config := map[string]string{
 		"port":     "6379",
 		"password": "secret",
 	}
 
-	envVars := s.manager.getServiceEnvVars("test-service", config, "redis")
+	envVars := s.command.getServiceEnvVars("test-service", config, "redis")
 
 	Expect(envVars).ToNot(BeEmpty())
 	Expect(envVars["REDIS_URL"]).To(ContainSubstring("redis://"))
@@ -208,24 +212,24 @@ func (s *ServiceManagerTestSuite) TestGetServiceEnvVars_Redis() {
 	Expect(envVars["REDIS_PASSWORD"]).To(Equal("secret"))
 }
 
-func (s *ServiceManagerTestSuite) TestGetServiceEnvVars_Redis_IncompleteConfig() {
+func (s *ServicesCommandTestSuite) TestGetServiceEnvVars_Redis_IncompleteConfig() {
 	config := map[string]string{
 		"port": "6379",
 		// Missing password
 	}
 
-	envVars := s.manager.getServiceEnvVars("test-service", config, "redis")
+	envVars := s.command.getServiceEnvVars("test-service", config, "redis")
 	Expect(envVars).To(BeEmpty())
 }
 
-func (s *ServiceManagerTestSuite) TestGetServiceEnvVars_UnknownPlugin() {
+func (s *ServicesCommandTestSuite) TestGetServiceEnvVars_UnknownPlugin() {
 	config := map[string]string{"key": "value"}
-	envVars := s.manager.getServiceEnvVars("test-service", config, "unknown-plugin")
+	envVars := s.command.getServiceEnvVars("test-service", config, "unknown-plugin")
 	Expect(envVars).To(BeEmpty())
 }
 
-func (s *ServiceManagerTestSuite) TestGetServiceEnvKeys_Postgres() {
-	keys := s.manager.getServiceEnvKeys("postgres")
+func (s *ServicesCommandTestSuite) TestGetServiceEnvKeys_Postgres() {
+	keys := s.command.getServiceEnvKeys("postgres")
 
 	Expect(keys).To(ContainElement("DATABASE_URL"))
 	Expect(keys).To(ContainElement("POSTGRES_HOST"))
@@ -235,8 +239,8 @@ func (s *ServiceManagerTestSuite) TestGetServiceEnvKeys_Postgres() {
 	Expect(keys).To(ContainElement("POSTGRES_DB"))
 }
 
-func (s *ServiceManagerTestSuite) TestGetServiceEnvKeys_Redis() {
-	keys := s.manager.getServiceEnvKeys("redis")
+func (s *ServicesCommandTestSuite) TestGetServiceEnvKeys_Redis() {
+	keys := s.command.getServiceEnvKeys("redis")
 
 	Expect(keys).To(ContainElement("REDIS_URL"))
 	Expect(keys).To(ContainElement("REDIS_HOST"))
@@ -244,18 +248,18 @@ func (s *ServiceManagerTestSuite) TestGetServiceEnvKeys_Redis() {
 	Expect(keys).To(ContainElement("REDIS_PASSWORD"))
 }
 
-func (s *ServiceManagerTestSuite) TestGetServiceEnvKeys_UnknownPlugin() {
-	keys := s.manager.getServiceEnvKeys("unknown-plugin")
+func (s *ServicesCommandTestSuite) TestGetServiceEnvKeys_UnknownPlugin() {
+	keys := s.command.getServiceEnvKeys("unknown-plugin")
 	Expect(keys).To(BeEmpty())
 }
 
-func (s *ServiceManagerTestSuite) TestListServices_Empty() {
-	services, err := s.manager.ListServices()
+func (s *ServicesCommandTestSuite) TestListServices_Empty() {
+	services, err := s.command.listServices()
 	Expect(err).To(BeNil())
 	Expect(services).To(BeEmpty())
 }
 
-func (s *ServiceManagerTestSuite) TestListServices_WithServices() {
+func (s *ServicesCommandTestSuite) TestListServices_WithServices() {
 	// Create service directories first
 	service1Dir := filepath.Join(s.servicesDir, "service1")
 	service2Dir := filepath.Join(s.servicesDir, "service2")
@@ -266,7 +270,7 @@ func (s *ServiceManagerTestSuite) TestListServices_WithServices() {
 	s.Require().NoError(err)
 
 	// Create service configs
-	service1 := Service{
+	service1 := service{
 		Name:       "service1",
 		Plugin:     "postgres",
 		Running:    false,
@@ -274,7 +278,7 @@ func (s *ServiceManagerTestSuite) TestListServices_WithServices() {
 		Config:     make(map[string]string),
 	}
 
-	service2 := Service{
+	service2 := service{
 		Name:       "service2",
 		Plugin:     "redis",
 		Running:    true,
@@ -282,24 +286,24 @@ func (s *ServiceManagerTestSuite) TestListServices_WithServices() {
 		Config:     make(map[string]string),
 	}
 
-	err = s.manager.saveServiceConfig("service1", service1)
+	err = s.command.saveServiceConfig("service1", service1)
 	s.Require().NoError(err)
 
-	err = s.manager.saveServiceConfig("service2", service2)
+	err = s.command.saveServiceConfig("service2", service2)
 	s.Require().NoError(err)
 
-	services, err := s.manager.ListServices()
+	services, err := s.command.listServices()
 	Expect(err).To(BeNil())
 	Expect(len(services)).To(Equal(2))
 }
 
-func (s *ServiceManagerTestSuite) TestGetService_WhenServiceExists() {
+func (s *ServicesCommandTestSuite) TestGetService_WhenServiceExists() {
 	// Create service directory first
 	serviceDir := filepath.Join(s.servicesDir, "test-service")
 	err := os.MkdirAll(serviceDir, 0755)
 	s.Require().NoError(err)
 
-	service := Service{
+	svc := service{
 		Name:       "test-service",
 		Plugin:     "postgres",
 		Running:    false,
@@ -307,27 +311,34 @@ func (s *ServiceManagerTestSuite) TestGetService_WhenServiceExists() {
 		Config:     make(map[string]string),
 	}
 
-	err = s.manager.saveServiceConfig("test-service", service)
+	err = s.command.saveServiceConfig("test-service", svc)
 	s.Require().NoError(err)
 
-	retrieved, err := s.manager.GetService("test-service")
+	err = s.command.Get("test-service")
 	Expect(err).To(BeNil())
-	Expect(retrieved.Name).To(Equal("test-service"))
-	Expect(retrieved.Plugin).To(Equal("postgres"))
 }
 
-func (s *ServiceManagerTestSuite) TestGetService_WhenServiceDoesNotExist() {
-	_, err := s.manager.GetService("non-existent-service")
+func (s *ServicesCommandTestSuite) TestGetService_WhenServiceDoesNotExist() {
+	testOutput := &testOutputNoExit{}
+	testCommand := &ServicesCommand{
+		output:      testOutput,
+		baseDir:     s.command.baseDir,
+		servicesDir: s.command.servicesDir,
+		pluginsDir:  s.command.pluginsDir,
+	}
+	
+	err := testCommand.Get("non-existent-service")
 	Expect(err).ToNot(BeNil())
+	Expect(testOutput.lastError).To(ContainSubstring("not found"))
 }
 
-func (s *ServiceManagerTestSuite) TestUpdateServiceConfig() {
+func (s *ServicesCommandTestSuite) TestUpdateServiceConfig() {
 	// Create service directory first
 	serviceDir := filepath.Join(s.servicesDir, "test-service")
 	err := os.MkdirAll(serviceDir, 0755)
 	s.Require().NoError(err)
 
-	service := Service{
+	svc := service{
 		Name:       "test-service",
 		Plugin:     "postgres",
 		Running:    false,
@@ -335,7 +346,7 @@ func (s *ServiceManagerTestSuite) TestUpdateServiceConfig() {
 		Config:     make(map[string]string),
 	}
 
-	err = s.manager.saveServiceConfig("test-service", service)
+	err = s.command.saveServiceConfig("test-service", svc)
 	s.Require().NoError(err)
 
 	newConfig := map[string]string{
@@ -343,24 +354,33 @@ func (s *ServiceManagerTestSuite) TestUpdateServiceConfig() {
 		"port":    "5432",
 	}
 
-	err = s.manager.UpdateServiceConfig("test-service", newConfig)
+	err = s.command.UpdateServiceConfig("test-service", newConfig)
 	Expect(err).To(BeNil())
 
-	updated, err := s.manager.getServiceConfig("test-service")
+	updated, err := s.command.getServiceConfig("test-service")
 	Expect(err).To(BeNil())
 	Expect(updated.Config["version"]).To(Equal("14"))
 	Expect(updated.Config["port"]).To(Equal("5432"))
 }
 
-func (s *ServiceManagerTestSuite) TestCreateService_WhenPluginDoesNotExist() {
-	err := s.manager.CreateService("non-existent-plugin", "test-service", "")
+func (s *ServicesCommandTestSuite) TestCreateService_WhenPluginDoesNotExist() {
+	testOutput := &testOutputNoExit{}
+	testCommand := &ServicesCommand{
+		output:      testOutput,
+		baseDir:     s.command.baseDir,
+		servicesDir: s.command.servicesDir,
+		pluginsDir:  s.command.pluginsDir,
+	}
+	
+	err := testCommand.Create("non-existent-plugin", "test-service", "")
 
 	Expect(err).ToNot(BeNil())
 	Expect(err.Error()).To(ContainSubstring("plugin"))
 	Expect(err.Error()).To(ContainSubstring("not found"))
+	Expect(testOutput.lastError).To(ContainSubstring("plugin"))
 }
 
-func (s *ServiceManagerTestSuite) TestCreateService_WhenServiceAlreadyExists() {
+func (s *ServicesCommandTestSuite) TestCreateService_WhenServiceAlreadyExists() {
 	// Create plugin directory
 	pluginDir := filepath.Join(s.pluginsDir, "test-plugin")
 	err := os.MkdirAll(pluginDir, 0755)
@@ -371,19 +391,37 @@ func (s *ServiceManagerTestSuite) TestCreateService_WhenServiceAlreadyExists() {
 	err = os.MkdirAll(serviceDir, 0755)
 	s.Require().NoError(err)
 
-	err = s.manager.CreateService("test-plugin", "test-service", "")
+	testOutput := &testOutputNoExit{}
+	testCommand := &ServicesCommand{
+		output:      testOutput,
+		baseDir:     s.command.baseDir,
+		servicesDir: s.command.servicesDir,
+		pluginsDir:  s.command.pluginsDir,
+	}
+	
+	err = testCommand.Create("test-plugin", "test-service", "")
 	Expect(err).ToNot(BeNil())
 	Expect(err.Error()).To(ContainSubstring("already exists"))
+	Expect(testOutput.lastError).To(ContainSubstring("already exists"))
 }
 
-func (s *ServiceManagerTestSuite) TestDestroyService_WhenServiceDoesNotExist() {
-	err := s.manager.DestroyService("non-existent-service")
+func (s *ServicesCommandTestSuite) TestDestroyService_WhenServiceDoesNotExist() {
+	testOutput := &testOutputNoExit{}
+	testCommand := &ServicesCommand{
+		output:      testOutput,
+		baseDir:     s.command.baseDir,
+		servicesDir: s.command.servicesDir,
+		pluginsDir:  s.command.pluginsDir,
+	}
+	
+	err := testCommand.Destroy("non-existent-service")
 
 	Expect(err).ToNot(BeNil())
 	Expect(err.Error()).To(ContainSubstring("not found"))
+	Expect(testOutput.lastError).To(ContainSubstring("not found"))
 }
 
-func (s *ServiceManagerTestSuite) TestDestroyService_WhenServiceExists() {
+func (s *ServicesCommandTestSuite) TestDestroyService_WhenServiceExists() {
 	// Create plugin directory
 	pluginDir := filepath.Join(s.pluginsDir, "test-plugin")
 	err := os.MkdirAll(pluginDir, 0755)
@@ -395,7 +433,7 @@ func (s *ServiceManagerTestSuite) TestDestroyService_WhenServiceExists() {
 	s.Require().NoError(err)
 
 	// Create service
-	service := Service{
+	svc := service{
 		Name:       "test-service",
 		Plugin:     "test-plugin",
 		Running:    false,
@@ -403,14 +441,14 @@ func (s *ServiceManagerTestSuite) TestDestroyService_WhenServiceExists() {
 		Config:     make(map[string]string),
 	}
 
-	err = s.manager.saveServiceConfig("test-service", service)
+	err = s.command.saveServiceConfig("test-service", svc)
 	s.Require().NoError(err)
 
 	// Verify service exists
 	Expect(serviceDir).To(BeADirectory())
 
 	// Destroy service
-	err = s.manager.DestroyService("test-service")
+	err = s.command.Destroy("test-service")
 	Expect(err).To(BeNil())
 
 	// Verify service directory is removed
@@ -418,8 +456,8 @@ func (s *ServiceManagerTestSuite) TestDestroyService_WhenServiceExists() {
 	Expect(os.IsNotExist(err)).To(BeTrue())
 }
 
-func (s *ServiceManagerTestSuite) TestServiceJSONSerialization() {
-	service := Service{
+func (s *ServicesCommandTestSuite) TestServiceJSONSerialization() {
+	svc := service{
 		Name:        "test-service",
 		Plugin:      "postgres",
 		ContainerID: "container-123",
@@ -429,19 +467,20 @@ func (s *ServiceManagerTestSuite) TestServiceJSONSerialization() {
 		Config:      map[string]string{"version": "14"},
 	}
 
-	data, err := json.Marshal(service)
+	data, err := json.Marshal(svc)
 
 	Expect(err).To(BeNil())
 	Expect(data).ToNot(BeEmpty())
 
-	var unmarshaled Service
+	var unmarshaled service
 	err = json.Unmarshal(data, &unmarshaled)
 
 	Expect(err).To(BeNil())
 
-	Expect(unmarshaled.Name).To(Equal(service.Name))
-	Expect(unmarshaled.Plugin).To(Equal(service.Plugin))
-	Expect(unmarshaled.Running).To(Equal(service.Running))
-	Expect(unmarshaled.LinkedApps).To(Equal(service.LinkedApps))
-	Expect(unmarshaled.Config).To(Equal(service.Config))
+	Expect(unmarshaled.Name).To(Equal(svc.Name))
+	Expect(unmarshaled.Plugin).To(Equal(svc.Plugin))
+	Expect(unmarshaled.Running).To(Equal(svc.Running))
+	Expect(unmarshaled.LinkedApps).To(Equal(svc.LinkedApps))
+	Expect(unmarshaled.Config).To(Equal(svc.Config))
 }
+

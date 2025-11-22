@@ -6,14 +6,14 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	. "gokku/internal"
+	"gokku/internal"
 )
 
 type Generic struct {
-	app *App
+	app *internal.App
 }
 
-func (l *Generic) Build(appName string, app *App, releaseDir string) error {
+func (l *Generic) Build(appName string, app *internal.App, releaseDir string) error {
 	fmt.Println("-----> Building generic application...")
 
 	// Check if custom Dockerfile is specified
@@ -50,14 +50,14 @@ func (l *Generic) Build(appName string, app *App, releaseDir string) error {
 		// Use custom Dockerfile path
 		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
 		// Add Gokku labels to image
-		for _, label := range GetGokkuLabels() {
+		for _, label := range internal.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
 		}
 	} else {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
 		// Add Gokku labels to image
-		for _, label := range GetGokkuLabels() {
+		for _, label := range internal.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
 		}
 	}
@@ -73,7 +73,7 @@ func (l *Generic) Build(appName string, app *App, releaseDir string) error {
 	return nil
 }
 
-func (l *Generic) Deploy(appName string, app *App, releaseDir string) error {
+func (l *Generic) Deploy(appName string, app *internal.App, releaseDir string) error {
 	fmt.Println("-----> Deploying generic application...")
 
 	// Get environment file
@@ -93,7 +93,7 @@ func (l *Generic) Deploy(appName string, app *App, releaseDir string) error {
 		volumes = append(volumes, app.Volumes...)
 	}
 
-	return DeployContainer(DeploymentConfig{
+	return internal.DeployContainer(internal.DeploymentConfig{
 		AppName:     appName,
 		ImageTag:    "latest",
 		EnvFile:     envFile,
@@ -104,16 +104,16 @@ func (l *Generic) Deploy(appName string, app *App, releaseDir string) error {
 	})
 }
 
-func (l *Generic) Restart(appName string, app *App) error {
+func (l *Generic) Restart(appName string, app *internal.App) error {
 	fmt.Printf("-----> Restarting %s...\n", appName)
 
 	// Find active container
 	containerName := appName
-	if !ContainerExists(containerName) {
+	if !internal.ContainerExists(containerName) {
 		containerName = appName + "-green"
 	}
 
-	if !ContainerExists(containerName) {
+	if !internal.ContainerExists(containerName) {
 		return fmt.Errorf("no active container found for %s", appName)
 	}
 
@@ -122,7 +122,7 @@ func (l *Generic) Restart(appName string, app *App) error {
 	return cmd.Run()
 }
 
-func (l *Generic) Cleanup(appName string, app *App) error {
+func (l *Generic) Cleanup(appName string, app *internal.App) error {
 	fmt.Printf("-----> Cleaning up old releases for %s...\n", appName)
 
 	appDir := filepath.Join("/opt/gokku/apps", appName)
@@ -163,7 +163,7 @@ func (l *Generic) DetectLanguage(releaseDir string) (string, error) {
 	return "generic", nil
 }
 
-func (l *Generic) EnsureDockerfile(releaseDir string, appName string, app *App) error {
+func (l *Generic) EnsureDockerfile(releaseDir string, appName string, app *internal.App) error {
 	dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
 
 	// Check if Dockerfile already exists
@@ -175,8 +175,8 @@ func (l *Generic) EnsureDockerfile(releaseDir string, appName string, app *App) 
 	return fmt.Errorf("no Dockerfile found and no language-specific strategy available")
 }
 
-func (l *Generic) GetDefaultConfig() *App {
-	return &App{
+func (l *Generic) GetDefaultConfig() *internal.App {
+	return &internal.App{
 		// Default configuration for generic apps
 	}
 }

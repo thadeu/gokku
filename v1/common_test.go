@@ -1,4 +1,4 @@
-package services
+package v1
 
 import (
 	"gokku/internal"
@@ -23,30 +23,6 @@ func (s *CommonTestSuite) SetupSuite() {
 
 func (s *CommonTestSuite) SetupTest() {
 	// Test-level setup if needed
-}
-
-func (s *CommonTestSuite) TestAppNotFoundError_Error() {
-	err := &AppNotFoundError{AppName: "test-app"}
-	errorMsg := err.Error()
-	Expect(errorMsg).To(ContainSubstring("app not found"))
-	Expect(errorMsg).To(ContainSubstring("test-app"))
-}
-
-func (s *CommonTestSuite) TestAppNotFoundError_Structure() {
-	err := &AppNotFoundError{AppName: "my-app"}
-	Expect(err.AppName).To(Equal("my-app"))
-}
-
-func (s *CommonTestSuite) TestContainerNotFoundError_Error() {
-	err := &ContainerNotFoundError{ContainerName: "test-container"}
-	errorMsg := err.Error()
-	Expect(errorMsg).To(ContainSubstring("container not found"))
-	Expect(errorMsg).To(ContainSubstring("test-container"))
-}
-
-func (s *CommonTestSuite) TestContainerNotFoundError_Structure() {
-	err := &ContainerNotFoundError{ContainerName: "my-container"}
-	Expect(err.ContainerName).To(Equal("my-container"))
 }
 
 func (s *CommonTestSuite) TestAppInfo_Structure() {
@@ -107,31 +83,3 @@ func (s *CommonTestSuite) TestContainerFilter_Empty() {
 	Expect(filter.All).To(BeFalse())
 }
 
-func (s *CommonTestSuite) TestConfigOperation_Structure() {
-	op := ConfigOperation{
-		Type:  "set",
-		Key:   "DATABASE_URL",
-		Value: "postgres://localhost/db",
-		Keys:  []string{},
-	}
-
-	Expect(op.Type).To(Equal("set"))
-	Expect(op.Key).To(Equal("DATABASE_URL"))
-	Expect(op.Value).To(Equal("postgres://localhost/db"))
-	Expect(op.Keys).To(BeEmpty())
-}
-
-func (s *CommonTestSuite) TestConfigOperation_Unset() {
-	op := ConfigOperation{
-		Type:  "unset",
-		Key:   "",
-		Value: "",
-		Keys:  []string{"KEY1", "KEY2", "KEY3"},
-	}
-
-	Expect(op.Type).To(Equal("unset"))
-	Expect(op.Keys).To(HaveLen(3))
-	Expect(op.Keys).To(ContainElement("KEY1"))
-	Expect(op.Keys).To(ContainElement("KEY2"))
-	Expect(op.Keys).To(ContainElement("KEY3"))
-}
