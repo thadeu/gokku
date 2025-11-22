@@ -24,6 +24,23 @@ func main() {
 	command := os.Args[1]
 	args := os.Args[2:]
 
+	// Check for --remote flag early, regardless of command position
+	remoteInfo, remainingArgs, err := util.GetRemoteInfoOrDefault(args)
+
+	if err == nil && remoteInfo != nil {
+		remoteCmd := []string{"gokku", command}
+		remoteCmd = append(remoteCmd, remainingArgs...)
+		cmdStr := strings.Join(remoteCmd, " ")
+
+		if err := pkg.ExecuteRemoteCommand(remoteInfo, cmdStr); err != nil {
+			os.Exit(1)
+		}
+
+		return
+	}
+
+	args = remainingArgs
+
 	cmd := v1.NewCommand(v1.OutputFormatStdout)
 
 	// Create execution context only for 'run' command
@@ -109,21 +126,6 @@ func main() {
 	case "uninstall":
 		uninstallCommand(cmd, args)
 	default:
-		// Check if --remote flag is present
-		remoteInfo, remainingArgs, err := util.GetRemoteInfoOrDefault(args)
-
-		if err == nil && remoteInfo != nil {
-			// Execute remotely
-			remoteCmd := []string{"gokku", command}
-			remoteCmd = append(remoteCmd, remainingArgs...)
-			cmdtr := strings.Join(remoteCmd, " ")
-
-			if err := pkg.ExecuteRemoteCommand(remoteInfo, cmdtr); err != nil {
-				os.Exit(1)
-			}
-			return
-		}
-
 		pluginsCommand(cmd, command, args)
 	}
 }
