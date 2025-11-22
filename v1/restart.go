@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"gokku/internal"
 )
 
 // RestartCommand gerencia restart de aplicações
@@ -28,7 +27,7 @@ func (c *RestartCommand) Execute(appName string) error {
 	envFile := filepath.Join(c.baseDir, "apps", appName, "shared", ".env")
 	appDir := filepath.Join(c.baseDir, "apps", appName, "current")
 
-	if err := internal.RecreateActiveContainer(appName, envFile, appDir); err != nil {
+	if err := RecreateActiveContainer(appName, envFile, appDir); err != nil {
 		c.output.Error(fmt.Sprintf("Error restarting app: %v", err))
 		return err
 	}

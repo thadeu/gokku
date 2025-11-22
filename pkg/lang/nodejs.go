@@ -6,27 +6,28 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"gokku/internal"
+	"gokku/pkg"
+	"gokku/pkg/util"
 )
 
-type Ruby struct {
-	app *internal.App
+type Nodejs struct {
+	app *pkg.App
 }
 
-func (l *Ruby) Build(appName string, app *internal.App, releaseDir string) error {
-	fmt.Println("-----> Building Ruby application...")
+func (l *Nodejs) Build(appName string, app *pkg.App, releaseDir string) error {
+	fmt.Println("-----> Building Node.js application...")
 
 	// Check if using pre-built image from registry
-	if app.Image != "" && internal.IsRegistryImage(app.Image, internal.GetCustomRegistries(appName)) {
+	if app.Image != "" && util.IsRegistryImage(app.Image, util.GetCustomRegistries(appName)) {
 		fmt.Println("-----> Using pre-built image from registry...")
 
 		// Pull the pre-built image
-		if err := internal.PullRegistryImage(app.Image); err != nil {
+		if err := util.PullRegistryImage(app.Image); err != nil {
 			return fmt.Errorf("failed to pull pre-built image: %v", err)
 		}
 
 		// Tag the image for the app
-		if err := internal.TagImageForApp(app.Image, appName); err != nil {
+		if err := util.TagImageForApp(app.Image, appName); err != nil {
 			return fmt.Errorf("failed to tag image: %v", err)
 		}
 
@@ -57,14 +58,14 @@ func (l *Ruby) Build(appName string, app *internal.App, releaseDir string) error
 		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
 		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
 		// Add Gokku labels to image
-		for _, label := range internal.GetGokkuLabels() {
+		for _, label := range pkg.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
 		}
 	} else {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
 		// Add Gokku labels to image
-		for _, label := range internal.GetGokkuLabels() {
+		for _, label := range pkg.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
 		}
 	}
@@ -76,12 +77,12 @@ func (l *Ruby) Build(appName string, app *internal.App, releaseDir string) error
 		return fmt.Errorf("docker build failed: %v", err)
 	}
 
-	fmt.Println("-----> Ruby build complete!")
+	fmt.Println("-----> Node.js build complete!")
 	return nil
 }
 
-func (l *Ruby) Deploy(appName string, app *internal.App, releaseDir string) error {
-	fmt.Println("-----> Deploying Ruby application...")
+func (l *Nodejs) Deploy(appName string, app *pkg.App, releaseDir string) error {
+	fmt.Println("-----> Deploying Node.js application...")
 
 	// Get environment file
 	envFile := filepath.Join("/opt/gokku/apps", appName, "shared", ".env")
@@ -100,7 +101,7 @@ func (l *Ruby) Deploy(appName string, app *internal.App, releaseDir string) erro
 		volumes = append(volumes, app.Volumes...)
 	}
 
-	return internal.DeployContainer(internal.DeploymentConfig{
+	return pkg.DeployContainer(pkg.DeploymentConfig{
 		AppName:     appName,
 		ImageTag:    "latest",
 		EnvFile:     envFile,
@@ -111,16 +112,16 @@ func (l *Ruby) Deploy(appName string, app *internal.App, releaseDir string) erro
 	})
 }
 
-func (l *Ruby) Restart(appName string, app *internal.App) error {
+func (l *Nodejs) Restart(appName string, app *pkg.App) error {
 	fmt.Printf("-----> Restarting %s...\n", appName)
 
 	// Find active container
 	containerName := appName
-	if !internal.ContainerExists(containerName) {
+	if !pkg.ContainerExists(containerName) {
 		containerName = appName + "-green"
 	}
 
-	if !internal.ContainerExists(containerName) {
+	if !pkg.ContainerExists(containerName) {
 		return fmt.Errorf("no active container found for %s", appName)
 	}
 
@@ -129,7 +130,7 @@ func (l *Ruby) Restart(appName string, app *internal.App) error {
 	return cmd.Run()
 }
 
-func (l *Ruby) Cleanup(appName string, app *internal.App) error {
+func (l *Nodejs) Cleanup(appName string, app *pkg.App) error {
 	fmt.Printf("-----> Cleaning up old releases for %s...\n", appName)
 
 	appDir := filepath.Join("/opt/gokku/apps", appName)
@@ -162,14 +163,14 @@ func (l *Ruby) Cleanup(appName string, app *internal.App) error {
 	return nil
 }
 
-func (l *Ruby) DetectLanguage(releaseDir string) (string, error) {
-	if _, err := os.Stat(filepath.Join(releaseDir, "Gemfile")); err == nil {
-		return "ruby", nil
+func (l *Nodejs) DetectLanguage(releaseDir string) (string, error) {
+	if _, err := os.Stat(filepath.Join(releaseDir, "package.json")); err == nil {
+		return "nodejs", nil
 	}
-	return "", fmt.Errorf("not a Ruby project")
+	return "", fmt.Errorf("not a Node.js project")
 }
 
-func (l *Ruby) EnsureDockerfile(releaseDir string, appName string, app *internal.App) error {
+func (l *Nodejs) EnsureDockerfile(releaseDir string, appName string, app *pkg.App) error {
 	// Check if custom Dockerfile is specified
 	if app.Dockerfile != "" {
 		customDockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
@@ -195,7 +196,7 @@ func (l *Ruby) EnsureDockerfile(releaseDir string, appName string, app *internal
 		return nil
 	}
 
-	fmt.Println("-----> Generating Dockerfile for Ruby...")
+	fmt.Println("-----> Generating Dockerfile for Node.js...")
 
 	// Get build configuration
 	build := l.GetDefaultConfig()
@@ -213,30 +214,30 @@ func (l *Ruby) EnsureDockerfile(releaseDir string, appName string, app *internal
 	return os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644)
 }
 
-func (l *Ruby) GetDefaultConfig() *internal.App {
-	return &internal.App{
-		// Default configuration for Ruby apps
-		Entrypoint: "app.rb",
+func (l *Nodejs) GetDefaultConfig() *pkg.App {
+	return &pkg.App{
+		// Default configuration for Node.js apps
+		Entrypoint: "index.js",
 		WorkDir:    ".",
 	}
 }
 
-func (l *Ruby) generateDockerfile(build *internal.App, appName string, app *internal.App) string {
+func (l *Nodejs) generateDockerfile(build *pkg.App, appName string, app *pkg.App) string {
 	// Determine entrypoint
 	entrypoint := build.Entrypoint
 	if entrypoint == "" {
-		entrypoint = "app.rb"
+		entrypoint = "index.js"
 	}
 
 	// Determine base image
 	baseImage := build.Image
 	if baseImage == "" {
-		// Try to detect Ruby version from project files
-		baseImage = internal.DetectRubyVersion(".")
-		fmt.Printf("-----> Detected Ruby version: %s\n", baseImage)
+		// Try to detect Node.js version from project files
+		baseImage = util.DetectNodeVersion(".")
+		fmt.Printf("-----> Detected Node.js version: %s\n", baseImage)
 	}
 
-	return fmt.Sprintf(`# Generated Dockerfile for Ruby application
+	return fmt.Sprintf(`# Generated Dockerfile for Node.js application
 # App: %s
 # Entrypoint: %s
 
@@ -244,17 +245,14 @@ FROM %s
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache build-base sox lame
-
-# Copy Gemfile
-COPY Gemfile* ./
-RUN bundle install --without development test
+# Copy package files
+COPY package*.json ./
+RUN npm ci --only=production
 
 # Copy application code
 COPY . .
 
 # Run the application
-CMD ["ruby", "%s"]
+CMD ["node", "%s"]
 `, appName, entrypoint, baseImage, entrypoint)
 }

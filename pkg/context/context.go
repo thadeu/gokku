@@ -1,16 +1,19 @@
-package internal
+package context
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
+
+	"gokku/pkg"
+	"gokku/pkg/util"
 )
 
 // ExecutionContext represents the execution context for a command
 type ExecutionContext struct {
 	Mode            string // "client" or "server"
 	AppName         string
-	RemoteInfo      *RemoteInfo
+	RemoteInfo      *pkg.RemoteInfo
 	ServerExecution bool
 	Host            string
 	BaseDir         string
@@ -22,7 +25,7 @@ func NewExecutionContext(appName string) (*ExecutionContext, error) {
 		AppName: appName,
 	}
 
-	if IsClientMode() {
+	if util.IsClientMode() {
 		ctx.Mode = "client"
 		ctx.ServerExecution = false
 	} else {
@@ -34,7 +37,7 @@ func NewExecutionContext(appName string) (*ExecutionContext, error) {
 	if !ctx.ServerExecution {
 		if appName != "" {
 			// Client mode with app - use git remote
-			remoteInfo, err := GetRemoteInfo(appName)
+			remoteInfo, err := util.GetRemoteInfo(appName)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to get remote info: %v", err)

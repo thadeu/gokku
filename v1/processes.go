@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"gokku/internal/containers"
+	"gokku/pkg"
+	"gokku/pkg/containers"
 )
 
 // ProcessesCommand gerencia processos/containers
@@ -56,7 +57,7 @@ func (c *ProcessesCommand) List(appName string) error {
 // Restart reinicia todos os containers de uma app
 func (c *ProcessesCommand) Restart(appName string) error {
 	registry := containers.NewContainerRegistry()
-	allContainers, err := registry.GetAllContainers(appName)
+	allContainers, err := registry.ListContainers(appName)
 
 	if err != nil {
 		c.output.Error(fmt.Sprintf("Error getting containers: %v", err))
@@ -110,7 +111,19 @@ func (c *ProcessesCommand) Stop(appName, processType string) error {
 
 	if processType != "" {
 		// Stop specific process type
-		containers, err := registry.GetContainers(appName, processType)
+		allContainers, err := registry.ListContainers(appName)
+		if err != nil {
+			c.output.Error(fmt.Sprintf("Error getting containers: %v", err))
+			return err
+		}
+
+		// Filter by process type
+		containers := make([]pkg.ContainerInfo, 0)
+		for _, container := range allContainers {
+			if container.ProcessType == processType {
+				containers = append(containers, container)
+			}
+		}
 		if err != nil {
 			c.output.Error(fmt.Sprintf("Error getting containers: %v", err))
 			return err
@@ -135,7 +148,7 @@ func (c *ProcessesCommand) Stop(appName, processType string) error {
 		}
 	} else {
 		// Stop all processes
-		allContainers, err := registry.GetAllContainers(appName)
+		allContainers, err := registry.ListContainers(appName)
 		if err != nil {
 			c.output.Error(fmt.Sprintf("Error getting containers: %v", err))
 			return err
@@ -186,7 +199,7 @@ func (c *ProcessesCommand) Stop(appName, processType string) error {
 // Start inicia containers de uma app
 func (c *ProcessesCommand) Start(appName string) error {
 	registry := containers.NewContainerRegistry()
-	allContainers, err := registry.GetAllContainers(appName)
+	allContainers, err := registry.ListContainers(appName)
 
 	if err != nil {
 		c.output.Error(fmt.Sprintf("Error getting containers: %v", err))

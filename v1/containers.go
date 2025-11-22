@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"gokku/internal"
+	"gokku/pkg"
 )
 
 // ContainersCommand gerencia operações de containers
@@ -83,7 +83,7 @@ func (c *ContainersCommand) Restart(name string) error {
 
 // Stop para um container (movido de internal/services/containers.go)
 func (c *ContainersCommand) Stop(name string) error {
-	if err := internal.StopContainer(name); err != nil {
+	if err := pkg.StopContainer(name); err != nil {
 		c.output.Error(err.Error())
 		return err
 	}
@@ -94,7 +94,7 @@ func (c *ContainersCommand) Stop(name string) error {
 
 // Start inicia um container (movido de internal/services/containers.go)
 func (c *ContainersCommand) Start(name string) error {
-	if !internal.ContainerExists(name) {
+	if !pkg.ContainerExists(name) {
 		c.output.Error(fmt.Sprintf("Container '%s' not found", name))
 		return fmt.Errorf("container not found")
 	}
@@ -112,7 +112,7 @@ func (c *ContainersCommand) Start(name string) error {
 
 // GetInfo obtém informações de um container (movido de internal/services/containers.go)
 func (c *ContainersCommand) GetInfo(name string) error {
-	containers, err := internal.ListContainers(true)
+	containers, err := pkg.ListContainers(true)
 	if err != nil {
 		c.output.Error(err.Error())
 		return err
@@ -131,8 +131,8 @@ func (c *ContainersCommand) GetInfo(name string) error {
 
 // Métodos privados (movidos de internal/services/containers.go)
 
-func (c *ContainersCommand) listContainers(filter ContainerFilter) ([]internal.ContainerInfo, error) {
-	allContainers, err := internal.ListContainers(filter.All)
+func (c *ContainersCommand) listContainers(filter ContainerFilter) ([]pkg.ContainerInfo, error) {
+	allContainers, err := pkg.ListContainers(filter.All)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
@@ -141,7 +141,7 @@ func (c *ContainersCommand) listContainers(filter ContainerFilter) ([]internal.C
 		return allContainers, nil
 	}
 
-	var filtered []internal.ContainerInfo
+	var filtered []pkg.ContainerInfo
 	for _, container := range allContainers {
 		match := true
 

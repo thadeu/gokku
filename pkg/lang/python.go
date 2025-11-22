@@ -6,27 +6,28 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"gokku/internal"
+	"gokku/pkg"
+	"gokku/pkg/util"
 )
 
-type Nodejs struct {
-	app *internal.App
+type Python struct {
+	app *pkg.App
 }
 
-func (l *Nodejs) Build(appName string, app *internal.App, releaseDir string) error {
-	fmt.Println("-----> Building Node.js application...")
+func (l *Python) Build(appName string, app *pkg.App, releaseDir string) error {
+	fmt.Println("-----> Building Python application...")
 
 	// Check if using pre-built image from registry
-	if app.Image != "" && internal.IsRegistryImage(app.Image, internal.GetCustomRegistries(appName)) {
+	if app.Image != "" && util.IsRegistryImage(app.Image, util.GetCustomRegistries(appName)) {
 		fmt.Println("-----> Using pre-built image from registry...")
 
 		// Pull the pre-built image
-		if err := internal.PullRegistryImage(app.Image); err != nil {
+		if err := util.PullRegistryImage(app.Image); err != nil {
 			return fmt.Errorf("failed to pull pre-built image: %v", err)
 		}
 
 		// Tag the image for the app
-		if err := internal.TagImageForApp(app.Image, appName); err != nil {
+		if err := util.TagImageForApp(app.Image, appName); err != nil {
 			return fmt.Errorf("failed to tag image: %v", err)
 		}
 
@@ -57,14 +58,14 @@ func (l *Nodejs) Build(appName string, app *internal.App, releaseDir string) err
 		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
 		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
 		// Add Gokku labels to image
-		for _, label := range internal.GetGokkuLabels() {
+		for _, label := range pkg.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
 		}
 	} else {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
 		// Add Gokku labels to image
-		for _, label := range internal.GetGokkuLabels() {
+		for _, label := range pkg.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
 		}
 	}
@@ -76,12 +77,12 @@ func (l *Nodejs) Build(appName string, app *internal.App, releaseDir string) err
 		return fmt.Errorf("docker build failed: %v", err)
 	}
 
-	fmt.Println("-----> Node.js build complete!")
+	fmt.Println("-----> Python build complete!")
 	return nil
 }
 
-func (l *Nodejs) Deploy(appName string, app *internal.App, releaseDir string) error {
-	fmt.Println("-----> Deploying Node.js application...")
+func (l *Python) Deploy(appName string, app *pkg.App, releaseDir string) error {
+	fmt.Println("-----> Deploying Python application...")
 
 	// Get environment file
 	envFile := filepath.Join("/opt/gokku/apps", appName, "shared", ".env")
@@ -100,7 +101,7 @@ func (l *Nodejs) Deploy(appName string, app *internal.App, releaseDir string) er
 		volumes = append(volumes, app.Volumes...)
 	}
 
-	return internal.DeployContainer(internal.DeploymentConfig{
+	return pkg.DeployContainer(pkg.DeploymentConfig{
 		AppName:     appName,
 		ImageTag:    "latest",
 		EnvFile:     envFile,
@@ -111,16 +112,16 @@ func (l *Nodejs) Deploy(appName string, app *internal.App, releaseDir string) er
 	})
 }
 
-func (l *Nodejs) Restart(appName string, app *internal.App) error {
+func (l *Python) Restart(appName string, app *pkg.App) error {
 	fmt.Printf("-----> Restarting %s...\n", appName)
 
 	// Find active container
 	containerName := appName
-	if !internal.ContainerExists(containerName) {
+	if !pkg.ContainerExists(containerName) {
 		containerName = appName + "-green"
 	}
 
-	if !internal.ContainerExists(containerName) {
+	if !pkg.ContainerExists(containerName) {
 		return fmt.Errorf("no active container found for %s", appName)
 	}
 
@@ -129,7 +130,7 @@ func (l *Nodejs) Restart(appName string, app *internal.App) error {
 	return cmd.Run()
 }
 
-func (l *Nodejs) Cleanup(appName string, app *internal.App) error {
+func (l *Python) Cleanup(appName string, app *pkg.App) error {
 	fmt.Printf("-----> Cleaning up old releases for %s...\n", appName)
 
 	appDir := filepath.Join("/opt/gokku/apps", appName)
@@ -162,14 +163,17 @@ func (l *Nodejs) Cleanup(appName string, app *internal.App) error {
 	return nil
 }
 
-func (l *Nodejs) DetectLanguage(releaseDir string) (string, error) {
-	if _, err := os.Stat(filepath.Join(releaseDir, "package.json")); err == nil {
-		return "nodejs", nil
+func (l *Python) DetectLanguage(releaseDir string) (string, error) {
+	if _, err := os.Stat(filepath.Join(releaseDir, "requirements.txt")); err == nil {
+		return "python", nil
 	}
-	return "", fmt.Errorf("not a Node.js project")
+	if _, err := os.Stat(filepath.Join(releaseDir, "pyproject.toml")); err == nil {
+		return "python", nil
+	}
+	return "", fmt.Errorf("not a Python project")
 }
 
-func (l *Nodejs) EnsureDockerfile(releaseDir string, appName string, app *internal.App) error {
+func (l *Python) EnsureDockerfile(releaseDir string, appName string, app *pkg.App) error {
 	// Check if custom Dockerfile is specified
 	if app.Dockerfile != "" {
 		customDockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
@@ -195,7 +199,7 @@ func (l *Nodejs) EnsureDockerfile(releaseDir string, appName string, app *intern
 		return nil
 	}
 
-	fmt.Println("-----> Generating Dockerfile for Node.js...")
+	fmt.Println("-----> Generating Dockerfile for Python...")
 
 	// Get build configuration
 	build := l.GetDefaultConfig()
@@ -213,30 +217,30 @@ func (l *Nodejs) EnsureDockerfile(releaseDir string, appName string, app *intern
 	return os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644)
 }
 
-func (l *Nodejs) GetDefaultConfig() *internal.App {
-	return &internal.App{
-		// Default configuration for Node.js apps
-		Entrypoint: "index.js",
+func (l *Python) GetDefaultConfig() *pkg.App {
+	return &pkg.App{
+		// Default configuration for Python apps
+		Entrypoint: "main.py",
 		WorkDir:    ".",
 	}
 }
 
-func (l *Nodejs) generateDockerfile(build *internal.App, appName string, app *internal.App) string {
+func (l *Python) generateDockerfile(build *pkg.App, appName string, app *pkg.App) string {
 	// Determine entrypoint
 	entrypoint := build.Entrypoint
 	if entrypoint == "" {
-		entrypoint = "index.js"
+		entrypoint = "main.py"
 	}
 
 	// Determine base image
 	baseImage := build.Image
 	if baseImage == "" {
-		// Try to detect Node.js version from project files
-		baseImage = internal.DetectNodeVersion(".")
-		fmt.Printf("-----> Detected Node.js version: %s\n", baseImage)
+		// Use latest Python as fallback
+		baseImage = util.DetectPythonVersion(".")
+		fmt.Printf("-----> Using Python fallback: %s\n", baseImage)
 	}
 
-	return fmt.Sprintf(`# Generated Dockerfile for Node.js application
+	return fmt.Sprintf(`# Generated Dockerfile for Python application
 # App: %s
 # Entrypoint: %s
 
@@ -244,14 +248,19 @@ FROM %s
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-RUN npm ci --only=production
+# Install system dependencies if needed
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc sox libsox-fmt-all lame \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt* ./
+RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
 
 # Copy application code
 COPY . .
 
 # Run the application
-CMD ["node", "%s"]
+CMD ["python", "%s"]
 `, appName, entrypoint, baseImage, entrypoint)
 }

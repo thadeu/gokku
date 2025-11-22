@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	"gokku/internal"
+	"gokku/pkg"
 )
 
 // LogsCommand gerencia logs de aplicações
@@ -25,7 +25,7 @@ func NewLogsCommand(output Output) *LogsCommand {
 // Show exibe os logs de uma aplicação
 func (c *LogsCommand) Show(appName string, follow bool, tail int) error {
 	// Verificar se o container existe
-	if !internal.ContainerExists(appName) {
+	if !pkg.ContainerExists(appName) {
 		c.output.Error(fmt.Sprintf("Container '%s' not found", appName))
 		return fmt.Errorf("container not found")
 	}

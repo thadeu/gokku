@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gokku/internal"
+	"gokku/pkg/git"
 )
 
 // SetupCommand gerencia configuração inicial do servidor
@@ -315,7 +315,7 @@ func (c *SetupCommand) verifySetup() error {
 }
 
 func (c *SetupCommand) createDefaultRemote() error {
-	client := &internal.GitClient{}
+	client := &git.GitClient{}
 
 	if _, err := client.GetRemoteURL("gokku"); err == nil {
 		return nil

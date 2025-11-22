@@ -1,4 +1,4 @@
-package internal
+package util
 
 import (
 	"bufio"
@@ -11,6 +11,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"gokku/pkg"
+	"gokku/pkg/git"
 )
 
 // GetConfigPath returns the path to the configuration file
@@ -53,11 +56,28 @@ func ExtractAppFlag(args []string) (string, []string) {
 	return app, remaining
 }
 
+// ExtractIdentityFlag extracts the --identity flag from arguments
+func ExtractIdentityFlag(args []string) (string, []string) {
+	var identity string
+	var remaining []string
+
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--identity" && i+1 < len(args) {
+			identity = args[i+1]
+			i++ // Skip next arg
+		} else {
+			remaining = append(remaining, args[i])
+		}
+	}
+
+	return identity, remaining
+}
+
 // GetRemoteInfoOrDefault extracts remote info using --remote flag or defaults to "gokku"
 // Returns nil if in server mode (local execution)
 // Returns RemoteInfo if in client mode with valid remote
 // Uses RemoteInfo from config.go
-func GetRemoteInfoOrDefault(args []string) (*RemoteInfo, []string, error) {
+func GetRemoteInfoOrDefault(args []string) (*pkg.RemoteInfo, []string, error) {
 	// If in server mode, return nil (execute locally)
 	if IsServerMode() {
 		// Remove --remote from args if present
@@ -93,7 +113,7 @@ func GetRemoteInfoOrDefault(args []string) (*RemoteInfo, []string, error) {
 
 // ExecuteRemoteCommand executes a command on remote server via SSH
 // Automatically removes --remote flag from the command string
-func ExecuteRemoteCommand(remoteInfo *RemoteInfo, command string) error {
+func ExecuteRemoteCommand(remoteInfo *pkg.RemoteInfo, command string) error {
 	if remoteInfo == nil {
 		return fmt.Errorf("remoteInfo is nil")
 	}
@@ -201,14 +221,10 @@ func IsSignalInterruption(err error) bool {
 		}
 	}
 
-	// For long-running operations, we'll be more permissive with signal handling
-	// This is a simplified approach that works better with SSH and Docker commands
-	return true
+	return false
 }
 
-// IsRegistryImage checks if the image is from a registry (pre-built image)
-// Returns true if the image contains a registry URL (ghcr.io, ECR, docker.io, etc.)
-// customRegistries is an optional list of custom registry patterns from gokku.yml
+// IsRegistryImage checks if an image is from a registry (not a local build)
 func IsRegistryImage(image string, customRegistries ...[]string) bool {
 	if image == "" {
 		return false
@@ -270,6 +286,18 @@ func IsRegistryImage(image string, customRegistries ...[]string) bool {
 	return false
 }
 
+// GetCustomRegistries returns custom registries configured for an app
+func GetCustomRegistries(appName string) []string {
+	// Load server config for the specific app
+	if config, err := pkg.LoadServerConfigByApp(appName); err == nil && config.Docker != nil && len(config.Docker.Registry) > 0 {
+		// Return the list of registries from docker.registry config
+		return config.Docker.Registry
+	}
+
+	// Fallback to empty list if no config found
+	return []string{}
+}
+
 // PullRegistryImage pulls a pre-built image from a registry
 func PullRegistryImage(image string) error {
 	fmt.Printf("-----> Pulling pre-built image: %s\n", image)
@@ -303,16 +331,73 @@ func TagImageForApp(image, appName string) error {
 	return nil
 }
 
-// GetCustomRegistries loads custom registries from gokku.yml configuration for a specific app
-func GetCustomRegistries(appName string) []string {
-	// Load server config for the specific app
-	if config, err := LoadServerConfigByApp(appName); err == nil && config.Docker != nil && len(config.Docker.Registry) > 0 {
-		// Return the list of registries from docker.registry config
-		return config.Docker.Registry
+// RunDockerBuildWithTimeout runs a Docker build command with timeout monitoring
+func RunDockerBuildWithTimeout(cmd *exec.Cmd, timeoutMinutes int) error {
+	if timeoutMinutes <= 0 {
+		timeoutMinutes = 30 // Default 30 minutes
 	}
 
-	// Fallback to empty list if no config found
-	return []string{}
+	timeout := time.Duration(timeoutMinutes) * time.Minute
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	buildStartTime := time.Now()
+	fmt.Printf("-----> Starting Docker build (timeout: %d minutes)...\n", timeoutMinutes)
+
+	// Start command
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start docker build: %v", err)
+	}
+
+	// Monitor progress
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	// Progress ticker - log every 30 seconds to show we're still working
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			// Timeout reached
+			elapsed := time.Since(buildStartTime)
+			fmt.Printf("-----> Build timeout reached after %s\n", elapsed.Round(time.Second))
+			fmt.Println("-----> Terminating build process...")
+			if cmd.Process != nil {
+				cmd.Process.Kill()
+			}
+
+			// Extract build context from command args
+			buildContext := "."
+			if len(cmd.Args) > 0 {
+				// Last argument is usually the build context
+				buildContext = cmd.Args[len(cmd.Args)-1]
+			}
+			if cmd.Dir != "" {
+				buildContext = cmd.Dir
+			}
+
+			return fmt.Errorf("docker build timed out after %d minutes. The build may be stuck or taking too long.\nTroubleshooting:\n  - Check Docker resources: docker system df\n  - Check Docker daemon logs: journalctl -u docker\n  - Verify available disk space: df -h\n  - Check if Go build is consuming resources: docker stats\n  - Try building manually: docker build -t <image> %s", timeoutMinutes, buildContext)
+		case err := <-done:
+			elapsed := time.Since(buildStartTime)
+			if err != nil {
+				return fmt.Errorf("docker build failed after %s: %v", elapsed.Round(time.Second), err)
+			}
+			fmt.Printf("-----> Build completed successfully in %s\n", elapsed.Round(time.Second))
+			return nil
+		case <-ticker.C:
+			// Log progress every 30 seconds
+			elapsed := time.Since(buildStartTime)
+			remaining := timeout - elapsed
+
+			if remaining > 0 {
+				fmt.Printf("-----> Build still running... (elapsed: %s, remaining: %s)\n", elapsed.Round(time.Second), remaining.Round(time.Second))
+			}
+		}
+	}
 }
 
 // DetectRubyVersion detects Ruby version from .ruby-version or Gemfile
@@ -415,92 +500,6 @@ func DetectPythonVersion(releaseDir string) string {
 	return "python:latest"
 }
 
-// RunDockerBuildWithTimeout executes docker build with timeout and progress monitoring
-func RunDockerBuildWithTimeout(cmd *exec.Cmd, timeoutMinutes int) error {
-	if timeoutMinutes <= 0 {
-		timeoutMinutes = 30 // Default 30 minutes
-	}
-
-	timeout := time.Duration(timeoutMinutes) * time.Minute
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	buildStartTime := time.Now()
-	fmt.Printf("-----> Starting Docker build (timeout: %d minutes)...\n", timeoutMinutes)
-
-	// Start command
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start docker build: %v", err)
-	}
-
-	// Monitor progress
-	done := make(chan error, 1)
-	go func() {
-		done <- cmd.Wait()
-	}()
-
-	// Progress ticker - log every 30 seconds to show we're still working
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			// Timeout reached
-			elapsed := time.Since(buildStartTime)
-			fmt.Printf("-----> Build timeout reached after %s\n", elapsed.Round(time.Second))
-			fmt.Println("-----> Terminating build process...")
-			if cmd.Process != nil {
-				cmd.Process.Kill()
-			}
-
-			// Extract build context from command args
-			buildContext := "."
-			if len(cmd.Args) > 0 {
-				// Last argument is usually the build context
-				buildContext = cmd.Args[len(cmd.Args)-1]
-			}
-			if cmd.Dir != "" {
-				buildContext = cmd.Dir
-			}
-
-			return fmt.Errorf("docker build timed out after %d minutes. The build may be stuck or taking too long.\nTroubleshooting:\n  - Check Docker resources: docker system df\n  - Check Docker daemon logs: journalctl -u docker\n  - Verify available disk space: df -h\n  - Check if Go build is consuming resources: docker stats\n  - Try building manually: docker build -t <image> %s", timeoutMinutes, buildContext)
-		case err := <-done:
-			elapsed := time.Since(buildStartTime)
-			if err != nil {
-				return fmt.Errorf("docker build failed after %s: %v", elapsed.Round(time.Second), err)
-			}
-			fmt.Printf("-----> Build completed successfully in %s\n", elapsed.Round(time.Second))
-			return nil
-		case <-ticker.C:
-			// Log progress every 30 seconds
-			elapsed := time.Since(buildStartTime)
-			remaining := timeout - elapsed
-
-			if remaining > 0 {
-				fmt.Printf("-----> Build still running... (elapsed: %s, remaining: %s)\n", elapsed.Round(time.Second), remaining.Round(time.Second))
-			}
-		}
-	}
-}
-
-// ExtractIdentityFlag extracts the -i or --identity flag from arguments and returns the identity file path and remaining args
-func ExtractIdentityFlag(args []string) (string, []string) {
-	var identity string
-	var remaining []string
-
-	for i := 0; i < len(args); i++ {
-		if (args[i] == "-i" || args[i] == "--identity") && i+1 < len(args) {
-			identity = args[i+1]
-			i++ // Skip next arg
-		} else {
-			remaining = append(remaining, args[i])
-		}
-	}
-
-	return identity, remaining
-}
-
 // LoadEnvFile loads environment variables from a file
 func LoadEnvFile(envFile string) map[string]string {
 	envVars := make(map[string]string)
@@ -559,4 +558,19 @@ func SaveEnvFile(envFile string, envVars map[string]string) error {
 	}
 
 	return os.WriteFile(envFile, []byte(content.String()), 0600)
+}
+
+// GetRemoteInfo extracts info from git remote
+// Example: ubuntu@server:api
+// Returns: RemoteInfo{Host: "ubuntu@server", BaseDir: "/opt/gokku", App: "api"}
+func GetRemoteInfo(remoteName string) (*pkg.RemoteInfo, error) {
+	remoteInfo, err := git.GetRemoteInfoWithClient(&git.GitClient{}, remoteName)
+	if err != nil {
+		return nil, err
+	}
+	return &pkg.RemoteInfo{
+		Host:    remoteInfo.Host,
+		BaseDir: remoteInfo.BaseDir,
+		App:     remoteInfo.App,
+	}, nil
 }

@@ -1,4 +1,4 @@
-package internal
+package pkg
 
 import (
 	"fmt"
@@ -44,13 +44,6 @@ type App struct {
 	Environments []Environment     `yaml:"environments,omitempty"`
 }
 
-// RemoteInfo contains information about remote connection
-type RemoteInfo struct {
-	Host    string
-	BaseDir string
-	App     string
-}
-
 type NetworkConfig struct {
 	Mode string `yaml:"mode,omitempty"`
 }
@@ -79,6 +72,27 @@ type Defaults struct {
 // Docker represents Docker-related configurations
 type Docker struct {
 	Registry []string `yaml:"registry,omitempty"`
+}
+
+// ContainerInfo represents information about a running container
+type ContainerInfo struct {
+	// Docker ps fields
+	ID      string `json:"ID"`
+	Names   string `json:"Names"`
+	Image   string `json:"Image"`
+	Status  string `json:"Status"`
+	Ports   string `json:"Ports"`
+	Command string `json:"Command"`
+	Created string `json:"CreatedAt"`
+
+	// Registry fields
+	Name         string `json:"name"`
+	AppName      string `json:"app_name"`
+	ProcessType  string `json:"process_type"`
+	Number       int    `json:"number"`
+	HostPort     int    `json:"host_port"`
+	InternalPort int    `json:"internal_port"`
+	CreatedAt    string `json:"created_at"`
 }
 
 // LoadServerConfig loads the server configuration from gokku.yml

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gokku/internal"
+	"gokku/pkg"
 )
 
 // ConfigCommand gerencia configurações de aplicações
@@ -31,7 +31,7 @@ func NewConfigCommand(output Output) *ConfigCommand {
 // Set define variáveis de ambiente (movido de internal/services/config.go)
 func (c *ConfigCommand) Set(appName string, pairs []string) error {
 	envFile := c.getEnvFilePath(appName)
-	envVars := internal.LoadEnvFile(envFile)
+	envVars := pkg.LoadEnvFile(envFile)
 
 	// Parse and update env vars
 	for _, pair := range pairs {
@@ -47,7 +47,7 @@ func (c *ConfigCommand) Set(appName string, pairs []string) error {
 		envVars[key] = value
 	}
 
-	if err := internal.SaveEnvFile(envFile, envVars); err != nil {
+	if err := pkg.SaveEnvFile(envFile, envVars); err != nil {
 		c.output.Error(err.Error())
 		return err
 	}
@@ -132,13 +132,13 @@ func (c *ConfigCommand) List(appName string) error {
 // Unset remove variáveis de ambiente (movido de internal/services/config.go)
 func (c *ConfigCommand) Unset(appName string, keys []string) error {
 	envFile := c.getEnvFilePath(appName)
-	envVars := internal.LoadEnvFile(envFile)
+	envVars := pkg.LoadEnvFile(envFile)
 
 	for _, key := range keys {
 		delete(envVars, key)
 	}
 
-	if err := internal.SaveEnvFile(envFile, envVars); err != nil {
+	if err := pkg.SaveEnvFile(envFile, envVars); err != nil {
 		c.output.Error(err.Error())
 		return err
 	}
@@ -164,7 +164,7 @@ func (c *ConfigCommand) Reload(appName string) error {
 	envFile := c.getEnvFilePath(appName)
 	appDir := filepath.Join(c.baseDir, "apps", appName, "current")
 
-	if err := internal.RecreateActiveContainer(appName, envFile, appDir); err != nil {
+	if err := RecreateActiveContainer(appName, envFile, appDir); err != nil {
 		c.output.Error(fmt.Sprintf("Failed to reload app: %v", err))
 		return err
 	}
@@ -181,5 +181,5 @@ func (c *ConfigCommand) getEnvFilePath(appName string) string {
 
 func (c *ConfigCommand) listEnvVars(appName string) map[string]string {
 	envFile := c.getEnvFilePath(appName)
-	return internal.LoadEnvFile(envFile)
+	return pkg.LoadEnvFile(envFile)
 }

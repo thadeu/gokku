@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gokku/internal"
+	"gokku/pkg"
 )
 
 // RollbackCommand gerencia rollback de aplicações
@@ -59,18 +59,18 @@ func (c *RollbackCommand) Execute(appName string, releaseID string) error {
 	c.output.Print(fmt.Sprintf("Rolling back %s to release: %s", appName, releaseID))
 
 	// Verificar se o container existe
-	if !internal.ContainerExists(appName) {
+	if !pkg.ContainerExists(appName) {
 		c.output.Error(fmt.Sprintf("Container '%s' not found", appName))
 		return fmt.Errorf("container not found")
 	}
 
 	// Parar e remover container atual
 	c.output.Print("-----> Stopping current container...")
-	if err := internal.StopContainer(appName); err != nil {
+	if err := pkg.StopContainer(appName); err != nil {
 		c.output.Print(fmt.Sprintf("Warning: Failed to stop container: %v", err))
 	}
 
-	if err := internal.RemoveContainer(appName, true); err != nil {
+	if err := pkg.RemoveContainer(appName, true); err != nil {
 		c.output.Print(fmt.Sprintf("Warning: Failed to remove container: %v", err))
 	}
 
@@ -89,7 +89,7 @@ func (c *RollbackCommand) Execute(appName string, releaseID string) error {
 	}
 
 	// Criar e iniciar novo container
-	if err := internal.RecreateActiveContainer(appName, envFile, releaseDir); err != nil {
+	if err := RecreateActiveContainer(appName, envFile, releaseDir); err != nil {
 		c.output.Error(fmt.Sprintf("Failed to start container: %v", err))
 		return err
 	}

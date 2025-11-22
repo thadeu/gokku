@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gokku/internal"
+	"gokku/pkg"
 )
 
 // ServicesCommand gerencia operações de serviços
@@ -75,7 +75,7 @@ func (c *ServicesCommand) List() error {
 	var result []ServiceInfo
 	for _, svc := range servicesData {
 		status := "stopped"
-		if internal.ContainerIsRunning(svc.Name) {
+		if pkg.ContainerIsRunning(svc.Name) {
 			status = "running"
 		}
 
@@ -194,12 +194,12 @@ func (c *ServicesCommand) Destroy(serviceName string) error {
 	// Stop and remove all found containers
 	for _, containerName := range containers {
 		c.output.Print(fmt.Sprintf("-----> Stopping container: %s", containerName))
-		if err := internal.StopContainer(containerName); err != nil {
+		if err := pkg.StopContainer(containerName); err != nil {
 			c.output.Print(fmt.Sprintf("Warning: Failed to stop container %s: %v", containerName, err))
 		}
 
 		c.output.Print(fmt.Sprintf("-----> Removing container: %s", containerName))
-		if err := internal.RemoveContainer(containerName, true); err != nil {
+		if err := pkg.RemoveContainer(containerName, true); err != nil {
 			c.output.Print(fmt.Sprintf("Warning: Failed to remove container %s: %v", containerName, err))
 		}
 	}
@@ -207,12 +207,12 @@ func (c *ServicesCommand) Destroy(serviceName string) error {
 	// Also try to stop/remove the container ID from service config (legacy support)
 	if svc.ContainerID != "" {
 		c.output.Print(fmt.Sprintf("-----> Stopping legacy container: %s", svc.ContainerID))
-		if err := internal.StopContainer(svc.ContainerID); err != nil {
+		if err := pkg.StopContainer(svc.ContainerID); err != nil {
 			c.output.Print(fmt.Sprintf("Warning: Failed to stop legacy container: %v", err))
 		}
 
 		c.output.Print(fmt.Sprintf("-----> Removing legacy container: %s", svc.ContainerID))
-		if err := internal.RemoveContainer(svc.ContainerID, true); err != nil {
+		if err := pkg.RemoveContainer(svc.ContainerID, true); err != nil {
 			c.output.Print(fmt.Sprintf("Warning: Failed to remove legacy container: %v", err))
 		}
 	}
@@ -333,7 +333,7 @@ func (c *ServicesCommand) Info(serviceName string) error {
 
 	// Fallback: show service info
 	status := "stopped"
-	if internal.ContainerIsRunning(serviceName) {
+	if pkg.ContainerIsRunning(serviceName) {
 		status = "running"
 	}
 
@@ -410,7 +410,7 @@ func (c *ServicesCommand) Get(serviceName string) error {
 	}
 
 	status := "stopped"
-	if internal.ContainerIsRunning(serviceName) {
+	if pkg.ContainerIsRunning(serviceName) {
 		status = "running"
 	}
 
@@ -542,7 +542,7 @@ func (c *ServicesCommand) addServiceEnvVars(serviceName, appName, pluginName str
 	envFile := filepath.Join(c.baseDir, "apps", appName, "shared", ".env")
 
 	// Load existing env vars
-	existingVars := internal.LoadEnvFile(envFile)
+	existingVars := pkg.LoadEnvFile(envFile)
 
 	// Add service env vars
 	for key, value := range envVars {
@@ -550,7 +550,7 @@ func (c *ServicesCommand) addServiceEnvVars(serviceName, appName, pluginName str
 	}
 
 	// Save updated env vars
-	return internal.SaveEnvFile(envFile, existingVars)
+	return pkg.SaveEnvFile(envFile, existingVars)
 }
 
 func (c *ServicesCommand) removeServiceEnvVars(serviceName, appName, pluginName string) error {
@@ -564,7 +564,7 @@ func (c *ServicesCommand) removeServiceEnvVars(serviceName, appName, pluginName 
 	envFile := filepath.Join(c.baseDir, "apps", appName, "shared", ".env")
 
 	// Load existing env vars
-	existingVars := internal.LoadEnvFile(envFile)
+	existingVars := pkg.LoadEnvFile(envFile)
 
 	// Remove service env vars
 	for _, key := range envKeys {
@@ -572,7 +572,7 @@ func (c *ServicesCommand) removeServiceEnvVars(serviceName, appName, pluginName 
 	}
 
 	// Save updated env vars
-	return internal.SaveEnvFile(envFile, existingVars)
+	return pkg.SaveEnvFile(envFile, existingVars)
 }
 
 func (c *ServicesCommand) getServiceEnvVars(serviceName string, config map[string]string, pluginName string) map[string]string {

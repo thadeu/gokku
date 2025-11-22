@@ -5,7 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"gokku/internal"
+	"gokku/pkg"
+	"gokku/pkg/context"
 )
 
 // RunCommand gerencia operações de aplicações
@@ -28,12 +29,12 @@ func NewRunCommand(output Output) *RunCommand {
 	}
 }
 
-func (c *RunCommand) UseWithContext(ctx *internal.ExecutionContext, args []string) {
+func (c *RunCommand) UseWithContext(ctx *context.ExecutionContext, args []string) {
 	if err := ctx.ValidateAppRequired(); err != nil {
 		ctx.PrintUsageError("run", err.Error())
 	}
 
-	_, remainingArgs := internal.ExtractAppFlag(args)
+	_, remainingArgs := pkg.ExtractAppFlag(args)
 
 	if len(remainingArgs) < 1 {
 		fmt.Println("Error: command is required")

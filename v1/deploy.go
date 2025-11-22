@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"gokku/internal"
 
 	"gopkg.in/yaml.v3"
+	"gokku/pkg"
+	"gokku/pkg/config"
 )
 
 // DeployCommand gerencia deploy de aplicações
@@ -135,7 +136,7 @@ func (c *DeployCommand) initialSetup(appName, gokkuYmlPath, releaseDir string) e
 		return err
 	}
 
-	var config internal.Config
+	var config pkg.Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return err
 	}
@@ -151,18 +152,18 @@ func (c *DeployCommand) initialSetup(appName, gokkuYmlPath, releaseDir string) e
 
 func (c *DeployCommand) updateEnvironmentFile(envFile, appName string) error {
 	// Carregar configuração
-	config, err := internal.LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		return err
 	}
 
-	appConfig := config.GetAppConfig(appName)
+	appConfig := config.GetAppConfig(cfg, appName)
 	if appConfig == nil {
 		return nil // No app config
 	}
 
 	// Carregar env vars existentes
-	envVars := internal.LoadEnvFile(envFile)
+	envVars := pkg.LoadEnvFile(envFile)
 
 	// Adicionar/atualizar env vars do config
 	if appConfig.Env != nil {
@@ -172,7 +173,7 @@ func (c *DeployCommand) updateEnvironmentFile(envFile, appName string) error {
 	}
 
 	// Salvar env file
-	return internal.SaveEnvFile(envFile, envVars)
+	return pkg.SaveEnvFile(envFile, envVars)
 }
 
 func (c *DeployCommand) buildRelease(appName, releaseDir string) error {
@@ -203,7 +204,7 @@ func (c *DeployCommand) updateCurrentSymlink(currentLink, releaseDir string) err
 }
 
 func (c *DeployCommand) executePostDeployCommands(appName, releaseDir string) error {
-	config, err := internal.LoadAppConfig(appName)
+	config, err := pkg.LoadAppConfig(appName)
 	if err != nil {
 		return nil // No config
 	}
@@ -236,7 +237,7 @@ func (c *DeployCommand) startContainers(appName, releaseDir string) error {
 	envFile := filepath.Join(c.baseDir, "apps", appName, "shared", ".env")
 
 	// Recriar container ativo
-	if err := internal.RecreateActiveContainer(appName, envFile, releaseDir); err != nil {
+	if err := RecreateActiveContainer(appName, envFile, releaseDir); err != nil {
 		return fmt.Errorf("failed to start containers: %w", err)
 	}
 
@@ -259,4 +260,10 @@ func (c *DeployCommand) copyFile(src, dst string) error {
 
 	_, err = io.Copy(destFile, sourceFile)
 	return err
+}
+
+// RecreateActiveContainer recreates the active container for an app
+// TODO: Implement full logic from internal/docker.go
+func RecreateActiveContainer(appName, envFile, releaseDir string) error {
+	return fmt.Errorf("RecreateActiveContainer not implemented yet - needs migration from internal/docker.go")
 }

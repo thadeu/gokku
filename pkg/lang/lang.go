@@ -5,17 +5,17 @@ import (
 	"os"
 	"path/filepath"
 
-	"gokku/internal"
+	"gokku/pkg"
 )
 
 type Lang interface {
-	Build(appName string, app *internal.App, releaseDir string) error
-	Deploy(appName string, app *internal.App, releaseDir string) error
-	Restart(appName string, app *internal.App) error
-	Cleanup(appName string, app *internal.App) error
+	Build(appName string, app *pkg.App, releaseDir string) error
+	Deploy(appName string, app *pkg.App, releaseDir string) error
+	Restart(appName string, app *pkg.App) error
+	Cleanup(appName string, app *pkg.App) error
 	DetectLanguage(releaseDir string) (string, error)
-	EnsureDockerfile(releaseDir string, appName string, app *internal.App) error
-	GetDefaultConfig() *internal.App
+	EnsureDockerfile(releaseDir string, appName string, app *pkg.App) error
+	GetDefaultConfig() *pkg.App
 }
 
 // DetectLanguage automatically detects the programming language based on project files
@@ -96,7 +96,7 @@ func detectLanguageRecursive(dir string, maxDepth int) string {
 }
 
 // NewLang creates a language handler based on detected or configured language
-func NewLang(app *internal.App, releaseDir string) (Lang, error) {
+func NewLang(app *pkg.App, releaseDir string) (Lang, error) {
 	var langType string
 	var err error
 

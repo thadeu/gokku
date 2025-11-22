@@ -1,11 +1,11 @@
 package v1
 
 import (
-	"gokku/internal"
 	"testing"
 
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/suite"
+	"gokku/pkg"
 )
 
 func TestCommonTestSuite(t *testing.T) {
@@ -50,7 +50,7 @@ func (s *CommonTestSuite) TestAppDetail_Structure() {
 	appDetail := AppDetail{
 		AppInfo:    appInfo,
 		Config:     nil,
-		Containers: []internal.ContainerInfo{},
+		Containers: []pkg.ContainerInfo{},
 		EnvVars:    make(map[string]string),
 	}
 

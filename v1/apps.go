@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"gokku/internal"
+	"gokku/pkg"
 )
 
 // AppsCommand gerencia operações de aplicações
@@ -41,8 +41,8 @@ type AppInfo struct {
 // AppDetail representa informações detalhadas de uma aplicação
 type AppDetail struct {
 	AppInfo
-	Config     *internal.App            `json:"config,omitempty"`
-	Containers []internal.ContainerInfo `json:"containers"`
+	Config     *pkg.App                 `json:"config,omitempty"`
+	Containers []pkg.ContainerInfo      `json:"containers"`
 	EnvVars    map[string]string        `json:"env_vars"`
 }
 
@@ -135,9 +135,9 @@ func (c *AppsCommand) Destroy(appName string) error {
 	}
 
 	// Parar e remover containers
-	if internal.ContainerExists(appName) {
-		internal.StopContainer(appName)
-		internal.RemoveContainer(appName, true)
+	if pkg.ContainerExists(appName) {
+		pkg.StopContainer(appName)
+		pkg.RemoveContainer(appName, true)
 	}
 
 	// Remover diretório da app
@@ -208,7 +208,7 @@ func (c *AppsCommand) getApp(appName string) (*AppDetail, error) {
 	releasesCount := c.countReleases(appName)
 	currentRelease := c.getCurrentRelease(appName)
 
-	config, _ := internal.LoadAppConfig(appName)
+	config, _ := pkg.LoadAppConfig(appName)
 	containers, _ := c.getAppContainers(appName)
 	envVars := c.getAppEnvVars(appName)
 	if envVars == nil {
@@ -235,9 +235,9 @@ func (c *AppsCommand) appExists(appName string) bool {
 }
 
 func (c *AppsCommand) getAppStatus(appName string) string {
-	if internal.ContainerIsRunning(appName) {
+	if pkg.ContainerIsRunning(appName) {
 		return "running"
-	} else if internal.ContainerExists(appName) {
+	} else if pkg.ContainerExists(appName) {
 		return "stopped"
 	}
 	return "not deployed"
@@ -261,15 +261,15 @@ func (c *AppsCommand) getCurrentRelease(appName string) string {
 	return filepath.Base(linkTarget)
 }
 
-func (c *AppsCommand) getAppContainers(appName string) ([]internal.ContainerInfo, error) {
-	containers, err := internal.ListContainers(false)
+func (c *AppsCommand) getAppContainers(appName string) ([]pkg.ContainerInfo, error) {
+	containers, err := pkg.ListContainers(false)
 	if err != nil {
 		return nil, err
 	}
 
-	var appContainers []internal.ContainerInfo
+	var appContainers []pkg.ContainerInfo
 	for _, container := range containers {
-		if strings.Contains(container.Names, appName) {
+		if strings.Contains(container.Name, appName) {
 			appContainers = append(appContainers, container)
 		}
 	}
@@ -279,7 +279,7 @@ func (c *AppsCommand) getAppContainers(appName string) ([]internal.ContainerInfo
 
 func (c *AppsCommand) getAppEnvVars(appName string) map[string]string {
 	envFile := filepath.Join(c.baseDir, "apps", appName, "shared", ".env")
-	return internal.LoadEnvFile(envFile)
+	return pkg.LoadEnvFile(envFile)
 }
 
 func (c *AppsCommand) createDirectoryStructure(appName string) error {

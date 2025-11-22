@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"gokku/tui/table"
+	"gokku/pkg/tui/table"
 )
 
 const (

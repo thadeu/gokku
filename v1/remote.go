@@ -5,7 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"gokku/internal"
+	"gokku/pkg"
+	"gokku/pkg/git"
 )
 
 type RunRemoteCommand struct {
@@ -92,7 +93,7 @@ func (c *RunRemoteCommand) handleRemoteAdd(args []string) {
 		os.Exit(1)
 	}
 
-	gitc := &internal.GitClient{}
+	gitc := &git.GitClient{}
 
 	// Create git remote URL
 	remoteURL := fmt.Sprintf("%s:%s", serverHost, remoteAppName)
@@ -119,7 +120,7 @@ func (c *RunRemoteCommand) handleRemoteAdd(args []string) {
 
 // handleRemoteList lists all configured git remotes
 func (c *RunRemoteCommand) handleRemoteList() {
-	gitc := &internal.GitClient{}
+	gitc := &git.GitClient{}
 	outputBytes, err := gitc.ExecuteCommand("remote", "-v")
 
 	if err != nil {
@@ -147,7 +148,7 @@ func (c *RunRemoteCommand) handleRemoteRemove(args []string) {
 		os.Exit(1)
 	}
 
-	gitc := &internal.GitClient{}
+	gitc := &git.GitClient{}
 
 	remoteName := args[0]
 
@@ -172,7 +173,7 @@ func (c *RunRemoteCommand) handleRemoteRemove(args []string) {
 // handleRemoteSetup performs one-time server setup
 func (c *RunRemoteCommand) handleRemoteSetup(args []string) {
 	// Extract identity flag (-i or --identity)
-	identityFile, remainingArgs := internal.ExtractIdentityFlag(args)
+	identityFile, remainingArgs := pkg.ExtractIdentityFlag(args)
 
 	// Get server host from remaining args
 	if len(remainingArgs) < 1 {

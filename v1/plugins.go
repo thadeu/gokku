@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gokku/internal"
+	"gokku/pkg"
 )
 
 // PluginsCommand gerencia plugins
@@ -224,7 +224,7 @@ func (c *PluginsCommand) Wildcard(args []string) error {
 	}
 
 	// Extract --remote flag first (if present)
-	remoteInfo, remainingArgs, err := internal.GetRemoteInfoOrDefault(args)
+	remoteInfo, remainingArgs, err := pkg.GetRemoteInfoOrDefault(args)
 	if err != nil {
 		c.output.Error(fmt.Sprintf("Error: %v", err))
 		return err
@@ -278,7 +278,7 @@ func (c *PluginsCommand) Wildcard(args []string) error {
 
 // Métodos privados para handlers CLI (com parsing de args e remote execution)
 
-func (c *PluginsCommand) handleInstall(args []string, remoteInfo *internal.RemoteInfo) error {
+func (c *PluginsCommand) handleInstall(args []string, remoteInfo *pkg.RemoteInfo) error {
 	if len(args) < 1 {
 		c.showInstallHelp()
 		return fmt.Errorf("plugin name required")
@@ -301,7 +301,7 @@ func (c *PluginsCommand) handleInstall(args []string, remoteInfo *internal.Remot
 	return c.Install(pluginName, gitURL)
 }
 
-func (c *PluginsCommand) handleUpdate(args []string, remoteInfo *internal.RemoteInfo) error {
+func (c *PluginsCommand) handleUpdate(args []string, remoteInfo *pkg.RemoteInfo) error {
 	if len(args) < 1 {
 		c.showUpdateHelp()
 		return fmt.Errorf("plugin name required")
@@ -317,7 +317,7 @@ func (c *PluginsCommand) handleUpdate(args []string, remoteInfo *internal.Remote
 	return c.Update(pluginName)
 }
 
-func (c *PluginsCommand) handleUninstall(args []string, remoteInfo *internal.RemoteInfo) error {
+func (c *PluginsCommand) handleUninstall(args []string, remoteInfo *pkg.RemoteInfo) error {
 	if len(args) < 1 {
 		c.showUninstallHelp()
 		return fmt.Errorf("plugin name required")
@@ -357,8 +357,8 @@ func (c *PluginsCommand) handlePluginCommand(args []string) error {
 
 // Métodos auxiliares para execução remota
 
-func (c *PluginsCommand) executeRemote(cmd string, remoteInfo *internal.RemoteInfo) error {
-	if err := internal.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+func (c *PluginsCommand) executeRemote(cmd string, remoteInfo *pkg.RemoteInfo) error {
+	if err := pkg.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 		c.output.Error(fmt.Sprintf("Remote execution failed: %v", err))
 		return err
 	}

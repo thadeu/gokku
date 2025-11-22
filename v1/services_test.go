@@ -326,7 +326,7 @@ func (s *ServicesCommandTestSuite) TestGetService_WhenServiceDoesNotExist() {
 		servicesDir: s.command.servicesDir,
 		pluginsDir:  s.command.pluginsDir,
 	}
-	
+
 	err := testCommand.Get("non-existent-service")
 	Expect(err).ToNot(BeNil())
 	Expect(testOutput.lastError).To(ContainSubstring("not found"))
@@ -371,7 +371,7 @@ func (s *ServicesCommandTestSuite) TestCreateService_WhenPluginDoesNotExist() {
 		servicesDir: s.command.servicesDir,
 		pluginsDir:  s.command.pluginsDir,
 	}
-	
+
 	err := testCommand.Create("non-existent-plugin", "test-service", "")
 
 	Expect(err).ToNot(BeNil())
@@ -398,7 +398,7 @@ func (s *ServicesCommandTestSuite) TestCreateService_WhenServiceAlreadyExists() 
 		servicesDir: s.command.servicesDir,
 		pluginsDir:  s.command.pluginsDir,
 	}
-	
+
 	err = testCommand.Create("test-plugin", "test-service", "")
 	Expect(err).ToNot(BeNil())
 	Expect(err.Error()).To(ContainSubstring("already exists"))
@@ -413,7 +413,7 @@ func (s *ServicesCommandTestSuite) TestDestroyService_WhenServiceDoesNotExist() 
 		servicesDir: s.command.servicesDir,
 		pluginsDir:  s.command.pluginsDir,
 	}
-	
+
 	err := testCommand.Destroy("non-existent-service")
 
 	Expect(err).ToNot(BeNil())
@@ -483,4 +483,3 @@ func (s *ServicesCommandTestSuite) TestServiceJSONSerialization() {
 	Expect(unmarshaled.LinkedApps).To(Equal(svc.LinkedApps))
 	Expect(unmarshaled.Config).To(Equal(svc.Config))
 }
-

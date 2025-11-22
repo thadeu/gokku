@@ -1,13 +1,16 @@
-package internal
+package config
 
 import (
 	"os"
 	"path/filepath"
 
+	"gokku/pkg"
+
 	"gopkg.in/yaml.v3"
 )
 
-func (c *Config) GetAppConfig(appName string) *App {
+// GetAppConfig gets an app configuration by name
+func GetAppConfig(c *pkg.Config, appName string) *pkg.App {
 	if app, exists := c.Apps[appName]; exists {
 		return &app
 	}
@@ -15,19 +18,19 @@ func (c *Config) GetAppConfig(appName string) *App {
 }
 
 // LoadConfig loads the configuration from the config file
-func LoadConfig() (*Config, error) {
+func LoadConfig() (*pkg.Config, error) {
 	configPath := GetConfigPath()
 
 	data, err := os.ReadFile(configPath)
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &Config{Apps: make(map[string]App)}, nil
+			return &pkg.Config{Apps: make(map[string]pkg.App)}, nil
 		}
 		return nil, err
 	}
 
-	var config Config
+	var config pkg.Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, err
 	}
@@ -36,7 +39,7 @@ func LoadConfig() (*Config, error) {
 }
 
 // SaveConfig saves the configuration to the config file
-func SaveConfig(config *Config) error {
+func SaveConfig(config *pkg.Config) error {
 	configPath := GetConfigPath()
 
 	// Ensure directory exists
@@ -51,4 +54,10 @@ func SaveConfig(config *Config) error {
 	}
 
 	return os.WriteFile(configPath, data, 0644)
+}
+
+// GetConfigPath returns the path to the configuration file
+func GetConfigPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".gokku", "config.yml")
 }
