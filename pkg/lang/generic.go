@@ -94,13 +94,15 @@ func (l *Generic) Deploy(appName string, app *pkg.App, releaseDir string) error 
 	}
 
 	return pkg.DeployContainer(pkg.DeploymentConfig{
-		AppName:     appName,
-		ImageTag:    "latest",
-		EnvFile:     envFile,
-		ReleaseDir:  releaseDir,
-		NetworkMode: networkMode,
-		DockerPorts: app.Ports,
-		Volumes:     volumes,
+		AppName:       appName,
+		ImageTag:      "latest",
+		EnvFile:       envFile,
+		ReleaseDir:    releaseDir,
+		ZeroDowntime:  true,
+		HealthTimeout: 60,
+		NetworkMode:   networkMode,
+		DockerPorts:   app.Ports,
+		Volumes:       volumes,
 	})
 }
 

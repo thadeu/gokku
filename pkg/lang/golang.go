@@ -320,23 +320,17 @@ WORKDIR /app
 COPY %s/go.mod %s/go.sum* ./
 
 # Download dependencies with cache mount (this layer will be cached if go.mod/go.sum don't change)
-RUN --mount=type=cache,target=/go/pkg/mod \
   go mod download
 
 # Copy the rest of the application code
 COPY %s .
 
 # Build the application with cache mounts for faster builds
-RUN --mount=type=cache,target=/go/pkg/mod \
-  --mount=type=cache,target=/root/.cache/go-build \
-  CGO_ENABLED=%s GOOS=%s GOARCH=%s \
   go build -ldflags="-w -s" -o app %s
 
 # Final stage
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates \
-  tzdata sox lame \
   && rm -rf /var/cache/apk/*
 
 WORKDIR /root/
