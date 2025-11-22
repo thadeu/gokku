@@ -89,7 +89,7 @@ func (c *RollbackCommand) Execute(appName string, releaseID string) error {
 	}
 
 	// Criar e iniciar novo container
-	if err := RecreateActiveContainer(appName, envFile, releaseDir); err != nil {
+	if err := pkg.RecreateActiveContainer(appName, envFile, releaseDir); err != nil {
 		c.output.Error(fmt.Sprintf("Failed to start container: %v", err))
 		return err
 	}

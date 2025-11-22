@@ -164,7 +164,7 @@ func (c *ConfigCommand) Reload(appName string) error {
 	envFile := c.getEnvFilePath(appName)
 	appDir := filepath.Join(c.baseDir, "apps", appName, "current")
 
-	if err := RecreateActiveContainer(appName, envFile, appDir); err != nil {
+	if err := pkg.RecreateActiveContainer(appName, envFile, appDir); err != nil {
 		c.output.Error(fmt.Sprintf("Failed to reload app: %v", err))
 		return err
 	}
