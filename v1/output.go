@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"gokku/pkg/tui"
+	"go.gokku-vm.com/pkg/tui"
 )
 
 // OutputFormat define o tipo de formato de saída

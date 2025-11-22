@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 )
 
 // RollbackCommand gerencia rollback de aplicações

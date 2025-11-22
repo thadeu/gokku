@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 )
 
 // ContainersCommand gerencia operações de containers

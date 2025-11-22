@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"go.gokku-vm.com/pkg"
 
+	"go.gokku-vm.com/pkg/config"
 	"gopkg.in/yaml.v3"
-	"gokku/pkg"
-	"gokku/pkg/config"
 )
 
 // DeployCommand gerencia deploy de aplicações

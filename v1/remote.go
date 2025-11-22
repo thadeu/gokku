@@ -5,8 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"gokku/pkg"
-	"gokku/pkg/git"
+	"go.gokku-vm.com/pkg"
+
+	"go.gokku-vm.com/pkg/git"
 )
 
 type RunRemoteCommand struct {

@@ -5,8 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"gokku/pkg"
-	"gokku/pkg/context"
+	"go.gokku-vm.com/pkg"
+
+	"go.gokku-vm.com/pkg/context"
 )
 
 // RunCommand gerencia operações de aplicações

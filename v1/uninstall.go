@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 )
 
 type RunUninstallCommand struct {

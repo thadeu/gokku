@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 )
 
 type Generic struct {

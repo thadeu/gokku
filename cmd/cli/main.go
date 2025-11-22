@@ -5,11 +5,12 @@ import (
 	"os"
 	"strings"
 
-	"gokku/pkg"
-	"gokku/pkg/context"
-	"gokku/pkg/util"
+	"go.gokku-vm.com/pkg"
 
-	v1 "gokku/v1"
+	"go.gokku-vm.com/pkg/context"
+	"go.gokku-vm.com/pkg/util"
+
+	v1 "go.gokku-vm.com/v1"
 )
 
 const version = "1.1.0"

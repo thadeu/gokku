@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 
 	"gopkg.in/yaml.v3"
 )

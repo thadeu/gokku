@@ -8,8 +8,9 @@ import (
 	"runtime"
 	"strings"
 
-	"gokku/pkg"
-	"gokku/pkg/util"
+	"go.gokku-vm.com/pkg"
+
+	"go.gokku-vm.com/pkg/util"
 )
 
 type Golang struct {

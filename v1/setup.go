@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gokku/pkg/git"
+	"go.gokku-vm.com/pkg/git"
 )
 
 // SetupCommand gerencia configuração inicial do servidor

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"syscall"
 
-	"gokku/pkg/git"
+	"go.gokku-vm.com/pkg/git"
 )
 
 // GetRemoteInfoOrDefault extracts remote info using --remote flag or defaults to "gokku"

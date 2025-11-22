@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"gokku/pkg/tui/table"
+	"go.gokku-vm.com/pkg/tui/table"
 )
 
 const (

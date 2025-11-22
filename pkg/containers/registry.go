@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 )
 
 // ContainerRegistry manages container information

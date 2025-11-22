@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 )
 
 type Lang interface {

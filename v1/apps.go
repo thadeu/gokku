@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 )
 
 // AppsCommand gerencia operações de aplicações
@@ -41,9 +41,9 @@ type AppInfo struct {
 // AppDetail representa informações detalhadas de uma aplicação
 type AppDetail struct {
 	AppInfo
-	Config     *pkg.App                 `json:"config,omitempty"`
-	Containers []pkg.ContainerInfo      `json:"containers"`
-	EnvVars    map[string]string        `json:"env_vars"`
+	Config     *pkg.App            `json:"config,omitempty"`
+	Containers []pkg.ContainerInfo `json:"containers"`
+	EnvVars    map[string]string   `json:"env_vars"`
 }
 
 // List lista todas as aplicações

@@ -3,9 +3,10 @@ package v1
 import (
 	"testing"
 
+	"go.gokku-vm.com/pkg"
+
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/suite"
-	"gokku/pkg"
 )
 
 func TestCommonTestSuite(t *testing.T) {
@@ -82,4 +83,3 @@ func (s *CommonTestSuite) TestContainerFilter_Empty() {
 	Expect(filter.ProcessType).To(BeEmpty())
 	Expect(filter.All).To(BeFalse())
 }
-

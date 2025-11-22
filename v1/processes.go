@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"gokku/pkg"
-	"gokku/pkg/containers"
+	"go.gokku-vm.com/pkg"
+
+	"go.gokku-vm.com/pkg/containers"
 )
 
 // ProcessesCommand gerencia processos/containers

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 )
 
 // ConfigCommand gerencia configurações de aplicações

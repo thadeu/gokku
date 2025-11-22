@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 )
 
 // ServicesCommand gerencia operações de serviços

@@ -5,8 +5,9 @@ import (
 	"os"
 	"os/exec"
 
-	"gokku/pkg"
-	"gokku/pkg/util"
+	"go.gokku-vm.com/pkg"
+
+	"go.gokku-vm.com/pkg/util"
 )
 
 // ExecutionContext represents the execution context for a command

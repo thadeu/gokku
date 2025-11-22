@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	"gokku/pkg"
+	"go.gokku-vm.com/pkg"
 )
 
 // LogsCommand gerencia logs de aplicações

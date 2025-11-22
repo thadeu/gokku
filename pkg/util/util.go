@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"gokku/pkg"
-	"gokku/pkg/git"
+	"go.gokku-vm.com/pkg"
+	"go.gokku-vm.com/pkg/git"
 )
 
 // GetConfigPath returns the path to the configuration file

@@ -6,8 +6,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"gokku/pkg"
-	"gokku/pkg/util"
+	"go.gokku-vm.com/pkg"
+
+	"go.gokku-vm.com/pkg/util"
 )
 
 type Nodejs struct {
