@@ -5,9 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"go.gokku-vm.com/pkg"
-
 	"go.gokku-vm.com/pkg/context"
+	"go.gokku-vm.com/pkg/util"
 )
 
 // RunCommand gerencia operações de aplicações
@@ -35,7 +34,7 @@ func (c *RunCommand) UseWithContext(ctx *context.ExecutionContext, args []string
 		ctx.PrintUsageError("run", err.Error())
 	}
 
-	_, remainingArgs := pkg.ExtractAppFlag(args)
+	_, remainingArgs := util.ExtractAppFlag(args)
 
 	if len(remainingArgs) < 1 {
 		fmt.Println("Error: command is required")

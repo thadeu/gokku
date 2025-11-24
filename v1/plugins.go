@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"go.gokku-vm.com/pkg"
+	"go.gokku-vm.com/pkg/util"
 )
 
 // PluginsCommand gerencia plugins
@@ -224,7 +225,7 @@ func (c *PluginsCommand) Wildcard(args []string) error {
 	}
 
 	// Extract --remote flag first (if present)
-	remoteInfo, remainingArgs, err := pkg.GetRemoteInfoOrDefault(args)
+	remoteInfo, remainingArgs, err := util.GetRemoteInfoOrDefault(args)
 	if err != nil {
 		c.output.Error(fmt.Sprintf("Error: %v", err))
 		return err
@@ -358,7 +359,7 @@ func (c *PluginsCommand) handlePluginCommand(args []string) error {
 // Métodos auxiliares para execução remota
 
 func (c *PluginsCommand) executeRemote(cmd string, remoteInfo *pkg.RemoteInfo) error {
-	if err := pkg.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+	if err := util.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 		c.output.Error(fmt.Sprintf("Remote execution failed: %v", err))
 		return err
 	}

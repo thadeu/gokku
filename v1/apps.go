@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"go.gokku-vm.com/pkg"
+	"go.gokku-vm.com/pkg/util"
 )
 
 // AppsCommand gerencia operações de aplicações
@@ -279,7 +280,7 @@ func (c *AppsCommand) getAppContainers(appName string) ([]pkg.ContainerInfo, err
 
 func (c *AppsCommand) getAppEnvVars(appName string) map[string]string {
 	envFile := filepath.Join(c.baseDir, "apps", appName, "shared", ".env")
-	return pkg.LoadEnvFile(envFile)
+	return util.LoadEnvFile(envFile)
 }
 
 func (c *AppsCommand) createDirectoryStructure(appName string) error {

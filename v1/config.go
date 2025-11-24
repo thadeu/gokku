@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"go.gokku-vm.com/pkg"
+	"go.gokku-vm.com/pkg/util"
 )
 
 // ConfigCommand gerencia configurações de aplicações
@@ -31,7 +32,7 @@ func NewConfigCommand(output Output) *ConfigCommand {
 // Set define variáveis de ambiente (movido de internal/services/config.go)
 func (c *ConfigCommand) Set(appName string, pairs []string) error {
 	envFile := c.getEnvFilePath(appName)
-	envVars := pkg.LoadEnvFile(envFile)
+	envVars := util.LoadEnvFile(envFile)
 
 	// Parse and update env vars
 	for _, pair := range pairs {
@@ -47,7 +48,7 @@ func (c *ConfigCommand) Set(appName string, pairs []string) error {
 		envVars[key] = value
 	}
 
-	if err := pkg.SaveEnvFile(envFile, envVars); err != nil {
+	if err := util.SaveEnvFile(envFile, envVars); err != nil {
 		c.output.Error(err.Error())
 		return err
 	}
@@ -132,13 +133,13 @@ func (c *ConfigCommand) List(appName string) error {
 // Unset remove variáveis de ambiente (movido de internal/services/config.go)
 func (c *ConfigCommand) Unset(appName string, keys []string) error {
 	envFile := c.getEnvFilePath(appName)
-	envVars := pkg.LoadEnvFile(envFile)
+	envVars := util.LoadEnvFile(envFile)
 
 	for _, key := range keys {
 		delete(envVars, key)
 	}
 
-	if err := pkg.SaveEnvFile(envFile, envVars); err != nil {
+	if err := util.SaveEnvFile(envFile, envVars); err != nil {
 		c.output.Error(err.Error())
 		return err
 	}
@@ -181,5 +182,5 @@ func (c *ConfigCommand) getEnvFilePath(appName string) string {
 
 func (c *ConfigCommand) listEnvVars(appName string) map[string]string {
 	envFile := c.getEnvFilePath(appName)
-	return pkg.LoadEnvFile(envFile)
+	return util.LoadEnvFile(envFile)
 }

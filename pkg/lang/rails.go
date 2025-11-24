@@ -7,16 +7,15 @@ import (
 	"path/filepath"
 
 	"go.gokku-vm.com/pkg"
-
 	"go.gokku-vm.com/pkg/util"
 )
 
-type Python struct {
+type Rails struct {
 	app *pkg.App
 }
 
-func (l *Python) Build(appName string, app *pkg.App, releaseDir string) error {
-	fmt.Println("-----> Building Python application...")
+func (l *Rails) Build(appName string, app *pkg.App, releaseDir string) error {
+	fmt.Println("-----> Building Rails application...")
 
 	// Check if using pre-built image from registry
 	if app.Image != "" && util.IsRegistryImage(app.Image, util.GetCustomRegistries(appName)) {
@@ -46,18 +45,21 @@ func (l *Python) Build(appName string, app *pkg.App, releaseDir string) error {
 
 	// Check if custom Dockerfile path is specified
 	var cmd *exec.Cmd
+
 	if app.Dockerfile != "" {
-		// Use custom Dockerfile path
 		dockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
-		// Check if Dockerfile exists in workdir
+
 		if app.WorkDir != "" {
 			workdirDockerfilePath := filepath.Join(releaseDir, app.WorkDir, app.Dockerfile)
+
 			if _, err := os.Stat(workdirDockerfilePath); err == nil {
 				dockerfilePath = workdirDockerfilePath
 			}
 		}
+
 		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
 		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
+
 		// Add Gokku labels to image
 		for _, label := range pkg.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
@@ -65,6 +67,7 @@ func (l *Python) Build(appName string, app *pkg.App, releaseDir string) error {
 	} else {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
+
 		// Add Gokku labels to image
 		for _, label := range pkg.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
@@ -78,12 +81,12 @@ func (l *Python) Build(appName string, app *pkg.App, releaseDir string) error {
 		return fmt.Errorf("docker build failed: %v", err)
 	}
 
-	fmt.Println("-----> Python build complete!")
+	fmt.Println("-----> Rails build complete!")
 	return nil
 }
 
-func (l *Python) Deploy(appName string, app *pkg.App, releaseDir string) error {
-	fmt.Println("-----> Deploying Python application...")
+func (l *Rails) Deploy(appName string, app *pkg.App, releaseDir string) error {
+	fmt.Println("-----> Deploying Rails application...")
 
 	// Get environment file
 	envFile := filepath.Join("/opt/gokku/apps", appName, "shared", ".env")
@@ -113,11 +116,12 @@ func (l *Python) Deploy(appName string, app *pkg.App, releaseDir string) error {
 	})
 }
 
-func (l *Python) Restart(appName string, app *pkg.App) error {
+func (l *Rails) Restart(appName string, app *pkg.App) error {
 	fmt.Printf("-----> Restarting %s...\n", appName)
 
 	// Find active container
 	containerName := appName
+
 	if !pkg.ContainerExists(containerName) {
 		containerName = appName + "-green"
 	}
@@ -131,7 +135,7 @@ func (l *Python) Restart(appName string, app *pkg.App) error {
 	return cmd.Run()
 }
 
-func (l *Python) Cleanup(appName string, app *pkg.App) error {
+func (l *Rails) Cleanup(appName string, app *pkg.App) error {
 	fmt.Printf("-----> Cleaning up old releases for %s...\n", appName)
 
 	appDir := filepath.Join("/opt/gokku/apps", appName)
@@ -151,9 +155,11 @@ func (l *Python) Cleanup(appName string, app *pkg.App) error {
 
 	// Remove old releases
 	toRemove := len(entries) - keepReleases
+
 	for i := 0; i < toRemove; i++ {
 		entry := entries[i]
 		releasePath := filepath.Join(releasesDir, entry.Name())
+
 		if err := os.RemoveAll(releasePath); err != nil {
 			fmt.Printf("Warning: Failed to remove old release %s: %v\n", entry.Name(), err)
 		} else {
@@ -164,46 +170,49 @@ func (l *Python) Cleanup(appName string, app *pkg.App) error {
 	return nil
 }
 
-func (l *Python) DetectLanguage(releaseDir string) (string, error) {
-	if _, err := os.Stat(filepath.Join(releaseDir, "requirements.txt")); err == nil {
-		return "python", nil
+func (l *Rails) DetectLanguage(releaseDir string) (string, error) {
+	if _, err := os.Stat(filepath.Join(releaseDir, "Gemfile")); err == nil {
+		return "ruby", nil
 	}
-	if _, err := os.Stat(filepath.Join(releaseDir, "pyproject.toml")); err == nil {
-		return "python", nil
-	}
-	return "", fmt.Errorf("not a Python project")
+	return "", fmt.Errorf("not a Rails project")
 }
 
-func (l *Python) EnsureDockerfile(releaseDir string, appName string, app *pkg.App) error {
+func (l *Rails) EnsureDockerfile(releaseDir string, appName string, app *pkg.App) error {
 	// Check if custom Dockerfile is specified
 	if app.Dockerfile != "" {
 		customDockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
+
 		if _, err := os.Stat(customDockerfilePath); err == nil {
 			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Dockerfile)
 			return nil
 		}
+
 		// If custom Dockerfile not found, try relative to workdir
 		if app.WorkDir != "" {
 			workdirDockerfilePath := filepath.Join(releaseDir, app.WorkDir, app.Dockerfile)
+
 			if _, err := os.Stat(workdirDockerfilePath); err == nil {
 				fmt.Printf("-----> Using custom Dockerfile in workdir: %s/%s\n", app.WorkDir, app.Dockerfile)
 				return nil
 			}
 		}
+
 		return fmt.Errorf("custom Dockerfile not found: %s or %s", customDockerfilePath, filepath.Join(releaseDir, app.WorkDir, app.Dockerfile))
 	}
 
 	// Check if default Dockerfile exists
 	dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
+
 	if _, err := os.Stat(dockerfilePath); err == nil {
 		fmt.Println("-----> Using existing Dockerfile")
 		return nil
 	}
 
-	fmt.Println("-----> Generating Dockerfile for Python...")
+	fmt.Println("-----> Generating Dockerfile for Ruby...")
 
 	// Get build configuration
 	build := l.GetDefaultConfig()
+
 	if app.Image != "" {
 		build.Image = app.Image
 	}
@@ -218,50 +227,72 @@ func (l *Python) EnsureDockerfile(releaseDir string, appName string, app *pkg.Ap
 	return os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644)
 }
 
-func (l *Python) GetDefaultConfig() *pkg.App {
+func (l *Rails) GetDefaultConfig() *pkg.App {
 	return &pkg.App{
-		// Default configuration for Python apps
-		Entrypoint: "main.py",
+		Entrypoint: "app.rb",
 		WorkDir:    ".",
 	}
 }
 
-func (l *Python) generateDockerfile(build *pkg.App, appName string, app *pkg.App) string {
+func (l *Rails) generateDockerfile(build *pkg.App, appName string, app *pkg.App) string {
 	// Determine entrypoint
 	entrypoint := build.Entrypoint
+
 	if entrypoint == "" {
-		entrypoint = "main.py"
+		entrypoint = "app.rb"
 	}
 
 	// Determine base image
 	baseImage := build.Image
+
 	if baseImage == "" {
-		// Use latest Python as fallback
-		baseImage = util.DetectPythonVersion(".")
-		fmt.Printf("-----> Using Python fallback: %s\n", baseImage)
+		baseImage = util.DetectRubyVersion(".")
+		fmt.Printf("-----> Detected Ruby version: %s\n", baseImage)
 	}
 
-	return fmt.Sprintf(`# Generated Dockerfile for Python application
+	return fmt.Sprintf(`# Generated Dockerfile for Ruby application
 # App: %s
 # Entrypoint: %s
 
-FROM %s
+FROM %s as builder
 
 WORKDIR /app
 
-# Install system dependencies if needed
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc sox libsox-fmt-all lame \
-    && rm -rf /var/lib/apt/lists/*
+# Install dependencies for building native extensions
+RUN apt-get update -qq && apt-get install -y build-essential libpq-dev nodejs npm yarn sox libsox-fmt-all lame
 
-# Copy requirements
-COPY requirements.txt* ./
-RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4 --retry 3
 
-# Copy application code
 COPY . .
 
-# Run the application
-CMD ["python", "%s"]
-`, appName, entrypoint, baseImage, entrypoint)
+# Precompile assets (if using Sprockets or similar)
+# For Rails 8 with Propshaft, this step might be different or handled automatically
+RUN bin/rails assets:precompile || true
+
+# Stage 2: Production Stage
+FROM %s as production
+
+WORKDIR /app
+
+# Install only runtime dependencies
+RUN apt-get update -qq && apt-get install -y libpq-dev && rm -rf /var/lib/apt/lists/*
+
+# Copy built application from the builder stage
+COPY --from=builder /app /app
+
+# Set environment variables for production
+ENV RAILS_ENV=production
+ENV BUNDLE_WITHOUT="development test"
+
+# Expose the port your Rails app will listen on
+EXPOSE 3000
+
+# Set a non-root user for security
+RUN useradd -ms /bin/bash rails
+USER rails
+
+# Command to run the Rails server
+CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
+`, appName, entrypoint, baseImage, baseImage)
 }

@@ -5,8 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"go.gokku-vm.com/pkg"
-
 	"go.gokku-vm.com/pkg/context"
 	"go.gokku-vm.com/pkg/util"
 
@@ -32,7 +30,7 @@ func main() {
 		remoteCmd = append(remoteCmd, remainingArgs...)
 		cmdStr := strings.Join(remoteCmd, " ")
 
-		if err := pkg.ExecuteRemoteCommand(remoteInfo, cmdStr); err != nil {
+		if err := util.ExecuteRemoteCommand(remoteInfo, cmdStr); err != nil {
 			os.Exit(1)
 		}
 
@@ -47,7 +45,7 @@ func main() {
 	var ctx *context.ExecutionContext
 
 	if command == "run" {
-		appName, _ := pkg.ExtractAppFlag(args)
+		appName, _ := util.ExtractAppFlag(args)
 
 		var err error
 		ctx, err = context.NewExecutionContext(appName)
@@ -139,7 +137,7 @@ func runCommand(cmd *v1.Command, ctx *context.ExecutionContext, args []string) {
 }
 
 func rollbackCommand(cmd *v1.Command, args []string) {
-	appName, remainingArgs := pkg.ExtractAppFlag(args)
+	appName, remainingArgs := util.ExtractAppFlag(args)
 
 	if appName == "" {
 		fmt.Println("Error: -a <app> is required")
@@ -223,7 +221,7 @@ func appsCommand(cmd *v1.Command, subcommand string, args []string) {
 }
 
 func configCommand(cmd *v1.Command, subcommand string, args []string) {
-	appName, remainingArgs := pkg.ExtractAppFlag(args)
+	appName, remainingArgs := util.ExtractAppFlag(args)
 
 	if appName == "" {
 		fmt.Println("Error: -a <app> is required")
@@ -281,7 +279,7 @@ func configCommand(cmd *v1.Command, subcommand string, args []string) {
 }
 
 func psCommand(cmd *v1.Command, subcommand string, args []string) {
-	appName, remainingArgs := pkg.ExtractAppFlag(args)
+	appName, remainingArgs := util.ExtractAppFlag(args)
 
 	// Check for remote execution
 	if appName != "" {
@@ -475,7 +473,7 @@ func pluginsCommand(cmd *v1.Command, subcommand string, args []string) {
 }
 
 func logsCommand(cmd *v1.Command, args []string) {
-	appName, remainingArgs := pkg.ExtractAppFlag(args)
+	appName, remainingArgs := util.ExtractAppFlag(args)
 
 	if appName == "" {
 		fmt.Println("Error: -a <app> is required")
@@ -491,6 +489,7 @@ func logsCommand(cmd *v1.Command, args []string) {
 	// Local execution
 	follow := false
 	tail := 500
+
 	for _, arg := range remainingArgs {
 		if arg == "-f" || arg == "--follow" {
 			follow = true
@@ -503,7 +502,7 @@ func logsCommand(cmd *v1.Command, args []string) {
 }
 
 func restartCommand(cmd *v1.Command, args []string) {
-	appName, remainingArgs := pkg.ExtractAppFlag(args)
+	appName, remainingArgs := util.ExtractAppFlag(args)
 
 	if appName == "" {
 		fmt.Println("Error: -a <app> is required")
@@ -523,7 +522,7 @@ func restartCommand(cmd *v1.Command, args []string) {
 }
 
 func deployCommand(cmd *v1.Command, args []string) {
-	appName, _ := pkg.ExtractAppFlag(args)
+	appName, _ := util.ExtractAppFlag(args)
 
 	if appName == "" {
 		fmt.Println("Error: -a <app> is required")
@@ -532,7 +531,7 @@ func deployCommand(cmd *v1.Command, args []string) {
 	}
 
 	// Check for remote execution
-	remoteInfo, err := pkg.GetRemoteInfo(appName)
+	remoteInfo, err := util.GetRemoteInfo(appName)
 	if err == nil && remoteInfo != nil {
 		// Deploy via git push
 		fmt.Printf("Deploying to %s...\n", appName)
@@ -547,7 +546,7 @@ func deployCommand(cmd *v1.Command, args []string) {
 }
 
 func executeRemote(command, subcommand string, args []string) error {
-	remoteInfo, remainingArgs, err := pkg.GetRemoteInfoOrDefault(args)
+	remoteInfo, remainingArgs, err := util.GetRemoteInfoOrDefault(args)
 
 	if err != nil || remoteInfo == nil {
 		return err
@@ -562,11 +561,11 @@ func executeRemote(command, subcommand string, args []string) error {
 	cmdParts = append(cmdParts, remainingArgs...)
 	cmdStr := strings.Join(cmdParts, " ")
 
-	return pkg.ExecuteRemoteCommand(remoteInfo, cmdStr)
+	return util.ExecuteRemoteCommand(remoteInfo, cmdStr)
 }
 
 func executeRemoteForApp(command, subcommand, appName string, remainingArgs []string) error {
-	remoteInfo, err := pkg.GetRemoteInfo(appName)
+	remoteInfo, err := util.GetRemoteInfo(appName)
 	if err != nil || remoteInfo == nil {
 		return err
 	}
@@ -579,7 +578,7 @@ func executeRemoteForApp(command, subcommand, appName string, remainingArgs []st
 	cmdParts = append(cmdParts, "--app", remoteInfo.App)
 	cmdStr := strings.Join(cmdParts, " ")
 
-	return pkg.ExecuteRemoteCommand(remoteInfo, cmdStr)
+	return util.ExecuteRemoteCommand(remoteInfo, cmdStr)
 }
 
 func printHelp() {

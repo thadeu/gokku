@@ -59,6 +59,11 @@ func detectLanguageInDir(dir string) string {
 		return "python"
 	}
 
+	// Check for Rails
+	if _, err := os.Stat(filepath.Join(dir, "config/application.rb")); err == nil {
+		return "rails"
+	}
+
 	// Check for Ruby
 	if _, err := os.Stat(filepath.Join(dir, "Gemfile")); err == nil {
 		return "ruby"
@@ -105,6 +110,7 @@ func NewLang(app *pkg.App, releaseDir string) (Lang, error) {
 		langType = app.Lang
 	} else {
 		langType, err = DetectLanguage(releaseDir)
+
 		if err != nil {
 			return nil, fmt.Errorf("failed to detect language: %v", err)
 		}
@@ -122,6 +128,8 @@ func NewLang(app *pkg.App, releaseDir string) (Lang, error) {
 		return &Nodejs{app: app}, nil
 	case "ruby":
 		return &Ruby{app: app}, nil
+	case "rails":
+		return &Rails{app: app}, nil
 	case "docker":
 		return &Generic{app: app}, nil
 	default:

@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"go.gokku-vm.com/pkg"
+	"go.gokku-vm.com/pkg/util"
 )
 
 // AutoUpdateCommand gerencia auto-atualização do gokku
@@ -25,7 +25,7 @@ func NewAutoUpdateCommand(output Output) *AutoUpdateCommand {
 func (c *AutoUpdateCommand) Execute(args []string) error {
 	command := "curl -fsSL https://gokku-vm.com/install | bash -s --"
 
-	remoteInfo, remainingArgs, err := pkg.GetRemoteInfoOrDefault(args)
+	remoteInfo, remainingArgs, err := util.GetRemoteInfoOrDefault(args)
 	if err != nil {
 		c.output.Error(fmt.Sprintf("Error: %v", err))
 		return err
@@ -33,13 +33,13 @@ func (c *AutoUpdateCommand) Execute(args []string) error {
 
 	hasRemoteFlag := strings.Contains(strings.Join(remainingArgs, " "), "--remote")
 
-	if pkg.IsClientMode() && hasRemoteFlag {
+	if util.IsClientMode() && hasRemoteFlag {
 		command += " --server"
 
 		cmd := fmt.Sprintf("bash -c '%s'", command)
 		c.output.Print(fmt.Sprintf("Executing command auto-update on server: %s", cmd))
 
-		if err := pkg.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
+		if err := util.ExecuteRemoteCommand(remoteInfo, cmd); err != nil {
 			c.output.Error(fmt.Sprintf("Error: %v", err))
 			return err
 		}
@@ -47,7 +47,7 @@ func (c *AutoUpdateCommand) Execute(args []string) error {
 		return nil
 	}
 
-	if pkg.IsServerMode() {
+	if util.IsServerMode() {
 		command += " --server"
 	} else {
 		command += " --client"

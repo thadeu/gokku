@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"go.gokku-vm.com/pkg"
+	"go.gokku-vm.com/pkg/util"
 )
 
 // ServicesCommand gerencia operações de serviços
@@ -542,7 +543,7 @@ func (c *ServicesCommand) addServiceEnvVars(serviceName, appName, pluginName str
 	envFile := filepath.Join(c.baseDir, "apps", appName, "shared", ".env")
 
 	// Load existing env vars
-	existingVars := pkg.LoadEnvFile(envFile)
+	existingVars := util.LoadEnvFile(envFile)
 
 	// Add service env vars
 	for key, value := range envVars {
@@ -550,7 +551,7 @@ func (c *ServicesCommand) addServiceEnvVars(serviceName, appName, pluginName str
 	}
 
 	// Save updated env vars
-	return pkg.SaveEnvFile(envFile, existingVars)
+	return util.SaveEnvFile(envFile, existingVars)
 }
 
 func (c *ServicesCommand) removeServiceEnvVars(serviceName, appName, pluginName string) error {
@@ -564,7 +565,7 @@ func (c *ServicesCommand) removeServiceEnvVars(serviceName, appName, pluginName 
 	envFile := filepath.Join(c.baseDir, "apps", appName, "shared", ".env")
 
 	// Load existing env vars
-	existingVars := pkg.LoadEnvFile(envFile)
+	existingVars := util.LoadEnvFile(envFile)
 
 	// Remove service env vars
 	for _, key := range envKeys {
@@ -572,7 +573,7 @@ func (c *ServicesCommand) removeServiceEnvVars(serviceName, appName, pluginName 
 	}
 
 	// Save updated env vars
-	return pkg.SaveEnvFile(envFile, existingVars)
+	return util.SaveEnvFile(envFile, existingVars)
 }
 
 func (c *ServicesCommand) getServiceEnvVars(serviceName string, config map[string]string, pluginName string) map[string]string {

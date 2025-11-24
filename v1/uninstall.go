@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.gokku-vm.com/pkg"
+	"go.gokku-vm.com/pkg/util"
 )
 
 type RunUninstallCommand struct {
@@ -31,7 +31,7 @@ func NewRunUninstallCommand(output Output) *RunUninstallCommand {
 // handleUninstall removes Gokku installation
 func (c *RunUninstallCommand) UseUninstall(args []string) {
 	// Check if running on server or client
-	isServerMode := pkg.IsServerMode()
+	isServerMode := util.IsServerMode()
 
 	fmt.Println("-----> Uninstalling Gokku...")
 	fmt.Println("")

@@ -7,6 +7,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type RemoteInfo struct {
+	Host    string
+	BaseDir string
+	App     string
+}
+
 // ServerConfig represents the gokku.yml configuration on the server
 type ServerConfig struct {
 	Apps         map[string]App `yaml:"apps"`

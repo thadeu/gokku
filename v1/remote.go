@@ -5,9 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"go.gokku-vm.com/pkg"
-
 	"go.gokku-vm.com/pkg/git"
+	"go.gokku-vm.com/pkg/util"
 )
 
 type RunRemoteCommand struct {
@@ -174,7 +173,7 @@ func (c *RunRemoteCommand) handleRemoteRemove(args []string) {
 // handleRemoteSetup performs one-time server setup
 func (c *RunRemoteCommand) handleRemoteSetup(args []string) {
 	// Extract identity flag (-i or --identity)
-	identityFile, remainingArgs := pkg.ExtractIdentityFlag(args)
+	identityFile, remainingArgs := util.ExtractIdentityFlag(args)
 
 	// Get server host from remaining args
 	if len(remainingArgs) < 1 {

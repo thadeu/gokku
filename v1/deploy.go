@@ -11,6 +11,7 @@ import (
 	"go.gokku-vm.com/pkg"
 
 	"go.gokku-vm.com/pkg/config"
+	"go.gokku-vm.com/pkg/util"
 	"gopkg.in/yaml.v3"
 )
 
@@ -151,7 +152,7 @@ func (c *DeployCommand) updateEnvironmentFile(envFile, appName string) error {
 		return nil
 	}
 
-	envVars := pkg.LoadEnvFile(envFile)
+	envVars := util.LoadEnvFile(envFile)
 
 	if appConfig.Env != nil {
 		for key, value := range appConfig.Env {
@@ -159,7 +160,7 @@ func (c *DeployCommand) updateEnvironmentFile(envFile, appName string) error {
 		}
 	}
 
-	return pkg.SaveEnvFile(envFile, envVars)
+	return util.SaveEnvFile(envFile, envVars)
 }
 
 func (c *DeployCommand) buildRelease(appName, releaseDir string) error {

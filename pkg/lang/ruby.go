@@ -46,18 +46,21 @@ func (l *Ruby) Build(appName string, app *pkg.App, releaseDir string) error {
 
 	// Check if custom Dockerfile path is specified
 	var cmd *exec.Cmd
+
 	if app.Dockerfile != "" {
-		// Use custom Dockerfile path
 		dockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
-		// Check if Dockerfile exists in workdir
+
 		if app.WorkDir != "" {
 			workdirDockerfilePath := filepath.Join(releaseDir, app.WorkDir, app.Dockerfile)
+
 			if _, err := os.Stat(workdirDockerfilePath); err == nil {
 				dockerfilePath = workdirDockerfilePath
 			}
 		}
+
 		fmt.Printf("-----> Using custom Dockerfile: %s\n", dockerfilePath)
 		cmd = exec.Command("docker", "build", "-f", dockerfilePath, "-t", imageTag, releaseDir)
+
 		// Add Gokku labels to image
 		for _, label := range pkg.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
@@ -65,6 +68,7 @@ func (l *Ruby) Build(appName string, app *pkg.App, releaseDir string) error {
 	} else {
 		// Use default Dockerfile in release directory
 		cmd = exec.Command("docker", "build", "-t", imageTag, releaseDir)
+
 		// Add Gokku labels to image
 		for _, label := range pkg.GetGokkuLabels() {
 			cmd.Args = append(cmd.Args, "--label", label)
@@ -118,6 +122,7 @@ func (l *Ruby) Restart(appName string, app *pkg.App) error {
 
 	// Find active container
 	containerName := appName
+
 	if !pkg.ContainerExists(containerName) {
 		containerName = appName + "-green"
 	}
@@ -151,9 +156,11 @@ func (l *Ruby) Cleanup(appName string, app *pkg.App) error {
 
 	// Remove old releases
 	toRemove := len(entries) - keepReleases
+
 	for i := 0; i < toRemove; i++ {
 		entry := entries[i]
 		releasePath := filepath.Join(releasesDir, entry.Name())
+
 		if err := os.RemoveAll(releasePath); err != nil {
 			fmt.Printf("Warning: Failed to remove old release %s: %v\n", entry.Name(), err)
 		} else {
@@ -175,23 +182,28 @@ func (l *Ruby) EnsureDockerfile(releaseDir string, appName string, app *pkg.App)
 	// Check if custom Dockerfile is specified
 	if app.Dockerfile != "" {
 		customDockerfilePath := filepath.Join(releaseDir, app.Dockerfile)
+
 		if _, err := os.Stat(customDockerfilePath); err == nil {
 			fmt.Printf("-----> Using custom Dockerfile: %s\n", app.Dockerfile)
 			return nil
 		}
+
 		// If custom Dockerfile not found, try relative to workdir
 		if app.WorkDir != "" {
 			workdirDockerfilePath := filepath.Join(releaseDir, app.WorkDir, app.Dockerfile)
+
 			if _, err := os.Stat(workdirDockerfilePath); err == nil {
 				fmt.Printf("-----> Using custom Dockerfile in workdir: %s/%s\n", app.WorkDir, app.Dockerfile)
 				return nil
 			}
 		}
+
 		return fmt.Errorf("custom Dockerfile not found: %s or %s", customDockerfilePath, filepath.Join(releaseDir, app.WorkDir, app.Dockerfile))
 	}
 
 	// Check if default Dockerfile exists
 	dockerfilePath := filepath.Join(releaseDir, "Dockerfile")
+
 	if _, err := os.Stat(dockerfilePath); err == nil {
 		fmt.Println("-----> Using existing Dockerfile")
 		return nil
@@ -201,6 +213,7 @@ func (l *Ruby) EnsureDockerfile(releaseDir string, appName string, app *pkg.App)
 
 	// Get build configuration
 	build := l.GetDefaultConfig()
+
 	if app.Image != "" {
 		build.Image = app.Image
 	}
@@ -217,7 +230,6 @@ func (l *Ruby) EnsureDockerfile(releaseDir string, appName string, app *pkg.App)
 
 func (l *Ruby) GetDefaultConfig() *pkg.App {
 	return &pkg.App{
-		// Default configuration for Ruby apps
 		Entrypoint: "app.rb",
 		WorkDir:    ".",
 	}
@@ -226,14 +238,15 @@ func (l *Ruby) GetDefaultConfig() *pkg.App {
 func (l *Ruby) generateDockerfile(build *pkg.App, appName string, app *pkg.App) string {
 	// Determine entrypoint
 	entrypoint := build.Entrypoint
+
 	if entrypoint == "" {
 		entrypoint = "app.rb"
 	}
 
 	// Determine base image
 	baseImage := build.Image
+
 	if baseImage == "" {
-		// Try to detect Ruby version from project files
 		baseImage = util.DetectRubyVersion(".")
 		fmt.Printf("-----> Detected Ruby version: %s\n", baseImage)
 	}
